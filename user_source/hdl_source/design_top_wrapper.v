@@ -54,12 +54,6 @@
 //    要么保留 video_out 但让它的读请求永不发起（busy 仍按原逻辑翻转），
 //    要么改 vib_ddr_arb 给算法一个最低带宽保证。
 // =====================================================================
-// =====================================================================
-//  ★★ 振动算法总开关（2026-10-18）★★
-//  去掉下行注释 = 打开整条振动链路；保持注释 = 关闭（省约 12,400 slice）
-// =====================================================================
-//`define VIB_ON
-
 //`define VIB_NO_DISPLAY
 
 module design_top_wrapper (
@@ -1122,7 +1116,6 @@ isp_top u_isp_top (
         end
     end
 
-`ifdef VIB_ON   // vib_osd_marker
     vib_osd_marker u_vib_osd_marker (
         .clk    ( S_hdmi_pixel_clk ),
         .rst_n  ( S_hdmi_rst_n     ),
@@ -1134,25 +1127,6 @@ isp_top u_isp_top (
         .O_de   ( S_osd_de         ),
         .O_data ( S_osd_data       )
     );
-`endif   // VIB_ON   (vib_osd_marker)
-
-//=============================================================================
-//  VIB_ON 未定义时：振动链路关闭，这里补齐 tie-off
-//    · 保留 vib_video_tap（只给 VSUM，约 880 slice，是"摄像头活着"的唯一证据）
-//    · 关闭：gauss3x3 / prev_frame_ddr / lk_grid / lk_solve /
-//            goertzel / gz_store / osd_marker
-//=============================================================================
-`ifndef VIB_ON
-    assign S_vib_ddr_wr_en   = 1'b0;
-    assign S_vib_ddr_rd_en   = 1'b0;
-    assign S_vib_ddr_addr    = 32'd0;
-    assign S_vib_ddr_wr_data = 128'd0;
-    assign S_vib_ddr_want    = 1'b0;
-    assign S_fx_pos          = 32'd0;
-    assign S_osd_vs          = S_hdmi_out_vsync;
-    assign S_osd_de          = S_hdmi_out_de;
-    assign S_osd_data        = S_hdmi_out_data;
-`endif
 
     hdmi_tx u_hdmi_tx(
         .I_pixel_clk        ( S_hdmi_pixel_clk  ),
@@ -1229,7 +1203,6 @@ isp_top u_isp_top (
     //    自检：GOFP 应 = 0x00038400（230400），GOFL 应 = 360 = 0x00000168
     //    注意本模块输出行比输入行晚一行（竖直 3 行窗口），末行靠回放补齐
     // =================================================================
-`ifdef VIB_ON   // vib_gauss3x3
     vib_gauss3x3 u_vib_gauss3x3 (
         .clk            ( S_csi_rx_clk           ),
         .rst_n          ( S_rst_n                ),
@@ -1248,9 +1221,7 @@ isp_top u_isp_top (
         .st_g_lines     ( S_g_lines              ),
         .st_tgl         ( S_g_tgl                )
     );
-`endif   // VIB_ON   (vib_gauss3x3)
 
-`ifdef VIB_ON   // vib_prev_frame_ddr
     vib_prev_frame_ddr u_vib_prev_frame_ddr (
         .csi_clk        ( S_csi_rx_clk           ),
         .csi_rst_n      ( S_rst_n                ),
@@ -1283,10 +1254,8 @@ isp_top u_isp_top (
         .lk_cur_w       ( S_lk_cur_w             ),
         .lk_prev_w      ( S_lk_prev               )
     );
-`endif   // VIB_ON   (vib_prev_frame_ddr)
 
     // =================================================================
-`ifdef VIB_ON   // DDR二选一
     //  DDR 算法客户端二选一：自检完成前给自检，完成后给上一帧缓存
     //    两者共用 vib_ddr_arb 的同一个 vib 端口，必须互斥。
     //    ready / 读回也按同样条件门控，避免未选中那个误收数据。
@@ -1305,7 +1274,6 @@ isp_top u_isp_top (
     assign S_pf_rd_valid     = S_vib_ddr_rd_valid & ~S_dt_active;
     assign S_dt_rd_data      = S_vib_ddr_rd_data;
     assign S_pf_rd_data      = S_vib_ddr_rd_data;
-`endif   // VIB_ON   (DDR二选一)
 
     // =================================================================
     //  实测 S_csi_rx_clk 频率 / ISP 像素率 / 帧率 / 每帧像素数
@@ -1376,7 +1344,6 @@ isp_top u_isp_top (
     //          LKAX/LKAY 是块(0,0)的 ΣdIx²/ΣdIy²（dIx = g[x+1]-g[x-1] 未除 2）
     //          与 Python 对比：axx_hw = 4*axx_py，bx_hw = 2*bx_py，en 相同
     // =================================================================
-`ifdef VIB_ON   // vib_lk_grid
     vib_lk_grid u_vib_lk_grid (
         .clk            ( S_ddr_clk              ),
         .rst_n          ( S_rst_n                ),
@@ -1431,7 +1398,6 @@ isp_top u_isp_top (
         .st_solve_req   ( S_lk_solve_req         ),
         .st_solve_ack   ( S_solve_ack            )
     );
-`endif   // VIB_ON   (vib_lk_grid)
 
     // =================================================================
     //  B2c-2a：对"本帧变化最大的块"做 2x2 Lucas-Kanade 求解
@@ -1454,7 +1420,6 @@ isp_top u_isp_top (
     //    只验证"26,112 bit 能不能进 RAM"，不接任何算法数据。
     //    自检期望：sum1 = 0x000512E8、sum2 = 0xFFFAED18
     //==================================================================
-`ifdef VIB_ON   // vib_gz_store
     vib_gz_store #(
         .NB   ( 48 ),
         .NBIN ( 17 )
@@ -1467,9 +1432,7 @@ isp_top u_isp_top (
         .o_busy ( S_gzstore_busy   ),
         .o_done ( S_gzstore_done   )
     );
-`endif   // VIB_ON   (vib_gz_store)
 
-`ifdef VIB_ON   // vib_goertzel
     vib_goertzel #(
         .NFRM ( 128 ),
         .NBIN ( 17  )
@@ -1488,9 +1451,7 @@ isp_top u_isp_top (
         .dbg_s1     ( S_gz_s1      ),
         .frm_tgl    (              )
     );
-`endif   // VIB_ON   (vib_goertzel)
 
-`ifdef VIB_ON   // vib_lk_solve
     vib_lk_solve u_vib_lk_solve (
         .clk            ( S_ddr_clk              ),
         .rst_n          ( S_rst_n                ),
@@ -1524,7 +1485,6 @@ isp_top u_isp_top (
         .r_rem_h        ( S_sv_rem_h             ),
         .r_num_ld       ( S_sv_num_ld            )
     );
-`endif   // VIB_ON   (vib_lk_solve)
 
     // =================================================================
     //  统计量的跨时钟域**原子快照**（修一个真实观测到的问题）
@@ -1749,42 +1709,42 @@ isp_top u_isp_top (
         .csi_frame_seen     (S_dbg_csi_seen),
         .raw10_seen         (S_dbg_raw10_seen),
         .video_nonzero_seen (S_dbg_video_nonzero_seen),
-// MUTE         .it_sum             (c_it_sum),
-// MUTE         .it_err             (c_it_err),
+        .it_sum             (c_it_sum),
+        .it_err             (c_it_err),
 // MUTE         .lk_en              (c_lk_en),
-// MUTE         .lk_px              (c_lk_px),
-// MUTE         .lk_err             (c_lk_err),
-// MUTE         .fxpos              (c_fx_pos),
-// MUTE         .fxbx               (c_fx_bx),
-// MUTE         .fxby               (c_fx_by),
-// MUTE         .fxen               (c_fx_en),
-// MUTE         .fxtex              (c_fx_tex[31:0]),   // LINT-OK: Σmin 恒 >= 0，截断安全
+        .lk_px              (c_lk_px),
+        .lk_err             (c_lk_err),
+        .fxpos              (c_fx_pos),
+        .fxbx               (c_fx_bx),
+        .fxby               (c_fx_by),
+        .fxen               (c_fx_en),
+        .fxtex              (c_fx_tex[31:0]),   // LINT-OK: Σmin 恒 >= 0，截断安全
 // MUTE         .lk_ae              (c_lk_dbg_ae),
 // MUTE         .lk_af              (c_lk_dbg_af),
 // MUTE         .lk_xa              (c_lk_dbg_xa),
 // MUTE         .lk_xb              (c_lk_dbg_xb),
         .vsum               (c_tap_sum),
 // MUTE         .itpx               (c_it_px),
-// MUTE         .gpx                (c_g_px),
+        .gpx                (c_g_px),
 // MUTE         .gln                (c_g_lines),
-// MUTE         .lk_u               (c_sv_u),
-// MUTE         .lk_v               (c_sv_v),
-// MUTE         .lk_va              (c_sv_valid),
-// MUTE         .lk_bl              (c_sv_bcol),
-// MUTE         .lk_br              (c_sv_brow),
+        .lk_u               (c_sv_u),
+        .lk_v               (c_sv_v),
+        .lk_va              (c_sv_valid),
+        .lk_bl              (c_sv_bcol),
+        .lk_br              (c_sv_brow),
 
-// MUTE         .gzs1               (c_gz_s1),
-// MUTE         .gzwc               (S_gzcrc_w),
-// MUTE         .gzrc               (S_gzcrc_r),
-// MUTE         .gzok               ({31'd0, S_gzcrc_ok}),
+        .gzs1               (c_gz_s1),
+        .gzwc               (S_gzcrc_w),
+        .gzrc               (S_gzcrc_r),
+        .gzok               ({31'd0, S_gzcrc_ok}),
 
 
-// MUTE         .gzhz               ({24'd0, c_gz_hz10}),
-// MUTE         .gzbn               ({27'd0, c_gz_bin}),
-// MUTE         .gzmg               (c_gz_mag),
-// MUTE         .gzfr               ({24'd0, c_gz_fcnt}),
-// MUTE         .lk_is              (c_sv_itsm),
-// MUTE         .lk_be              (c_sv_en),
+        .gzhz               ({24'd0, c_gz_hz10}),
+        .gzbn               ({27'd0, c_gz_bin}),
+        .gzmg               (c_gz_mag),
+        .gzfr               ({24'd0, c_gz_fcnt}),
+        .lk_is              (c_sv_itsm),
+        .lk_be              (c_sv_en),
         .tx                 (O_uart_tx)
     );
 

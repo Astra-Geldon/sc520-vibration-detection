@@ -9,11 +9,36 @@
 //  串口：115200 8N1；板子 TX(H1) 接 USB-TTL 的 RXD，GND 共地
 //
 //  ---------------------------------------------------------------------
-//  每轮先打 1 行横幅，再打 2 行状态，每行 15 字节，共 67 字节//  （115200 下约 5.8 ms 打完，所以"每秒一轮"绰绰有余）：
+//  每轮先打 1 行横幅，再打 27 行状态，每行 15 字节，共 442 字节//  （115200 下约 38.4 ms 打完，所以"每秒一轮"绰绰有余）：
 //
 //      SC520 MIPI-HDMI UART LOG 115200 8N1\r\n
 //      SEC  00000000   运行秒数（每轮 +1）
 //      VSUM 00000000   抽头 Σ灰度（摄像头活着的证据）
+//      GPIX 00000000   高斯每帧输出像素数（应 230400）
+//      ITSM 00000000   每帧 Σ|It|：静止接近 0，一动就涨
+//      ITER 00000000   上一帧差分异常计数，必须 = 0
+//      LKPX 00000000   LK 每帧像素数，应 = 0x00038400
+//      LKER 00000000   LK 异常计数，必须 = 0
+//      LKU  00000000   u 的 Q8.8（像素/帧，有符号）
+//      LKV  00000000   v 的 Q8.8（像素/帧，有符号）
+//      LKVA 00000000   该块通过门限（1=有效）
+//      LKBL 00000000   最大变化块的列 0..7
+//      LKBR 00000000   最大变化块的行 0..5
+//      LKBE 00000000   最大块 en
+//      FXPS 00000000   固定块 {valid,row,col}
+//      FXBX 00000000   固定块 bx
+//      FXBY 00000000   固定块 by
+//      FXEN 00000000   固定块 en
+//      FXTX 00000000   固定块 Σmin(ix²,iy²)（二维可观测性）
+//      GZHZ 00000000   Goertzel 峰值频率×10（55=5.5Hz）
+//      GZBN 00000000   Goertzel 峰值频点 0..16
+//      GZMG 00000000   Goertzel 峰值幅度² >>8（防 32 位回绕）
+//      GZFR 00000000   Goertzel 窗口已累计帧数 0..128
+//      GZWC 00000000   阶段0 写流校验（旋转XOR）
+//      GZRC 00000000   阶段0 读流校验，应等于 GZWC
+//      GZOK 00000000   阶段0 存储自检通过（GZWC==GZRC）
+//      GZS1 00000000   bin6(5Hz) 的 s1 状态
+//      LKIS 00000000   与 LKBE 同拍锁存的 ITSM
 //
 //  判读方法：
 //    * 能看到整齐的上面这些行        -> 波特率 / 帧格式 / 引脚 都对 ✓
@@ -59,6 +84,31 @@ module uart_log_debug #(
     input  wire        raw10_seen,          // 已出现 RAW10 流水（粘滞）
     input  wire        video_nonzero_seen,  // 已读到非零视频数据（粘滞）
     input wire [31:0] vsum, // 抽头每帧 Σ灰度：非 0 说明抽头拿到像素了
+    input wire [31:0] gpx, // 高斯每帧输出像素数，应恒为 230400
+    input wire [31:0] it_sum,             // 每帧 Σ|It|：静止场景接近 0，画面一动立刻涨
+    input wire [31:0] it_err,             // 上一帧差分异常计数，必须 = 0
+    input wire [31:0] lk_px,              // LK 每帧参与累加的像素数，应 = 0x00038400
+    input wire [31:0] lk_err,             // LK 异常计数，必须 = 0
+    input wire signed [31:0] lk_u,  // u = 2*nu_hw/det_hw，Q8.8 像素/帧
+    input wire signed [31:0] lk_v,  // v = 2*nv_hw/det_hw，Q8.8 像素/帧
+    input wire lk_va,              // 1 = 该块通过门限，u/v 有效
+    input wire [2:0] lk_bl,        // 最大变化块的块列 0..7
+    input wire [2:0] lk_br,        // 最大变化块的块行 0..5
+    input wire [31:0] lk_be, // 最大变化块的 acc_en（诊断 LKBE 恒定用）
+    input wire [31:0] fxpos, // 纹理固定块: bit[6]=valid, bit[5:3]=row, bit[2:0]=col（共 32 位）
+    input wire signed [31:0] fxbx, // 固定块本帧的 bx
+    input wire signed [31:0] fxby, // 固定块本帧的 by
+    input wire [31:0] fxen, // 固定块本帧的 en
+    input wire [31:0] fxtex, // 固定块 Σmin(ix^2, iy^2)：一维纹理接近 0，二维纹理才大
+    input wire [31:0] gzhz, // Goertzel 峰值频率*10
+    input wire [31:0] gzbn, // Goertzel 峰值频点
+    input wire [31:0] gzmg, // Goertzel 峰值 mag^2 >> 8（覆盖到 5.5e11，不回绕）
+    input wire [31:0] gzfr, // Goertzel 窗口帧计数
+    input wire [31:0] gzwc, // 写流旋转XOR校验
+    input wire [31:0] gzrc, // 读流旋转XOR校验
+    input wire [31:0] gzok, // 存储自检通过标志
+    input wire signed [31:0] gzs1, // 5Hz 频点的 s1
+    input wire [31:0] lk_is, // 与 LKBE 同一拍锁存的 ITSM，用于验证 LKBE <= LKIS
     output wire        tx                   // 串口输出 -> O_uart_tx -> H1
 );
 
@@ -71,8 +121,8 @@ module uart_log_debug #(
     //------------------------------------------------------------------
     // 一轮消息的长度参数
     //------------------------------------------------------------------
-    localparam integer NF        = 2;   // 状态行（字段）个数
-    localparam integer FLD_LAST  = 2 - 1;
+    localparam integer NF        = 27;   // 状态行（字段）个数
+    localparam integer FLD_LAST  = 27 - 1;
     localparam integer POS_LAST  = 15 - 1;
     localparam integer BIDX_LAST = 37 - 1;
 
@@ -144,13 +194,38 @@ module uart_log_debug #(
     // 字段标签：给出第 f 个字段的第 p 个字符（p: 0..3，从左到右）
     //------------------------------------------------------------------
     function [7:0] lbl;
-        input [0:0] f;
+        input [4:0] f;
         input [1:0] p;
         reg  [31:0] s;
         begin
             case (f)
-            1'd0 : s = "SEC ";
-            1'd1 : s = "VSUM";
+            5'd0 : s = "SEC ";
+            5'd1 : s = "VSUM";
+            5'd2 : s = "GPIX";
+            5'd3 : s = "ITSM";
+            5'd4 : s = "ITER";
+            5'd5 : s = "LKPX";
+            5'd6 : s = "LKER";
+            5'd7 : s = "LKU ";
+            5'd8 : s = "LKV ";
+            5'd9 : s = "LKVA";
+            5'd10: s = "LKBL";
+            5'd11: s = "LKBR";
+            5'd12: s = "LKBE";
+            5'd13: s = "FXPS";
+            5'd14: s = "FXBX";
+            5'd15: s = "FXBY";
+            5'd16: s = "FXEN";
+            5'd17: s = "FXTX";
+            5'd18: s = "GZHZ";
+            5'd19: s = "GZBN";
+            5'd20: s = "GZMG";
+            5'd21: s = "GZFR";
+            5'd22: s = "GZWC";
+            5'd23: s = "GZRC";
+            5'd24: s = "GZOK";
+            5'd25: s = "GZS1";
+            5'd26: s = "LKIS";
             default: s = "????";
             endcase
             case (p)
@@ -169,8 +244,33 @@ module uart_log_debug #(
 
     always @(*) begin
         case (fld)
-        1'd0 : v = run_sec           ; // 运行秒数（每轮 +1）
-        1'd1 : v = vsum              ; // 抽头 Σ灰度（摄像头活着的证据）
+        5'd0 : v = run_sec           ; // 运行秒数（每轮 +1）
+        5'd1 : v = vsum              ; // 抽头 Σ灰度（摄像头活着的证据）
+        5'd2 : v = gpx               ; // 高斯每帧输出像素数（应 230400）
+        5'd3 : v = it_sum            ; // 每帧 Σ|It|：静止接近 0，一动就涨
+        5'd4 : v = it_err            ; // 上一帧差分异常计数，必须 = 0
+        5'd5 : v = lk_px             ; // LK 每帧像素数，应 = 0x00038400
+        5'd6 : v = lk_err            ; // LK 异常计数，必须 = 0
+        5'd7 : v = lk_u              ; // u 的 Q8.8（像素/帧，有符号）
+        5'd8 : v = lk_v              ; // v 的 Q8.8（像素/帧，有符号）
+        5'd9 : v = lk_va             ; // 该块通过门限（1=有效）
+        5'd10: v = lk_bl             ; // 最大变化块的列 0..7
+        5'd11: v = lk_br             ; // 最大变化块的行 0..5
+        5'd12: v = lk_be             ; // 最大块 en
+        5'd13: v = snap[13]          ; // 固定块 {valid,row,col}
+        5'd14: v = snap[14]          ; // 固定块 bx
+        5'd15: v = snap[15]          ; // 固定块 by
+        5'd16: v = snap[16]          ; // 固定块 en
+        5'd17: v = snap[17]          ; // 固定块 Σmin(ix²,iy²)（二维可观测性）
+        5'd18: v = snap[18]          ; // Goertzel 峰值频率×10（55=5.5Hz）
+        5'd19: v = snap[19]          ; // Goertzel 峰值频点 0..16
+        5'd20: v = snap[20]          ; // Goertzel 峰值幅度² >>8（防 32 位回绕）
+        5'd21: v = snap[21]          ; // Goertzel 窗口已累计帧数 0..128
+        5'd22: v = snap[22]          ; // 阶段0 写流校验（旋转XOR）
+        5'd23: v = snap[23]          ; // 阶段0 读流校验，应等于 GZWC
+        5'd24: v = snap[24]          ; // 阶段0 存储自检通过（GZWC==GZRC）
+        5'd25: v = snap[25]          ; // bin6(5Hz) 的 s1 状态
+        5'd26: v = snap[26]          ; // 与 LKBE 同拍锁存的 ITSM
         default:  v = 32'd0;
         endcase
     end
@@ -197,7 +297,7 @@ module uart_log_debug #(
     // ★ 整轮日志的快照（本轮新增，修一个真实的观测问题）
     //
     //   下面的 v 是**组合译码**：每个字段是"发到它那一刻"才去取值。
-    //   而一轮要发 5.8 ms，一帧只有 16.7 ms —— 于是
+    //   而一轮要发 38.4 ms，一帧只有 16.7 ms —— 于是
     //     ITSM(字段25) 与 ITSS(字段29) 相隔 4 字段 = 60 字节 = 5.2 ms，
     //     约 31% 的概率落在相邻两帧上。
     //   实测出现过 |ITSS| > ITSM（= 1.67e7 > 1.78e5），这违反三角不等式
@@ -206,14 +306,27 @@ module uart_log_debug #(
     //
     //   修法：每秒开轮的那一拍，把所有"会变的"字段（13 号及之后）
     //         一次性打进快照寄存器，整轮日志都从快照读 -> 同一轮内自洽。
-    //   代价：0 个 32bit 寄存器。标志位/常量不必快照。
+    //   代价：14 个 32bit 寄存器。标志位/常量不必快照。
     //------------------------------------------------------------------
     wire        snap_ld = (st_r == ST_TICK) && tick_1s;   // 开轮那一拍
     reg  [31:0] snap [0:NF-1];
 
     always @(posedge clk) begin
         if (snap_ld) begin
-
+            snap[13] <= fxpos;
+            snap[14] <= fxbx;
+            snap[15] <= fxby;
+            snap[16] <= fxen;
+            snap[17] <= fxtex;
+            snap[18] <= gzhz;
+            snap[19] <= gzbn;
+            snap[20] <= gzmg;
+            snap[21] <= gzfr;
+            snap[22] <= gzwc;
+            snap[23] <= gzrc;
+            snap[24] <= gzok;
+            snap[25] <= gzs1;
+            snap[26] <= lk_is;
         end
     end
 
@@ -270,7 +383,7 @@ module uart_log_debug #(
     //------------------------------------------------------------------
     reg              in_banner;   // 1 = 正在发横幅
     reg  [5:0] bidx;        // 横幅字节下标
-    reg  [0:0] fld;         // 字段号
+    reg  [4:0] fld;         // 字段号
     reg  [3:0] pos;         // 字段内字节位置
 
     //------------------------------------------------------------------

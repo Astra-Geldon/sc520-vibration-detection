@@ -1,12 +1,3 @@
-// ★★ 去掉下面这行的注释即可旁路 AWB（做颜色对比实验）★★
-// ★★ 去掉下行的注释 = 切到"帧级增益"版 AWB（省掉一个除法器）★★
-//`define AWB_FRAMEGAIN
-
-//`define AWB_BYPASS
-
-// 帧级增益版 AWB（方案 B），由本文件用 include 拉入，不要登记进 .al
-`include "../awb_fg.v"
-
 module isp_top (
     input 			axi4s_video_aclk,
     input 			I_rst_n			,
@@ -83,52 +74,6 @@ data128_96 u_data128_96 (
     .O_tdata(m_aixs_tdata_96)
 );
 
-`ifdef AWB_BYPASS
-//=============================================================================
-//  AWB 旁路实验（2026-10-18）
-//
-//  目的：判断 SC520 传感器内部是否已经做了 AWB。
-//        如果传感器自带 AWB，FPGA 再算一次就是**双重校正**，
-//        两个自适应环互相追打，会形成低频猎振 → 污染振动频率检测。
-//
-//  用法：把文件头 //`define AWB_BYPASS 的注释去掉再编译，对比 HDMI 画面颜色。
-//        颜色正常  → 传感器自带 AWB → FPGA 这套可以永久删掉（省 9,926）
-//        发绿/发紫  → 传感器没做   → FPGA 的 AWB 必需，改平滑帧级
-//
-//  注意：旁路后 AWB 的延迟消失，但 AXI-Stream 不依赖固定延迟，
-//        下游的 96→128 转换和时间戳都不受影响。
-//=============================================================================
-    assign m_aixs_tready = O_tready;
-    assign awb_O_tdata   = m_aixs_tdata_96;
-    assign awb_O_tlast   = m_aixs_tlast;
-    assign awb_O_tuser   = m_aixs_tuser;
-    assign awb_O_tvalid  = m_aixs_tvalid;
-`else
-`ifdef AWB_FRAMEGAIN
-//------------------------------------------------------------------
-//  帧级增益版 AWB（方案 B）
-//  去掉文件头 //`define AWB_FRAMEGAIN 的注释即可切换
-//  数据通路延迟与原版完全一致（signal_delay 50 + 3 级寄存器）
-//------------------------------------------------------------------
-awb_fg #(
-    .IMG_HEIGHT(720 ),
-    .IMG_WIDTH (1280)
-) u_awb (
-    .I_clk   (axi4s_video_aclk),
-    .I_rst_n (I_rst_n),
-    .I_tlast (m_aixs_tlast),
-    .I_tuser (m_aixs_tuser),
-    .I_tdata (m_aixs_tdata_96),
-    .I_tvalid(m_aixs_tvalid),
-    .I_tready(m_aixs_tready),
-    .O_tlast (awb_O_tlast ),
-    .O_tuser (awb_O_tuser ),
-    .O_tdata (awb_O_tdata ),
-    .O_tvalid(awb_O_tvalid),
-    .O_tready(awb_O_tready)
-);
-`else
-//  原版 AWB（每像素重算增益）—— 基准版本，保留
 awb #(
     .IMG_HEIGHT(720 ),
     .IMG_WIDTH (1280)
@@ -146,46 +91,14 @@ awb #(
     .O_tvalid(awb_O_tvalid),
     .O_tready(awb_O_tready)
 );
-`endif   // AWB_FRAMEGAIN
-
-`endif
-
-    //------------------------------------------------------------------
-    //  伽马校正（2026-10-18 补入）
-    //
-    //  为什么必须加：模块 axis_gamma_rgb96 一直定义在本文件末尾，
-    //  但从来没有被例化过 —— 所以 10 位传感器到 8 位显示是**线性映射**，
-    //  中灰被严重压暗（实测平均灰度 24~48，而传感器还有余量）。
-    //  这条曲线 y = 255*(x/255)^0.7 把暗部和中调抬高 30~60%，
-    //  亮部基本不变，正好补上"暗淡"的问题。
-    //
-    //  位置：AWB 之后、96→128 转换之前。
-    //  代价：多 1 拍流水 = 画面右移 4 个像素（96 位总线 = 4 像素）
-    //        这个偏移对显示无影响，但记在这里以备后查。
-    //------------------------------------------------------------------
-    wire        gam_O_tlast, gam_O_tuser, gam_O_tvalid;
-    wire [95:0] gam_O_tdata;
-
-    axis_gamma_rgb96 u_gamma (
-        .I_clk   ( axi4s_video_aclk ),
-        .I_rst_n ( I_rst_n           ),
-        .I_tlast ( awb_O_tlast       ),
-        .I_tuser ( awb_O_tuser       ),
-        .I_tdata ( awb_O_tdata       ),
-        .I_tvalid( awb_O_tvalid      ),
-        .O_tlast ( gam_O_tlast       ),
-        .O_tuser ( gam_O_tuser       ),
-        .O_tdata ( gam_O_tdata       ),
-        .O_tvalid( gam_O_tvalid      )
-    );
 
     data_96bit_to_128bit u_data_96bit_to_128bit(
         .I_clk              ( axi4s_video_aclk  ),
         .I_rst_n            ( I_rst_n           ),
 	
-        .I_96b_frame_start  ( gam_O_tuser       ),
-        .I_96b_valid        ( gam_O_tvalid      ),
-        .I_96b_data         ( gam_O_tdata       ),
+        .I_96b_frame_start  ( awb_O_tuser       ),
+        .I_96b_valid        ( awb_O_tvalid      ),
+        .I_96b_data         ( awb_O_tdata       ),
 	
         .O_128b_frame_start ( awb_O_tuser_128  	),
         .O_128b_valid       ( awb_O_tvalid_128 	),
@@ -203,9 +116,8 @@ endmodule
 
 
 // Four-pixel RGB888 gamma stage.  The 16-segment curve approximates
-// y = 255 * (x / 255)^0.7.  Mid-tone lift WITHOUT the heavy shadow lift,
-// so the sensor black-level noise is NOT amplified (no grey veil).
-// Adds one registered pipeline cycle.
+// y = 255 * (x / 255)^0.7.  It lifts shadows and mid-tones while preserving
+// black and white and adds one registered pipeline cycle.
 module axis_gamma_rgb96 (
     input  wire        I_clk,
     input  wire        I_rst_n,
