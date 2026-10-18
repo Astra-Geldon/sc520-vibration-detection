@@ -1,0 +1,44 @@
+# ---- 编译产物：全部忽略 ----
+td_project/*_Runs/
+*.bit
+*.sbit
+*.bin
+*.db
+*.dcp
+*.timing
+*.timingsummary
+*.rpt
+*.log
+*.logw
+*.area
+*.trp
+*.dtrp
+
+# ---- TD 工程运行时文件（每次编译都会重写）----
+td_project/settings.cfg
+td_project/*.adc
+
+# ---- 系统文件 ----
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---- 编辑器 ----
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---- 备份 ----
+zhendong_defect/
+*.zip
+*.7z
+*.rar
+
+# ---- Python ----
+__pycache__/
+*.pyc
+
+# ---- 注意 ----
+# user_source/ip_source/*.xml 是 IP 核定义，.al 工程文件要用，必须提交！
+# td_project/*.al 是工程文件本身，必须提交！
