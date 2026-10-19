@@ -77,15 +77,18 @@ module img_proc #(
         //--------------------------------------------------------------
         end
         else if (MODE == 2) begin : g_binary
+            localparam [7:0] TH8 = THRESH;   // 显式截断，避免 32 位 integer 直接赋给 8 位寄存器
+
             reg  [7:0]  S_th;           // 当前使用的阈值
             reg  [27:0] S_acc;          // 帧累加：1280*720*255 = 235,008,000 < 2^28
             reg         S_vs_d;
 
-            // I_vs 上升沿 = 新一帧开始：用刚结束那一帧的均值更新阈值
+            // I_vs 上升沿 = 一帧有效像素已收完（VTC 的 vs 在 active 之后 5 行才拉高）：
+            // 用刚结束那一帧的均值更新下一帧的阈值
             always @(posedge I_clk or negedge I_rst_n) begin
                 if (!I_rst_n) begin
                     S_vs_d <= 1'b0;
-                    S_th   <= THRESH;
+                    S_th   <= TH8;
                     S_acc  <= 28'd0;
                 end
                 else begin

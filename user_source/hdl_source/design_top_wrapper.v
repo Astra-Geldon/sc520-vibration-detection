@@ -339,7 +339,8 @@ module design_top_wrapper (
     //   插在 video_out 与 hdmi_mixer 之间，同属 S_hdmi_pixel_clk 域。
     //   IMG_MODE: 0=直通 1=灰度 2=二值化（详见 img_proc.v 文件头）
     //   灰度/二值化是纯组合、零延迟，因此 mixer 的时序对齐不用改。
-    localparam integer IMG_MODE = 1;
+    //   进阶要求(1)的按键实时切换留到阶段 4：把 IMG_MODE 换成运行期寄存器即可。
+    localparam integer IMG_MODE = 2;
     wire[23:0]  S_imgp_data;
 
     reg         S_dbg_raw_seen;
