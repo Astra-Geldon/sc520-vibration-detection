@@ -42,3 +42,11 @@ __pycache__/
 # ---- 注意 ----
 # user_source/ip_source/*.xml 是 IP 核定义，.al 工程文件要用，必须提交！
 # td_project/*.al 是工程文件本身，必须提交！
+
+# ---- local work notes: never upload (see docs/plan/00-overview.md) ----
+docs/
+
+# ---- TD reports produced by td_project/flow_build.tcl ----
+*.qor
+*.ts
+*.bid
