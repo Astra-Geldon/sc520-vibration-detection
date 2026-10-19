@@ -1,4 +1,4 @@
-﻿
+
 
 // 振动算法通路：上一帧灰度缓存 + 帧差 It
 // 振动算法通路的模块来源说明（★ 很重要，重复定义会整个编译失败）
@@ -334,6 +334,14 @@ module design_top_wrapper (
     wire[23:0]  S_hdmi_out_data;
 
     wire[23:0]  S_video_rd_data;
+
+    // ===== 基础图像处理（基础要求 2.3(2)）=====
+    //   插在 video_out 与 hdmi_mixer 之间，同属 S_hdmi_pixel_clk 域。
+    //   IMG_MODE: 0=直通 1=灰度 2=二值化（详见 img_proc.v 文件头）
+    //   灰度/二值化是纯组合、零延迟，因此 mixer 的时序对齐不用改。
+    localparam integer IMG_MODE = 1;
+    wire[23:0]  S_imgp_data;
+
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
     reg         S_dbg_ddr_wr_seen;
@@ -1076,6 +1084,23 @@ isp_top u_isp_top (
     );
 
 `ifndef VIB_NO_DISPLAY
+    //------------------------------------------------------------------
+    //  基础图像处理：video_out -> img_proc -> hdmi_mixer
+    //    纯组合、零延迟，mixer 的 2 级对齐照旧
+    //------------------------------------------------------------------
+    img_proc #(
+        .MODE       ( IMG_MODE ),
+        .THRESH     ( 48       ),
+        .ADAPT_EN   ( 1        )
+    )u_img_proc(
+        .I_clk      ( S_hdmi_pixel_clk ),
+        .I_rst_n    ( S_hdmi_rst_n     ),
+        .I_vs       ( S_hdmi_vsync     ),
+        .I_de       ( S_hdmi_de        ),
+        .I_data     ( S_video_rd_data  ),
+        .O_data     ( S_imgp_data      )
+    );
+
     hdmi_mixer #(
         .H_OFFSET   ( 0    ),
         .V_OFFSET   ( 0    ),
@@ -1094,7 +1119,7 @@ isp_top u_isp_top (
         .I_video_last    ( S_hdmi_last        ),
         .I_debug_status  ( S_hdmi_debug_status),
         .O_video_rd_en   ( S_hdmi_window_rd_en),
-        .I_video_rd_data ( S_video_rd_data    ),
+        .I_video_rd_data ( S_imgp_data       ),
         .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
         .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
         .O_hdmi_de       ( S_hdmi_out_de      ),
@@ -1187,6 +1212,7 @@ isp_top u_isp_top (
 `else
     // ---- 显示关闭：hdmi_mixer / hdmi_tx 原本驱动的信号全部接地 ----
     //   顶层 TMDS 差分输出必须驱动，否则会报输出未驱动。
+    assign S_imgp_data         = 24'd0;
     assign S_hdmi_window_rd_en = 1'b0;
     assign S_hdmi_out_vsync    = 1'b0;
     assign S_hdmi_out_hsync    = 1'b0;
