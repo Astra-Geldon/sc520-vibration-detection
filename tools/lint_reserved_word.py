@@ -18,8 +18,8 @@ import os
 import re
 import sys
 
-ROOT = (r'D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520'
-        r'\lab_ex1_mipi_hdmi\user_source\hdl_source')
+ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+     'user_source', 'hdl_source')
 
 RESERVED = set("""
 always and assign automatic begin buf bufif0 bufif1 case casex casez cell cmos

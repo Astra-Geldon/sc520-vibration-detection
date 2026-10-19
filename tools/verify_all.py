@@ -4,8 +4,8 @@ import io
 import os
 import re
 
-H = (r'D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520'
-     r'\lab_ex1_mipi_hdmi\user_source\hdl_source')
+H = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+     'user_source', 'hdl_source')
 
 
 def nc(t):

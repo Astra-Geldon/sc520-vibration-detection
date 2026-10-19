@@ -9,8 +9,8 @@ import os
 import re
 import sys
 
-H = (r'D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520'
-     r'\lab_ex1_mipi_hdmi\user_source\hdl_source')
+H = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+     'user_source', 'hdl_source')
 LK = os.path.join(H, 'vib_lk_grid.v')
 TOP = os.path.join(H, 'design_top_wrapper.v')
 
@@ -33,8 +33,12 @@ print('=== 显示通路关闭 ===')
 chk('VIB_NO_DISPLAY 已定义', '`define VIB_NO_DISPLAY' in top)
 chk('video_out 被 ifndef 包住',
     re.search(r'`ifndef VIB_NO_DISPLAY\s*\n\s*video_out u_video_out', top) is not None)
+# 注意：不能要求 hdmi_mixer 紧跟 `ifndef —— img_proc 是插在它们之间的（img_proc.v）。
+# 这里只断言 hdmi_mixer / hdmi_tx 确实落在最后一个 `ifndef VIB_NO_DISPLAY 块内。
+_disp = top[top.rfind('`ifndef VIB_NO_DISPLAY'):].split('`else')[0]
 chk('hdmi_mixer/hdmi_tx 被 ifndef 包住',
-    re.search(r'`ifndef VIB_NO_DISPLAY\s*\n\s*hdmi_mixer', top) is not None)
+    re.search(r'\bhdmi_mixer\b', _disp) is not None and
+    re.search(r'\bhdmi_tx u_hdmi_tx\b', _disp) is not None)
 chk('video_out 关闭时输出接地',
     "assign S_video_out_rd_busy = 1'b0;" in top and
     "assign S_vo_ddr_rd_en      = 1'b0;" in top and

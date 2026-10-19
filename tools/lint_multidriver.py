@@ -10,8 +10,8 @@ import os
 import re
 from collections import defaultdict
 
-H = (r'D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520'
-     r'\lab_ex1_mipi_hdmi\user_source\hdl_source')
+H = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+     'user_source', 'hdl_source')
 
 FILES = ['vib_lk_grid.v', 'vib_prev_frame_ddr.v', 'vib_gauss3x3.v',
          'design_top_wrapper.v', 'uart_log_debug.v',

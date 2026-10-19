@@ -7,7 +7,7 @@ This is the check that would have caught `.PX_PER_BEAT(4)` being left behind.
 """
 import io, os, re, sys
 
-PROJ = r"D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520\lab_ex1_mipi_hdmi"
+PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOP  = os.path.join(PROJ, "user_source", "hdl_source", "design_top_wrapper.v")
 AL   = os.path.join(PROJ, "td_project", "camera_to_dsi_display.al")
 

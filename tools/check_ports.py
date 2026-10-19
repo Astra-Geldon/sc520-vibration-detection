@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 双向端口比对：顶层例化的端口名集合必须与模块定义的端口名集合完全一致。
 
@@ -11,8 +11,8 @@ import os
 import re
 import sys
 
-H = (r'D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520'
-     r'\lab_ex1_mipi_hdmi\user_source\hdl_source')
+H = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+     'user_source', 'hdl_source')
 TOP = os.path.join(H, 'design_top_wrapper.v')
 
 # 需要检查的 模块名 -> 定义文件
@@ -22,6 +22,7 @@ PAIRS = [
     ('vib_lk_solve',      os.path.join(H, 'vib_lk_grid.v')),
     ('vib_prev_frame_ddr', os.path.join(H, 'vib_prev_frame_ddr.v')),
     ('vib_gauss3x3',      os.path.join(H, 'vib_gauss3x3.v')),
+    ('img_proc',          os.path.join(H, 'img_proc.v')),
 ]
 
 

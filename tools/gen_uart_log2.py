@@ -4,9 +4,10 @@
 DDR-self-test measurements).  Tables are generated so lengths and indices
 cannot be miscounted by hand."""
 import io
+import os
 
-OUT = (r"D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520"
-       r"\lab_ex1_mipi_hdmi\user_source\hdl_source\uart_log_debug.v")
+OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+     'user_source', 'hdl_source', 'uart_log_debug.v')
 
 BANNER = "SC520 MIPI-HDMI UART LOG 115200 8N1\r\n"
 
