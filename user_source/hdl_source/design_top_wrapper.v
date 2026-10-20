@@ -246,11 +246,6 @@ module design_top_wrapper (
     wire signed [31:0] S_lk_axx, S_lk_ayy, S_lk_axy, S_lk_bx, S_lk_by, S_lk_en;
     wire[31:0]  S_lk_px, S_lk_err;
     // 诊断采样：固定像素(行100/列100)的邻域字节与差值
-    wire[7:0]   S_lk_dbg_m0, S_lk_dbg_m1, S_lk_dbg_m2, S_lk_dbg_p0;
-    wire[5:0]   S_lk_dbg_sel;
-    wire[7:0]   S_lk_dbg_pa, S_lk_dbg_pb;
-    wire[31:0]  S_lk_dbg_ae, S_lk_dbg_af;
-    wire[31:0]  S_lk_dbg_xa, S_lk_dbg_xb;
     wire[31:0]  S_fx_pos, S_fx_en;
     wire signed [31:0] S_fx_bx, S_fx_by;
     wire signed [32:0] S_fx_tex;
@@ -271,7 +266,6 @@ module design_top_wrapper (
     wire signed [31:0] S_gz_hp, S_gz_in, S_gz_s1;
     wire signed [31:0] S_fx_axx, S_fx_ayy, S_fx_axy;
     wire               S_fx_tick;
-    wire[7:0]   S_lk_dbg_la, S_lk_dbg_lb, S_lk_dbg_lc;
     wire[31:0]  S_sv_num_ld;
     wire[31:0]  S_lk_b_itsm;
     wire[31:0]  S_sv_det_h, S_sv_num_h, S_sv_quot;
@@ -1362,20 +1356,6 @@ isp_top u_isp_top (
 
         .st_px          ( S_lk_px                ),
         .st_err         ( S_lk_err               ),
-        .st_dbg_m0      ( S_lk_dbg_m0            ),
-        .st_dbg_m1      ( S_lk_dbg_m1            ),
-        .st_dbg_m2      ( S_lk_dbg_m2            ),
-        .st_dbg_p0      ( S_lk_dbg_p0            ),
-        .st_dbg_pa      ( S_lk_dbg_pa            ),
-        .st_dbg_pb      ( S_lk_dbg_pb            ),
-        .st_dbg_ae      ( S_lk_dbg_ae            ),
-        .st_dbg_af      ( S_lk_dbg_af            ),
-        .st_dbg_xa      ( S_lk_dbg_xa            ),
-        .st_dbg_xb      ( S_lk_dbg_xb            ),
-        .st_dbg_sel     ( S_lk_dbg_sel           ),
-        .st_dbg_la      ( S_lk_dbg_la            ),
-        .st_dbg_lb      ( S_lk_dbg_lb            ),
-        .st_dbg_lc      ( S_lk_dbg_lc            ),
         .st_b_itsm      ( S_lk_b_itsm            ),
         .i_it_sum       ( S_it_sum               ),
         .st_tgl         ( S_lk_tgl               ),
@@ -1591,12 +1571,6 @@ isp_top u_isp_top (
     reg  signed [31:0] c_gz_hp, c_gz_in, c_gz_s1;
     reg  signed [31:0] c_fx_bx, c_fx_by;
     reg  signed [32:0] c_fx_tex;
-    reg  [7:0]         c_lk_dbg_m0, c_lk_dbg_m1, c_lk_dbg_m2, c_lk_dbg_p0;
-    reg  [5:0]         c_lk_dbg_sel;
-    reg  [7:0]         c_lk_dbg_pa, c_lk_dbg_pb;
-    reg  [31:0]        c_lk_dbg_ae, c_lk_dbg_af;
-    reg  [31:0]        c_lk_dbg_xa, c_lk_dbg_xb;
-    reg  [7:0]         c_lk_dbg_la, c_lk_dbg_lb, c_lk_dbg_lc;
     reg  [31:0]        c_sv_num_ld;
     reg  [31:0]        c_sv_en;
     always @(posedge I_sys_clk) begin
@@ -1618,14 +1592,6 @@ isp_top u_isp_top (
             c_gz_hp   <= S_gz_hp;
             c_gz_in   <= S_gz_in;
             c_gz_s1   <= S_gz_s1;
-            c_lk_dbg_m0 <= S_lk_dbg_m0; c_lk_dbg_m1 <= S_lk_dbg_m1;
-            c_lk_dbg_m2 <= S_lk_dbg_m2; c_lk_dbg_p0 <= S_lk_dbg_p0;
-            c_lk_dbg_sel <= S_lk_dbg_sel;
-            c_lk_dbg_pa <= S_lk_dbg_pa; c_lk_dbg_pb <= S_lk_dbg_pb;
-            c_lk_dbg_ae <= S_lk_dbg_ae; c_lk_dbg_af <= S_lk_dbg_af;
-            c_lk_dbg_xa <= S_lk_dbg_xa; c_lk_dbg_xb <= S_lk_dbg_xb;
-            c_lk_dbg_la <= S_lk_dbg_la; c_lk_dbg_lb <= S_lk_dbg_lb;
-            c_lk_dbg_lc <= S_lk_dbg_lc;
         end
     end
 
@@ -1694,30 +1660,18 @@ isp_top u_isp_top (
         .raw10_seen         (S_dbg_raw10_seen),
         .video_nonzero_seen (S_dbg_video_nonzero_seen),
         .it_sum             (c_it_sum),
-        .it_err             (c_it_err),
 // MUTE         .lk_en              (c_lk_en),
-        .lk_px              (c_lk_px),
-        .lk_err             (c_lk_err),
         .fxpos              (c_fx_pos),
         .fxbx               (c_fx_bx),
         .fxby               (c_fx_by),
         .fxen               (c_fx_en),
         .fxtex              (c_fx_tex[31:0]),   // LINT-OK: Σmin 恒 >= 0，截断安全
-// MUTE         .lk_ae              (c_lk_dbg_ae),
-// MUTE         .lk_af              (c_lk_dbg_af),
-// MUTE         .lk_xa              (c_lk_dbg_xa),
-// MUTE         .lk_xb              (c_lk_dbg_xb),
         .vsum               (c_tap_sum),
 // MUTE         .itpx               (c_it_px),
         .gpx                (c_g_px),
 // MUTE         .gln                (c_g_lines),
-        .lk_u               (c_sv_u),
-        .lk_v               (c_sv_v),
         .lk_va              (c_sv_valid),
-        .lk_bl              (c_sv_bcol),
-        .lk_br              (c_sv_brow),
 
-        .gzs1               (c_gz_s1),
 
 
         .gzhz               ({24'd0, c_gz_hz10}),
@@ -1725,8 +1679,6 @@ isp_top u_isp_top (
         .gzmg               (c_gz_mag),
         .gztl               ({31'd0, S_gz_tonal}),
         .gzfr               ({24'd0, c_gz_fcnt}),
-        .lk_is              (c_sv_itsm),
-        .lk_be              (c_sv_en),
         .tx                 (O_uart_tx)
     );
 

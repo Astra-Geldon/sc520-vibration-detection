@@ -54,23 +54,9 @@ module vib_lk_grid (
     //     * 奇偶锯齿(82,86,83,87) -> 抽头竖直 2x2 没做平均（是抽头的问题，不是 LK）
     //     * 跳变不连续(82,83,191,84) -> gmem 环的 gsel_up/gsel_dn/gsel_m_r 选错行
     //   mrow 98..102 都在块行 1 内部（60..119），不跨块行边界。
-    output reg  [7:0]   st_dbg_m0,        // g[m-1][100]  走 gsel_dn 通路
-    output reg  [7:0]   st_dbg_m1,        // g[m  ][100]  走 shB 通路（基准）
-    output reg  [7:0]   st_dbg_m2,        // g[m+1][100]  走 gsel_up 通路
-    output reg  [7:0]   st_dbg_p0,        // prev[m][100] 走 pmem 通路
-    output reg  [7:0]   st_dbg_pa,        // prev[99][100]
-    output reg  [7:0]   st_dbg_pb,        // prev[101][100]
-    output reg  [31:0]  st_dbg_ae,        // 块0~3 的 acc_en>>13
-    output reg  [31:0]  st_dbg_af,        // 块4~7 的 acc_en>>13
     // ---- 水平错位诊断 ----
     //   每个字段 4 字节 = {cur[x], prev[x-1], prev[x], prev[x+1]}（最高字节是 cur[x]）
     //   判据：若 |cur[x]-prev[x±1]| 明显小于 |cur[x]-prev[x]|，则 prev 相对 cur 水平错位
-    output reg  [31:0]  st_dbg_xa,        // 纹理强列 300（块 3）
-    output reg  [31:0]  st_dbg_xb,        // 平坦列  60（块 0）
-    output reg  [5:0]   st_dbg_sel,       // {wr_sel, gsel_dn, gsel_m_r}
-    output reg  [7:0]   st_dbg_la,        // 当前线的第一个字节
-    output reg  [7:0]   st_dbg_lb,        // 上一条线的第一个字节
-    output reg  [7:0]   st_dbg_lc,        // 上上条线的第一个字节
 
     // ---- 纹理固定块（Goertzel 的信号源）----
     //   st_fx_pos = {25'd0, fx_valid, fx_row[2:0], fx_col[2:0]}   共 32 位
@@ -275,37 +261,20 @@ module vib_lk_grid (
     //==================================================================
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            st_dbg_m0 <= 8'd0; st_dbg_m1 <= 8'd0;
-            st_dbg_m2 <= 8'd0; st_dbg_p0 <= 8'd0;
-            st_dbg_pa <= 8'd0; st_dbg_pb <= 8'd0;
-            st_dbg_ae <= 32'd0; st_dbg_af <= 32'd0;
-            st_dbg_xa <= 32'd0; st_dbg_xb <= 32'd0;
-            st_dbg_sel <= 6'd0;
         end
         else if (proc_en) begin
             // ---- 当前帧的三行（同一列）----
             if ((px_now == 10'd100) && (mrow == 10'd100)) begin
-                st_dbg_m0 <= bD1;    // g[m-1][p]
-                st_dbg_m1 <= bB1;    // g[m  ][p]
-                st_dbg_m2 <= bU1;    // g[m+1][p]
-                st_dbg_p0 <= bP1;    // prev[m][p]
-                st_dbg_sel <= {wr_sel, gsel_dn, gsel_m_r};
                 // 8 个块的 acc_en 同时可见（各压缩到 8 位：>>7，上限 255*128 = 32640）
                 //   mrow=100 属于第 1 个块行（行 60~119），此时 acc_en 是
                 //   该块行到目前为止的部分和，8 个块可直接横向比较。
                 //   -> 若某一块远大于其余，说明那一块的 dit 被污染；
                 //      若 8 块都正常而 LKBE 仍偏大，则是 st_b_en 的清除有问题。
-                st_dbg_ae <= {ae3, ae2, ae1, ae0};
-                st_dbg_af <= {ae7, ae6, ae5, ae4};
             end
             // ---- prev 的三行剖面：prev[99] / prev[100] / prev[101] ----
             //   三个值应像图像相邻行一样平滑变化；若 prev[100] 与 cur[99]
             //   之类错位，就能直接看出 pmem 的行序偏了一行。
-            if ((px_now == 10'd100) && (mrow == 10'd99))  st_dbg_pa <= bP1;
-            if ((px_now == 10'd100) && (mrow == 10'd101)) st_dbg_pb <= bP1;
             // ---- 水平错位诊断：同一行、同一列，cur 与 prev 的三个相邻值 ----
-            if (px_now == 10'd300) st_dbg_xa <= {bB1, bP2, bP1, bP};
-            if (px_now == 10'd60)  st_dbg_xb <= {bB1, bP2, bP1, bP};
         end
     end
 
@@ -341,7 +310,6 @@ module vib_lk_grid (
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            st_dbg_la <= 8'd0; st_dbg_lb <= 8'd0; st_dbg_lc <= 8'd0;
             line_chk  <= 8'd0;
         end
         else if (word_valid && (st == ST_RECV)) begin
@@ -350,9 +318,6 @@ module vib_lk_grid (
             //   累加和覆盖全行 40 个字，才有判别力。
             if (wr_wk == 6'd0) begin
                 // 新一行开始：把上一条"已完成"行的 checksum 滚进 LA/LB/LC
-                st_dbg_lc <= st_dbg_lb;
-                st_dbg_lb <= st_dbg_la;
-                st_dbg_la <= line_chk;
                 line_chk  <= word_cur[127:120];
             end
             else begin

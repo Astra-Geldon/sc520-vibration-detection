@@ -65,10 +65,18 @@ module vib_goertzel #(
     localparam [7:0]  LAST_FRM  = NFRM - 1;
 
     // 音调判决的两个门限
-    //   MIN_MAG：峰值绝对下限。静止场景实测 GZMG ≈ 451，有振动时 > 1e5。
-    //            取 20000 留足余量；这个值可以在串口上按 GZMG 再调。
-    //   PEAK_RATIO：峰值 / 全部能量。真振动通常 > 50%，噪声 < 15%。
-    localparam signed [63:0] MIN_MAG = 64'sd20000;
+    //   MIN_MAG：峰值绝对下限。
+    //     实机数据（2026-10-20，手机屏播 8 Hz 视频）：
+    //       静止噪声     GZMG = 45,254
+    //       8 Hz 屏振动  GZMG = 8,289 ~ 33,953   ← 比手抖那次小得多
+    //       手抖 / 大幅  GZMG = 530,012
+    //     取 4,000（低于最小真实振动值的一半），主要靠比例判据区分。
+    //   PEAK_RATIO：峰值 / 平均 bin，用 pmax*2 > psum
+    //     静止时 17 个 bin 相近 → 峰值 ≈ 平均，比值 ≈ 1，判 0
+    //     真实单频时峰值突出   → 比值 >> 2，判 1
+    //     原来用 pmax*4（峰值占 25%），实测 8 Hz 用例过不了 ——
+    //     泄漏把能量分散到了相邻 bin，25% 太严。
+    localparam signed [63:0] MIN_MAG = 64'sd4000;
 
     function signed [15:0] coef_of;
         input [4:0] k;
@@ -266,10 +274,12 @@ module vib_goertzel #(
                 peak_hz10 <= 8'd20 + {2'b00, pidx, 2'b00} + {4'b0000, pidx};
                 peak_mag  <= (pmax >= 64'sd0) ? pmax : 64'sd0;
                 valid     <= 1'b1;
-                // 音调判决：峰值够大，且占全部能量 25% 以上
+                // 音调判决：峰值够大，且是平均 bin 的 2 倍以上
+                //   pmax_sh = pmax>>24，psum = Σ(mag2>>24)，两者同一标度
+                //   {1'b0, pmax_sh, 1'b0} = pmax_sh * 2
                 // psum 此时已含全部 17 个 bin（含峰值本身）
                 tonal     <= (pmax > MIN_MAG) &&
-                             (({2'b00, pmax_sh, 2'b00}) > psum);
+                             (({1'b0, pmax_sh, 1'b0}) > psum);
                 dbg_hp    <= 32'd0;   // 已移除峰值保持，恒 0
                 dbg_in    <= 32'd0;
                 dbg_s1    <= pk_sh;
