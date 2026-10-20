@@ -203,7 +203,7 @@ input wire [31:0] gzps, // 全部 bin 能量和的高 32 位
             5'd12: s = "GZMG";
             5'd13: s = "GZFR";
             5'd14: s = "GZTL";
-             5\'d15: s = "GZPS";
+             5'd15: s = "GZPS";
             default: s = "????";
             endcase
             case (p)
@@ -237,7 +237,7 @@ input wire [31:0] gzps, // 全部 bin 能量和的高 32 位
         5'd12: v = snap[12]        ; // Goertzel 峰值幅度²
         5'd13: v = snap[13]        ; // Goertzel 窗口累计帧数
         5'd14: v = snap[14]        ;
-         5\'d15: v = gzps; // 全部 bin 能量和的高位 // 音调判决：1=存在单一主导频率
+         5'd15: v = gzps;            ; // 全部 bin 能量和的高位
         default:  v = 32'd0;
         endcase
     end
