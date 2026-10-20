@@ -97,6 +97,7 @@ module uart_log_debug #(
     input wire [31:0] gzmg, // Goertzel 峰值 mag^2 >> 8（覆盖到 5.5e11，不回绕）
     input wire [31:0] gzfr, // Goertzel 窗口帧计数
 input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
+input wire [31:0] gzps, // 全部 bin 能量和的高 32 位
     output wire        tx                   // 串口输出 -> O_uart_tx -> H1
 );
 
@@ -109,8 +110,8 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
     //------------------------------------------------------------------
     // 一轮消息的长度参数
     //------------------------------------------------------------------
-    localparam integer NF        = 15;   // 状态行（字段）个数
-    localparam integer FLD_LAST  = 15 - 1;
+    localparam integer NF        = 16;   // 状态行（字段）个数
+    localparam integer FLD_LAST  = 16 - 1;
     localparam integer POS_LAST  = 15 - 1;
     localparam integer BIDX_LAST = 37 - 1;
 
@@ -202,6 +203,7 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
             5'd12: s = "GZMG";
             5'd13: s = "GZFR";
             5'd14: s = "GZTL";
+             5\'d15: s = "GZPS";
             default: s = "????";
             endcase
             case (p)
@@ -234,7 +236,8 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
         5'd11: v = snap[11]        ; // Goertzel 峰值频点 0..16
         5'd12: v = snap[12]        ; // Goertzel 峰值幅度²
         5'd13: v = snap[13]        ; // Goertzel 窗口累计帧数
-        5'd14: v = snap[14]        ; // 音调判决：1=存在单一主导频率
+        5'd14: v = snap[14]        ;
+         5\'d15: v = gzps; // 全部 bin 能量和的高位 // 音调判决：1=存在单一主导频率
         default:  v = 32'd0;
         endcase
     end

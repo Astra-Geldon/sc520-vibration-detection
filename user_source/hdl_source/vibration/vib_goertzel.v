@@ -51,6 +51,7 @@ module vib_goertzel #(
     //   即"峰值占全部能量的 25% 以上"，才认为存在单一主导频率。
     output reg                tonal,
     output wire [43:0]        total_mag,
+    output wire [31:0]        psum_hi,   // psum 的高 32 位（调阈值用）
     output reg  [7:0]         frm_cnt,
     output reg                frm_tgl,
     // ---- 诊断：上一个完整窗口内的绝对峰值 ----
@@ -129,6 +130,7 @@ module vib_goertzel #(
     //   只用于"峰值 / 全部能量"的比值判决，精度完全够。
     reg  [43:0] psum;
     assign total_mag = psum;
+    assign psum_hi   = psum[43:12];
 
     reg [31:0] pk_sh;                   // 只保留 bin6 的 |s1| 峰值
 
@@ -165,6 +167,8 @@ module vib_goertzel #(
     //    而不是写 mag2[63:24]。
     wire signed [39:0] mag2_sh = mag2 >>> 24;
     wire signed [39:0] pmax_sh = pmax >>> 24;
+    // 峰值 * 3，用于"峰值 > 平均 bin 的 2.8 倍"判决
+    wire signed [41:0] pmax_sh_3 = {1'b0, pmax_sh, 1'b0} + {2'b00, pmax_sh};
 
     wire signed [63:0] hp_63   = $signed(hp) * 32'sd63;
     wire signed [63:0] hp_d    = $signed(bx) - $signed(xprev);
@@ -279,7 +283,7 @@ module vib_goertzel #(
                 //   {1'b0, pmax_sh, 1'b0} = pmax_sh * 2
                 // psum 此时已含全部 17 个 bin（含峰值本身）
                 tonal     <= (pmax > MIN_MAG) &&
-                             (({1'b0, pmax_sh, 1'b0}) > psum);
+                             (pmax_sh_3 > psum);
                 dbg_hp    <= 32'd0;   // 已移除峰值保持，恒 0
                 dbg_in    <= 32'd0;
                 dbg_s1    <= pk_sh;
