@@ -1,4 +1,4 @@
-﻿
+
 
 // 振动算法通路：上一帧灰度缓存 + 帧差 It
 // 振动算法通路的模块来源说明（★ 很重要，重复定义会整个编译失败）
@@ -259,6 +259,9 @@ module design_top_wrapper (
     wire [7:0]  S_gz_hz10, S_gz_fcnt;
     wire [63:0] S_gz_mag;
     wire        S_gz_vld;
+    // 音调判决（2026-10-20）：峰值够大且占全部能量 25% 以上
+    wire        S_gz_tonal;
+    wire [71:0] S_gz_total;
     // OSD 标记
     wire        S_osd_vs, S_osd_de;
     wire [23:0] S_osd_data;
@@ -1445,6 +1448,8 @@ isp_top u_isp_top (
         .peak_hz10  ( S_gz_hz10    ),
         .peak_mag   ( S_gz_mag     ),
         .valid      ( S_gz_vld     ),
+        .tonal      ( S_gz_tonal   ),
+        .total_mag  ( S_gz_total   ),
         .frm_cnt    ( S_gz_fcnt    ),
         .dbg_hp     ( S_gz_hp      ),
         .dbg_in     ( S_gz_in      ),
@@ -1742,6 +1747,8 @@ isp_top u_isp_top (
         .gzhz               ({24'd0, c_gz_hz10}),
         .gzbn               ({27'd0, c_gz_bin}),
         .gzmg               (c_gz_mag),
+        .gztl               ({31'd0, S_gz_tonal}),
+        .gztm               (S_gz_total[71:40]),   // 总能量高位，用于判断量级
         .gzfr               ({24'd0, c_gz_fcnt}),
         .lk_is              (c_sv_itsm),
         .lk_be              (c_sv_en),

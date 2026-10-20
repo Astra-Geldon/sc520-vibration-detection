@@ -134,7 +134,7 @@ module vib_gz_store #(
                     rcrc <= {rcrc[30:0], rcrc[31]} ^ rmix;
                 end
                 // 读阶段同步推进 LFSR，只为让期望序列与写阶段一致
-                lfsr <= (addr == 11'd0) ? seed : lfsr_nx;
+                lfsr <= (addr == 11'd0) ? seed_d : lfsr_nx;   // 与写阶段一致：都用 seed_d
                 if (addr >= NA) begin
                     st <= S_DRAIN;
                 end

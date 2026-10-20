@@ -44,6 +44,13 @@ module vib_goertzel #(
     output reg  [7:0]         peak_hz10,
     output reg  [63:0]        peak_mag,
     output reg                valid,
+    // ---- 音调判决（2026-10-20 新增）----
+    //   没有振动时 17 个 bin 的能量相近，峰值只是噪声的偶然最大；
+    //   有真实振动时某个 bin 会显著高于其余。
+    //   tonal = (峰值 > MIN_MAG) && (峰值*4 > 全部 bin 之和)
+    //   即"峰值占全部能量的 25% 以上"，才认为存在单一主导频率。
+    output reg                tonal,
+    output wire [71:0]        total_mag,
     output reg  [7:0]         frm_cnt,
     output reg                frm_tgl,
     // ---- 诊断：上一个完整窗口内的绝对峰值 ----
@@ -56,6 +63,12 @@ module vib_goertzel #(
 
     localparam [13:0] COEF_FRAC = 14'd14;
     localparam [7:0]  LAST_FRM  = NFRM - 1;
+
+    // 音调判决的两个门限
+    //   MIN_MAG：峰值绝对下限。静止场景实测 GZMG ≈ 451，有振动时 > 1e5。
+    //            取 20000 留足余量；这个值可以在串口上按 GZMG 再调。
+    //   PEAK_RATIO：峰值 / 全部能量。真振动通常 > 50%，噪声 < 15%。
+    localparam signed [63:0] MIN_MAG = 64'sd20000;
 
     function signed [15:0] coef_of;
         input [4:0] k;
@@ -102,6 +115,10 @@ module vib_goertzel #(
     reg signed [63:0] pmax;
     reg [4:0]  pidx;
 
+    // 窗口内 17 个 bin 的能量累计（负数按 0 处理），用于音调判决
+    reg  [71:0] psum;
+    assign total_mag = psum;
+
     reg [31:0] pk_hp, pk_in, pk_sh;
 
     // ---- 组合：位宽全部"恰好够"，然后全名引用（绝不 part-select signed 量）
@@ -110,18 +127,25 @@ module vib_goertzel #(
     //     cs1     = mul_cs1>>14 <= 2^17.2 → 32 位
     //     p_cs12  = c*s1*s2  <= 2^48.4 → 64 位
     //     sq1,sq2 = s1²      <= 2^34.4 → 64 位
-    wire signed [47:0] c_ext   = {{32{ccur[15]}}, ccur};
-    wire signed [47:0] rd1_ext = {{16{rd1[31]}}, rd1};
-    wire signed [63:0] rd2_ext = {{32{rd2[31]}}, rd2};
+    //  ★ 2026-10-20 修正：原来把 c 手工扩到 48 位、s2 扩到 64 位，
+    //    导致 c(48)*s1(48) 吃 9 个 DSP、mul_cs1(48)*s2(64) 吃 12 个。
+    //    c 本身就是 16 位有符号（Q1.14，实测范围 16134..32040），
+    //    s1/s2 是 32 位 —— 按真实宽度声明即可，乘法器 18+ → 10 个。
+    wire signed [15:0] c_ext   = ccur;
+    wire signed [31:0] rd1_ext = rd1;
+    wire signed [31:0] rd2_ext = rd2;
 
-    wire signed [47:0] mul_cs1 = c_ext * rd1_ext;
+    wire signed [47:0] mul_cs1 = c_ext * rd1_ext;     // 16 x 32 → 2 个 DSP
     wire signed [31:0] cs1     = mul_cs1 >>> COEF_FRAC;
     wire signed [31:0] s0      = vcur + cs1 - rd2;
 
-    wire signed [63:0] sq1     = rd1 * rd1;
+    wire signed [63:0] sq1     = rd1 * rd1;           // 32 x 32 → 4 个 DSP
     wire signed [63:0] sq2     = rd2 * rd2;
 
-    wire signed [63:0] p_cs12  = mul_cs1 * rd2_ext;
+    //  原来 mul_cs1(48) * rd2_ext(64) = 12 个 DSP。
+    //  改成先把 c*s1 归一到 cs1(32) 再乘 s2(32) = 4 个 DSP。
+    //  差别只是 (c*s1*s2)>>14 与 ((c*s1)>>14)*s2 的 1 LSB 舍入。
+    wire signed [63:0] p_cs12  = cs1 * rd2_ext;
     wire signed [63:0] cs12    = p_cs12 >>> COEF_FRAC;
     wire signed [63:0] mag2    = sq1 - cs12 + sq2;
 
@@ -139,6 +163,7 @@ module vib_goertzel #(
             gst <= CLR; bidx <= 5'd0; clr_i <= 5'd0; fcnt <= 8'd0;
             rd1 <= 32'sd0; rd2 <= 32'sd0; ccur <= 16'sd0; vcur <= 32'sd0;
             pmax <= 64'sd0; pidx <= 5'd0;
+            psum <= 72'd0; tonal <= 1'b0;
             peak_bin <= 5'd0; peak_hz10 <= 8'd0; peak_mag <= 64'd0;
             valid <= 1'b0; frm_cnt <= 8'd0; frm_tgl <= 1'b0;
             pk_hp <= 32'd0; pk_in <= 32'd0; pk_sh <= 32'd0;
@@ -215,6 +240,10 @@ module vib_goertzel #(
                     pmax <= mag2;
                     pidx <= bidx;
                 end
+                // 累计全部 bin 的能量（负值按 0 计，避免相消）
+                if (mag2 >= 64'sd0) begin
+                    psum <= psum + {{8{1'b0}}, mag2};
+                end
                 if (bidx == NBIN - 1) begin
                     bidx <= 5'd0;
                     gst  <= P_DONE;
@@ -229,6 +258,10 @@ module vib_goertzel #(
                 peak_hz10 <= 8'd20 + {2'b00, pidx, 2'b00} + {4'b0000, pidx};
                 peak_mag  <= (pmax >= 64'sd0) ? pmax : 64'sd0;
                 valid     <= 1'b1;
+                // 音调判决：峰值够大，且占全部能量 25% 以上
+                // psum 此时已含全部 17 个 bin（含峰值本身）
+                tonal     <= (pmax > MIN_MAG) &&
+                             ({{2{1'b0}}, pmax, 2'b00} > psum);
                 dbg_hp    <= pk_hp;
                 dbg_in    <= pk_in;
                 dbg_s1    <= pk_sh;
@@ -236,6 +269,7 @@ module vib_goertzel #(
                 pk_in     <= 32'd0;
                 pk_sh     <= 32'd0;
                 pmax      <= 64'sd0;
+                psum      <= 72'd0;
                 pidx      <= 5'd0;
                 fcnt      <= 8'd0;
                 frm_cnt   <= 8'd0;
