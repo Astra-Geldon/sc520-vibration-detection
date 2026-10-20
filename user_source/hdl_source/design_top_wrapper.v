@@ -261,7 +261,7 @@ module design_top_wrapper (
     wire        S_gz_vld;
     // 音调判决（2026-10-20）：峰值够大且占全部能量 25% 以上
     wire        S_gz_tonal;
-    wire [71:0] S_gz_total;
+    wire [43:0] S_gz_total;
     // OSD 标记
     wire        S_osd_vs, S_osd_de;
     wire [23:0] S_osd_data;
@@ -1748,7 +1748,6 @@ isp_top u_isp_top (
         .gzbn               ({27'd0, c_gz_bin}),
         .gzmg               (c_gz_mag),
         .gztl               ({31'd0, S_gz_tonal}),
-        .gztm               (S_gz_total[71:40]),   // 总能量高位，用于判断量级
         .gzfr               ({24'd0, c_gz_fcnt}),
         .lk_is              (c_sv_itsm),
         .lk_be              (c_sv_en),

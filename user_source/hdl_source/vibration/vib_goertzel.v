@@ -50,7 +50,7 @@ module vib_goertzel #(
     //   tonal = (峰值 > MIN_MAG) && (峰值*4 > 全部 bin 之和)
     //   即"峰值占全部能量的 25% 以上"，才认为存在单一主导频率。
     output reg                tonal,
-    output wire [71:0]        total_mag,
+    output wire [43:0]        total_mag,
     output reg  [7:0]         frm_cnt,
     output reg                frm_tgl,
     // ---- 诊断：上一个完整窗口内的绝对峰值 ----
@@ -116,10 +116,13 @@ module vib_goertzel #(
     reg [4:0]  pidx;
 
     // 窗口内 17 个 bin 的能量累计（负数按 0 处理），用于音调判决
-    reg  [71:0] psum;
+    // 2026-10-20：psum 从 72 位降到 44 位。
+    //   累计的是 mag2>>24，mag2 最大约 2^48 → 17 个之和 < 2^44 ✓
+    //   只用于"峰值 / 全部能量"的比值判决，精度完全够。
+    reg  [43:0] psum;
     assign total_mag = psum;
 
-    reg [31:0] pk_hp, pk_in, pk_sh;
+    reg [31:0] pk_sh;                   // 只保留 bin6 的 |s1| 峰值
 
     // ---- 组合：位宽全部"恰好够"，然后全名引用（绝不 part-select signed 量）
     //   实测量级：s1,s2 <= 1.5e5 = 2^17.2；c <= 2^14
@@ -149,12 +152,16 @@ module vib_goertzel #(
     wire signed [63:0] cs12    = p_cs12 >>> COEF_FRAC;
     wire signed [63:0] mag2    = sq1 - cs12 + sq2;
 
+    //  ★ signed part-select 是无符号的（本项目第二条铁律），
+    //    所以这里先把 mag2/pmax 右移 24 位再存成恰好 40 位的信号，
+    //    而不是写 mag2[63:24]。
+    wire signed [39:0] mag2_sh = mag2 >>> 24;
+    wire signed [39:0] pmax_sh = pmax >>> 24;
+
     wire signed [63:0] hp_63   = $signed(hp) * 32'sd63;
     wire signed [63:0] hp_d    = $signed(bx) - $signed(xprev);
     wire signed [31:0] hp_next = (hp_63 + hp_d) >>> 6;
 
-    wire [31:0] hp_abs = hp[31]   ? (~hp   + 32'd1) : hp;
-    wire [31:0] in_abs = vcur[31] ? (~vcur + 32'd1) : vcur;
     wire [31:0] sh_abs = s0[31]   ? (~s0   + 32'd1) : s0;
 
     always @(posedge clk or negedge rst_n) begin
@@ -163,10 +170,10 @@ module vib_goertzel #(
             gst <= CLR; bidx <= 5'd0; clr_i <= 5'd0; fcnt <= 8'd0;
             rd1 <= 32'sd0; rd2 <= 32'sd0; ccur <= 16'sd0; vcur <= 32'sd0;
             pmax <= 64'sd0; pidx <= 5'd0;
-            psum <= 72'd0; tonal <= 1'b0;
+            psum <= 44'd0; tonal <= 1'b0;
             peak_bin <= 5'd0; peak_hz10 <= 8'd0; peak_mag <= 64'd0;
             valid <= 1'b0; frm_cnt <= 8'd0; frm_tgl <= 1'b0;
-            pk_hp <= 32'd0; pk_in <= 32'd0; pk_sh <= 32'd0;
+            pk_sh <= 32'd0;
             dbg_hp <= 32'd0; dbg_in <= 32'd0; dbg_s1 <= 32'd0;
         end
         else begin
@@ -188,8 +195,9 @@ module vib_goertzel #(
             //--------------------------------------------------------------
             G_IDLE: begin
                 if (tick) begin
-                    if (hp_abs > pk_hp) pk_hp <= hp_abs;
-                    if (in_abs > pk_in) pk_in <= in_abs;
+                    // 2026-10-20：为过综合减重，去掉 pk_hp / pk_in 的峰值保持
+                    // （共 64 个触发器 + 2 组比较器）。dbg_hp / dbg_in 恒输出 0，
+                    // 只保留 dbg_s1 —— 它是判断 Goertzel 状态是否正常最直接的一个。
                     hp    <= hp_next;
                     xprev <= bx;
                     vcur  <= hp_next >>> 6;
@@ -242,7 +250,7 @@ module vib_goertzel #(
                 end
                 // 累计全部 bin 的能量（负值按 0 计，避免相消）
                 if (mag2 >= 64'sd0) begin
-                    psum <= psum + {{8{1'b0}}, mag2};
+                    psum <= psum + {4'd0, mag2_sh};
                 end
                 if (bidx == NBIN - 1) begin
                     bidx <= 5'd0;
@@ -261,15 +269,13 @@ module vib_goertzel #(
                 // 音调判决：峰值够大，且占全部能量 25% 以上
                 // psum 此时已含全部 17 个 bin（含峰值本身）
                 tonal     <= (pmax > MIN_MAG) &&
-                             ({{2{1'b0}}, pmax, 2'b00} > psum);
-                dbg_hp    <= pk_hp;
-                dbg_in    <= pk_in;
+                             (({2'b00, pmax_sh, 2'b00}) > psum);
+                dbg_hp    <= 32'd0;   // 已移除峰值保持，恒 0
+                dbg_in    <= 32'd0;
                 dbg_s1    <= pk_sh;
-                pk_hp     <= 32'd0;
-                pk_in     <= 32'd0;
                 pk_sh     <= 32'd0;
                 pmax      <= 64'sd0;
-                psum      <= 72'd0;
+                psum      <= 44'd0;
                 pidx      <= 5'd0;
                 fcnt      <= 8'd0;
                 frm_cnt   <= 8'd0;
