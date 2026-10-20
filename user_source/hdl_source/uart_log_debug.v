@@ -104,9 +104,6 @@ module uart_log_debug #(
     input wire [31:0] gzbn, // Goertzel 峰值频点
     input wire [31:0] gzmg, // Goertzel 峰值 mag^2 >> 8（覆盖到 5.5e11，不回绕）
     input wire [31:0] gzfr, // Goertzel 窗口帧计数
-    input wire [31:0] gzwc, // 写流旋转XOR校验
-    input wire [31:0] gzrc, // 读流旋转XOR校验
-    input wire [31:0] gzok, // 存储自检通过标志
     input wire signed [31:0] gzs1, // 5Hz 频点的 s1
 input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
     input wire [31:0] lk_is, // 与 LKBE 同一拍锁存的 ITSM，用于验证 LKBE <= LKIS
@@ -122,8 +119,8 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
     //------------------------------------------------------------------
     // 一轮消息的长度参数
     //------------------------------------------------------------------
-    localparam integer NF        = 28;   // 状态行（字段）个数
-    localparam integer FLD_LAST  = 28 - 1;
+    localparam integer NF        = 25;   // 状态行（字段）个数
+    localparam integer FLD_LAST  = 25 - 1;
     localparam integer POS_LAST  = 15 - 1;
     localparam integer BIDX_LAST = 37 - 1;
 
@@ -222,12 +219,9 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
             5'd19: s = "GZBN";
             5'd20: s = "GZMG";
             5'd21: s = "GZFR";
-            5'd22: s = "GZWC";
-            5'd23: s = "GZRC";
-            5'd24: s = "GZOK";
-            5'd25: s = "GZS1";
-            5'd27: s = "GZTL";
-            5'd26: s = "LKIS";
+            5'd22: s = "GZS1";
+            5'd24: s = "GZTL";
+            5'd23: s = "LKIS";
             default: s = "????";
             endcase
             case (p)
@@ -268,12 +262,9 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
         5'd19: v = snap[19]          ; // Goertzel 峰值频点 0..16
         5'd20: v = snap[20]          ; // Goertzel 峰值幅度² >>8（防 32 位回绕）
         5'd21: v = snap[21]          ; // Goertzel 窗口已累计帧数 0..128
-        5'd22: v = snap[22]          ; // 阶段0 写流校验（旋转XOR）
-        5'd23: v = snap[23]          ; // 阶段0 读流校验，应等于 GZWC
-        5'd24: v = snap[24]          ; // 阶段0 存储自检通过（GZWC==GZRC）
-        5'd25: v = snap[25]          ; // bin6(5Hz) 的 s1 状态
-        5'd27: v = snap[27]          ; // 音调判决
-        5'd26: v = snap[26]          ; // 与 LKBE 同拍锁存的 ITSM
+        5'd22: v = snap[22]          ; // bin6(5Hz) 的 s1 状态
+        5'd24: v = snap[24]          ; // 音调判决
+        5'd23: v = snap[23]          ; // 与 LKBE 同拍锁存的 ITSM
         default:  v = 32'd0;
         endcase
     end
@@ -325,12 +316,9 @@ input wire [31:0] gztl, // 音调判决：峰值占全部能量 25% 以上
             snap[19] <= gzbn;
             snap[20] <= gzmg;
             snap[21] <= gzfr;
-            snap[22] <= gzwc;
-            snap[23] <= gzrc;
-            snap[24] <= gzok;
-            snap[25] <= gzs1;
-            snap[27] <= gztl;
-            snap[26] <= lk_is;
+            snap[22] <= gzs1;
+            snap[24] <= gztl;
+            snap[23] <= lk_is;
         end
     end
 

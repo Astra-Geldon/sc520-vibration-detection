@@ -27,7 +27,7 @@
 `include "vibration/vib_osd_marker.v"
 
 // 阶段 0 探针：48x17 状态阵列 + 上电自检（验证能不能被综合成 RAM）
-`include "vibration/vib_gz_store.v"
+// 2026-10-20：vib_gz_store 是 RAM 自检探针（1,928 slice），已删除
 
 // =====================================================================
 //  调试开关：注释掉下面这一行即可恢复 HDMI 显示（一行都不用改别的）。
@@ -267,8 +267,6 @@ module design_top_wrapper (
     wire [23:0] S_osd_data;
     reg  [31:0] S_fx_pos_p1, S_fx_pos_p2;
     // 阶段 0：48x17 存储自检
-    wire [31:0] S_gzcrc_w, S_gzcrc_r;
-    wire        S_gzcrc_ok;
     wire        S_gzstore_busy, S_gzstore_done;
     wire signed [31:0] S_gz_hp, S_gz_in, S_gz_s1;
     wire signed [31:0] S_fx_axx, S_fx_ayy, S_fx_axy;
@@ -1423,18 +1421,7 @@ isp_top u_isp_top (
     //    只验证"26,112 bit 能不能进 RAM"，不接任何算法数据。
     //    自检期望：sum1 = 0x000512E8、sum2 = 0xFFFAED18
     //==================================================================
-    vib_gz_store #(
-        .NB   ( 48 ),
-        .NBIN ( 17 )
-    ) u_vib_gz_store (
-        .clk    ( S_ddr_clk        ),
-        .rst_n  ( S_rst_n          ),
-        .o_wcrc ( S_gzcrc_w        ),
-        .o_rcrc ( S_gzcrc_r        ),
-        .o_match( S_gzcrc_ok       ),
-        .o_busy ( S_gzstore_busy   ),
-        .o_done ( S_gzstore_done   )
-    );
+    // 2026-10-20：原 vib_gz_store 例化已删除（RAM 自检探针，非功能数据）
 
     vib_goertzel #(
         .NFRM ( 128 ),
@@ -1739,9 +1726,6 @@ isp_top u_isp_top (
         .lk_br              (c_sv_brow),
 
         .gzs1               (c_gz_s1),
-        .gzwc               (S_gzcrc_w),
-        .gzrc               (S_gzcrc_r),
-        .gzok               ({31'd0, S_gzcrc_ok}),
 
 
         .gzhz               ({24'd0, c_gz_hz10}),
