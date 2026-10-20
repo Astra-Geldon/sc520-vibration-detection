@@ -1444,39 +1444,31 @@ isp_top u_isp_top (
         .frm_tgl    (              )
     );
 
-    vib_lk_solve u_vib_lk_solve (
-        .clk            ( S_ddr_clk              ),
-        .rst_n          ( S_rst_n                ),
-
-        .req            ( S_lk_solve_req         ),
-        // ★ 求解器输入改用**纹理固定块**（fx_*），不再用最大变化块（st_b_*）。
-        //   最大变化块的坐标每帧都会跳（实测 blk2→blk3→blk1→blk5→blk4→blk6），
-        //   时间序列中途换信号源会让 Goertzel 看到虚假的突变成分。
-        .s_axx          ( S_fx_axx               ),
-        .s_ayy          ( S_fx_ayy               ),
-        .s_axy          ( S_fx_axy               ),
-        .s_bx           ( S_fx_bx                ),
-        .s_by           ( S_fx_by                ),
-        .s_en           ( S_fx_en                ),
-        .s_bcol         ( S_fx_pos[2:0]          ),
-        .s_brow         ( S_fx_pos[5:3]          ),
-
-        .ack            ( S_solve_ack            ),
-        .r_u            ( S_sv_u                 ),
-        .r_v            ( S_sv_v                 ),
-        .r_en           ( S_sv_en                ),
-        .r_bcol         ( S_sv_bcol              ),
-        .r_brow         ( S_sv_brow              ),
-        .r_valid        ( S_sv_valid             ),
-        .r_tgl          ( S_sv_tgl               ),
-        .r_det_h        ( S_sv_det_h             ),
-        .r_num_h        ( S_sv_num_h             ),
-        .r_quot         ( S_sv_quot              ),
-        .r_nu_neg       ( S_sv_nu_neg            ),
-        .r_den_h        ( S_sv_den_h             ),
-        .r_rem_h        ( S_sv_rem_h             ),
-        .r_num_ld       ( S_sv_num_ld            )
-    );
+    // =================================================================
+    //  2026-10-20：vib_lk_solve 已删除（2,286 slice）
+    //
+    //  它是纯诊断分支：Goertzel 用的是 S_fx_bx（vib_lk_grid 的 st_fx_bx
+    //  直接产生），而求解器只是把同一组 S_fx_* 再算一遍 u/v，
+    //  输出 S_sv_* 仅进入串口快照 c_sv_*，没有任何控制逻辑使用。
+    //
+    //  S_sv_* 现在直接由 vib_lk_grid 的"最大变化块" st_b_* 赋值，
+    //  所以 LKU/LKV/LKVA/LKBL/LKBR/LKBE 这些字段仍然后意义
+    //  （只是含义从"LK 位移"变成"最大变化块的 bx/by"）。
+    // =================================================================
+    assign S_sv_u      = S_lk_b_bx;
+    assign S_sv_v      = S_lk_b_by;
+    assign S_sv_en     = S_lk_b_en;
+    assign S_sv_bcol   = S_lk_b_bcol;
+    assign S_sv_brow   = S_lk_b_brow;
+    assign S_sv_valid  = (S_lk_b_en > 32'd1000);
+    assign S_sv_tgl    = S_lk_tgl;
+    assign S_sv_det_h  = 32'd0;
+    assign S_sv_num_h  = 32'd0;
+    assign S_sv_quot   = 32'd0;
+    assign S_sv_nu_neg = 1'b0;
+    assign S_sv_den_h  = 32'd0;
+    assign S_sv_rem_h  = 32'd0;
+    assign S_sv_num_ld = 32'd0;
 
     // =================================================================
     //  统计量的跨时钟域**原子快照**（修一个真实观测到的问题）
