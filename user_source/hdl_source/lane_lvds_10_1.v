@@ -2,7 +2,8 @@
 
 
 module lane_lvds_10_1 #(
-    parameter DEVICE = "EG"
+    parameter DEVICE = "EG",
+    parameter CLOCK_WORD_BYPASS = 0
     )(
     input wire      I_pixel_clk,
     input wire      I_serial_clk,
@@ -10,9 +11,31 @@ module lane_lvds_10_1 #(
 
     input wire[9:0] I_data_in,
 
+    output wire O_diag_load,
+    output wire [1:0] O_diag_pair,
+    output wire [9:0] O_diag_word,
     output wire     O_serial_out
 );
 
+    // Stage complete words at the opposite pixel edge for serial-load margin.
+    // All four lanes use the same staging edge; bit order and ODDR are unchanged.
+    reg [9:0] S_word_staged;
+    generate
+        if (CLOCK_WORD_BYPASS) begin : g_clock_bypass
+            // Only the clock lane: keep the input/top register, bypass opposite-edge stage.
+            // Steady clock word and all serial-load/pair logic are unchanged.
+            always @* S_word_staged = I_data_in;
+        end else begin : g_data_stage
+            always @(negedge I_pixel_clk or posedge I_rst) begin
+                if (I_rst) S_word_staged <= 10'd0;
+                else S_word_staged <= I_data_in;
+            end
+        end
+    endgenerate
+
+    assign O_diag_load = S_load_en_2d;
+    assign O_diag_pair = S_oddr_data;
+    assign O_diag_word = S_shift_data;
     reg      S_odd_even;     
     reg      S_odd_even_1d;  
     reg      S_odd_even_2d;  
@@ -46,7 +69,7 @@ module lane_lvds_10_1 #(
             S_shift_data <= 'd0;
         else
             if(S_load_en_2d)
-                S_shift_data <= I_data_in;
+                S_shift_data <= S_word_staged;
             else 
                 S_shift_data <= S_shift_data << 2;
     end

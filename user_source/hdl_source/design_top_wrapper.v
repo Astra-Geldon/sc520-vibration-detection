@@ -160,6 +160,7 @@ module design_top_wrapper (
     wire        S_ddr_clk;
     wire        S_hdmi_pixel_clk;
     wire        S_hdmi_serial_clk;
+    wire        S_hdmi_clk_lock;      // pll_hdmi_7425（74.25/371.25 MHz）的锁定
     wire        S_hdmi_rst_n;
     wire        S_video_out_rst_n;
 
@@ -404,7 +405,8 @@ module design_top_wrapper (
 	
 	
     assign S_rst_n 		= S_pll_lock;
-    assign S_hdmi_rst_n = S_pll_lock;
+    // HDMI 域要等 74.25/371.25 的那颗 PLL 也锁定
+    assign S_hdmi_rst_n = S_pll_lock & S_hdmi_clk_lock;
 
     always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
         if(!S_rst_n)
@@ -716,11 +718,33 @@ module design_top_wrapper (
         .clk0_out    ( S_100m_clk        ),
         .clk1_out    ( S_24m_clk         ),
 
-        .clk4_out    ( S_hdmi_pixel_clk  ),
-        .clk5_out    ( S_hdmi_serial_clk ),
+        // ★ 2026-10-20：HDMI 时钟改由 pll_hdmi_7425 提供（74.25 / 371.25 MHz）
+        //   原来这里是 75.000 / 375.000 MHz（60.606 Hz），属于非标准 720p60。
+        //   依据：队友 round35 的成功配置是「74.25 MHz + 计数器 valid_3d 补丁」；
+        //   我们「75 MHz + 补丁」实测仍然是采集黑屏（docs/worklog.md）。
+        //   这两路输出不再使用，保持开路。
+        .clk4_out    (                   ),
+        .clk5_out    (                   ),
 
         .lock        ( S_pll_lock        )
 
+    );
+
+
+    //------------------------------------------------------------------
+    //  HDMI 标准 720p60 时钟树：50/5×108/40 = 27 MHz → ×55/20 = 74.25 MHz
+    //                                                   ×55/4  = 371.25 MHz
+    //------------------------------------------------------------------
+    //    模块原样取自队友 round35（docs/HDMI采集卡成功经验/.../pll_hdmi_7425.v）
+    //    （S_hdmi_clk_lock 在顶部 wire 区已声明）
+    //------------------------------------------------------------------
+
+    pll_hdmi_7425 u_pll_hdmi_7425 (
+        .refclk      ( I_sys_clk         ),
+        .reset       ( ~I_rst_n          ),
+        .clk4_out    ( S_hdmi_pixel_clk  ),
+        .clk5_out    ( S_hdmi_serial_clk ),
+        .lock        ( S_hdmi_clk_lock   )
     );
 
 
@@ -1109,7 +1133,12 @@ isp_top u_isp_top (
         .IMG_HEIGHT ( 720  ),
         // Normal camera display.  Set to 4 only when the MIPI diagnostic
         // full-screen status page is needed.
-        .DEBUG_MODE ( 0    )
+        // ===== 临时诊断（2026-10-20）：1 = 内置 8 段彩条 =====
+        //   彩条完全绕开 摄像头 / ISP / DDR / img_proc，只测 HDMI 出口本身：
+        //   采集卡能看到彩条 → HDMI 链路正常，黑屏是显示数据通路（DDR 读）问题；
+        //   仍然纯黑      → HDMI 发射核/采集卡兼容性问题，与图像数据无关。
+        //   诊断完必须改回 0。
+        .DEBUG_MODE ( 1    )
     )u_hdmi_mixer(
         .I_clk           ( S_hdmi_pixel_clk   ),
         .I_rst_n         ( S_hdmi_rst_n       ),

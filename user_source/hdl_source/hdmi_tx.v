@@ -240,6 +240,10 @@ module hdmi_tx (
         .I_tmds_channel_2   ( S_ch2_tmds_data ),
         .I_tmds_channel_clk ( S_clk_tmds_data ),
 
+        // 2026-10-20：PHY 换成队友 round35 那版（串行字在相反时钟沿打拍 +
+        // 时钟 lane 走 CLOCK_WORD_BYPASS）。它多一路诊断输出，这里悬空。
+        .O_diag_trace       (                 ),
+
         .O_tmds_ch0_p       ( O_tmds_ch0_p    ),
         .O_tmds_ch1_p       ( O_tmds_ch1_p    ),
         .O_tmds_ch2_p       ( O_tmds_ch2_p    ),

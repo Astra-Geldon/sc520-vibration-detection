@@ -12,12 +12,17 @@ module hdmi_phy_wrapper#(
     input wire[9:0] I_tmds_channel_2,
     input wire[9:0] I_tmds_channel_clk,
     
+    output wire [63:0] O_diag_trace,
     output wire     O_tmds_ch0_p,
     output wire     O_tmds_ch1_p,
     output wire     O_tmds_ch2_p,
     output wire     O_tmds_clk_p
 );
     
+    wire [3:0] diag_load;
+    wire [7:0] diag_pairs;
+    wire [39:0] diag_words;
+    assign O_diag_trace = {12'd0,diag_load,diag_pairs,diag_words};
     wire[9:0] S_tmds_data_ch0;
     wire[9:0] S_tmds_data_ch1;
     wire[9:0] S_tmds_data_ch2;
@@ -71,6 +76,8 @@ module hdmi_phy_wrapper#(
     lane_lvds_10_1 #(
         .DEVICE ( DEVICE )    
     )u0_lane_lvds_8_1(
+        .O_diag_load(diag_load[0]), .O_diag_pair(diag_pairs[1:0]),
+        .O_diag_word(diag_words[9:0]),
         .I_pixel_clk  ( I_pixel_clk     ),
         .I_serial_clk ( I_serial_clk    ),
         .I_rst        ( I_rst           ),
@@ -83,6 +90,8 @@ module hdmi_phy_wrapper#(
     lane_lvds_10_1 #(
         .DEVICE ( DEVICE )    
     )u1_lane_lvds_8_1(
+        .O_diag_load(diag_load[1]), .O_diag_pair(diag_pairs[3:2]),
+        .O_diag_word(diag_words[19:10]),
         .I_pixel_clk  ( I_pixel_clk     ),
         .I_serial_clk ( I_serial_clk    ),
         .I_rst        ( I_rst           ),
@@ -95,6 +104,8 @@ module hdmi_phy_wrapper#(
     lane_lvds_10_1 #(
         .DEVICE ( DEVICE )    
     )u2_lane_lvds_8_1(
+        .O_diag_load(diag_load[2]), .O_diag_pair(diag_pairs[5:4]),
+        .O_diag_word(diag_words[29:20]),
         .I_pixel_clk  ( I_pixel_clk     ),
         .I_serial_clk ( I_serial_clk    ),
         .I_rst        ( I_rst           ),
@@ -105,8 +116,10 @@ module hdmi_phy_wrapper#(
 
 
     lane_lvds_10_1 #(
-        .DEVICE ( DEVICE )    
+        .DEVICE ( DEVICE ), .CLOCK_WORD_BYPASS(1)
     )u3_lane_lvds_8_1(
+        .O_diag_load(diag_load[3]), .O_diag_pair(diag_pairs[7:6]),
+        .O_diag_word(diag_words[39:30]),
         .I_pixel_clk  ( I_pixel_clk     ),
         .I_serial_clk ( I_serial_clk    ),
         .I_rst        ( I_rst           ),
