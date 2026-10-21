@@ -1133,12 +1133,9 @@ isp_top u_isp_top (
         .IMG_HEIGHT ( 720  ),
         // Normal camera display.  Set to 4 only when the MIPI diagnostic
         // full-screen status page is needed.
-        // ===== 临时诊断（2026-10-20）：1 = 内置 8 段彩条 =====
-        //   彩条完全绕开 摄像头 / ISP / DDR / img_proc，只测 HDMI 出口本身：
-        //   采集卡能看到彩条 → HDMI 链路正常，黑屏是显示数据通路（DDR 读）问题；
-        //   仍然纯黑      → HDMI 发射核/采集卡兼容性问题，与图像数据无关。
-        //   诊断完必须改回 0。
-        .DEBUG_MODE ( 1    )
+        // 2026-10-21：彩条诊断已通过（OBS 抓到八色条，证明 HDMI 链路 OK），
+        //              改回 0 = 正常显示 img_proc 处理后的摄像头画面。
+        .DEBUG_MODE ( 0    )
     )u_hdmi_mixer(
         .I_clk           ( S_hdmi_pixel_clk   ),
         .I_rst_n         ( S_hdmi_rst_n       ),
