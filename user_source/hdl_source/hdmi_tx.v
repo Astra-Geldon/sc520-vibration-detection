@@ -228,6 +228,48 @@ module hdmi_tx (
     );
 
 
+    //==================================================================
+    //  2026-10-21：照搬队友 round35 的 TX 尾端（docs/HDMI采集卡成功经验/
+    //  .../hdmi_clock_test_top.v:38-55 + 92-99）：
+    //    1) hdmi_sync_polarity 只处理 CH0 的控制期同步位 / data island payload
+    //    2) 四路 TMDS 字（含时钟 lane）在**同一个像素沿**统一打一拍再进 PHY，
+    //       保证 lane 之间与"时钟字相对数据"的相位一致 —— 队友注释原话：
+    //       "Register the entire encoded word group on the same pixel edge.
+    //        All channels have identical one-pixel latency into the existing PHY."
+    //    初值 0x354（控制期码字）/ 0b1111100000（时钟字）与队友完全一致。
+    //==================================================================
+    wire [9:0] S_ch0_pos;
+
+    hdmi_sync_polarity u_hdmi_sync_polarity (
+        .pixel_clk ( I_pixel_clk     ),
+        .rst       ( I_rst           ),
+        .ch0       ( S_ch0_tmds_data ),
+        .ch1       ( S_ch1_tmds_data ),
+        .ch2       ( S_ch2_tmds_data ),
+        .out_ch0   ( S_ch0_pos       )
+    );
+
+    reg [9:0] S_tx_ch0   = 10'h354;
+    reg [9:0] S_tx_ch1   = 10'h354;
+    reg [9:0] S_tx_ch2   = 10'h354;
+    reg [9:0] S_tx_chclk = 10'b1111100000;
+
+    always @(posedge I_pixel_clk) begin
+        if (I_rst) begin
+            S_tx_ch0   <= 10'h354;
+            S_tx_ch1   <= 10'h354;
+            S_tx_ch2   <= 10'h354;
+            S_tx_chclk <= 10'b1111100000;
+        end
+        else begin
+            S_tx_ch0   <= S_ch0_pos;
+            S_tx_ch1   <= S_ch1_tmds_data;
+            S_tx_ch2   <= S_ch2_tmds_data;
+            S_tx_chclk <= S_clk_tmds_data;
+        end
+    end
+
+
     hdmi_phy_wrapper  #(
         .DEVICE ( "PH1P" )  //"EF2","EF3","EF4","SF1","EG","PH1A","PH1P","DR1"
     )u_hdmi2phy_wrapper(
@@ -235,10 +277,10 @@ module hdmi_tx (
         .I_serial_clk       ( I_serial_clk    ),
         .I_rst              ( I_rst           ),
 
-        .I_tmds_channel_0   ( S_ch0_tmds_data ),
-        .I_tmds_channel_1   ( S_ch1_tmds_data ),
-        .I_tmds_channel_2   ( S_ch2_tmds_data ),
-        .I_tmds_channel_clk ( S_clk_tmds_data ),
+        .I_tmds_channel_0   ( S_tx_ch0        ),
+        .I_tmds_channel_1   ( S_tx_ch1        ),
+        .I_tmds_channel_2   ( S_tx_ch2        ),
+        .I_tmds_channel_clk ( S_tx_chclk      ),
 
         // 2026-10-20：PHY 换成队友 round35 那版（串行字在相反时钟沿打拍 +
         // 时钟 lane 走 CLOCK_WORD_BYPASS）。它多一路诊断输出，这里悬空。
