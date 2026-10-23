@@ -50,3 +50,6 @@ docs/
 *.qor
 *.ts
 *.bid
+# TD build scratch files
+td_project/stdin_tmp.txt
+td_project/tmp.err
