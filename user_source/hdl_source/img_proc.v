@@ -22,6 +22,7 @@
 //      0 = 原图     直通 I_data（不做任何改动，等价于不插本模块）
 //      1 = 灰度     g=(R+2G+B)>>2，输出 {g,g,g}
 //      2 = 二值化   g>=TH ? 白 : 黑，TH = ADAPT_EN ? (上一帧 Σg>>ADAPT_SHIFT) : THRESH
+//      3 = Sobel 边缘 |Gx|+|Gy|，3x3 邻域，**晚 1 行 + 2 像素**（唯一有延迟的模式）
 //
 //  ★ 运行期切换的代价
 //      三种模式的逻辑**同时存在**（不再靠编译期常量裁剪）。实测约
@@ -99,10 +100,113 @@ module img_proc #(
     wire S_bin = (S_gray >= S_th);
 
     //==================================================================
-    //  输出选择：纯组合 3 选 1，零拍延迟
+    //  Sobel 边缘检测（I_mode == 3）
+    //
+    //  ★ 这是本工程第一个"有延迟"的算法：3x3 邻域必须缓存前两行，
+    //    输出比输入晚 **1 行 + 2 像素**。因为没有改动 hdmi_mixer 的时序，
+    //    画面会整体下移 1 行（720 行里的 1 行，肉眼不可见），
+    //    原因与三种补偿方案见 docs/算法添加方法.md §1。
+    //
+    //  行缓存：3 个轮转 RAM（每个 2048x8，让工具推断为 ERAM）
+    //      行 y   写入 buf[y%3]，行 y-1 从 buf[(y-1)%3] 读，行 y-2 从 buf[(y-2)%3] 读
+    //      三者互不冲突，每个 RAM 都是 1 读 1 写。
+    //  卷积核（列：左=x-2, 中=x-1, 右=x）
+    //      Gx = (B0-B2) + 2*(A0-A2) + (D0-D2)
+    //      Gy = (D2+2D1+D0) - (B2+2B1+B0)
+    //      |G| = |Gx| + |Gy|（省一次开方，工程常用）
+    //==================================================================
+    reg [10:0] S_lx;            // 行内像素序号 0..1279
+    reg [1:0]  S_ly3;           // 行号 mod 3
+    reg        S_de_d;
+    reg [9:0]  S_ln;            // 本帧已收到的有效行数
+
+    wire S_line_end = S_de_d & ~I_de;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            S_de_d <= 1'b0;
+            S_lx   <= 11'd0;
+            S_ly3  <= 2'd0;
+            S_ln   <= 10'd0;
+        end
+        else begin
+            S_de_d <= I_de;
+
+            if (I_de)  S_lx <= S_lx + 1'b1;
+            else       S_lx <= 11'd0;
+
+            if (I_vs) begin
+                S_ln  <= 10'd0;
+            end
+            else if (S_line_end) begin
+                S_ly3 <= (S_ly3 == 2'd2) ? 2'd0 : (S_ly3 + 2'd1);
+                S_ln  <= S_ln + 1'b1;
+            end
+        end
+    end
+
+    // ---- 3 个轮转行缓存 ----
+    reg [7:0] S_lb0 [0:2047];
+    reg [7:0] S_lb1 [0:2047];
+    reg [7:0] S_lb2 [0:2047];
+
+    reg [7:0] S_q1;             // 行 y-1 在 x 处的灰度
+    reg [7:0] S_q2;             // 行 y-2 在 x 处的灰度
+
+    always @(posedge I_clk) begin
+        if (I_de) begin
+            case (S_ly3)
+                2'd0: begin S_q1 <= S_lb1[S_lx]; S_q2 <= S_lb2[S_lx]; S_lb0[S_lx] <= S_gray; end
+                2'd1: begin S_q1 <= S_lb2[S_lx]; S_q2 <= S_lb0[S_lx]; S_lb1[S_lx] <= S_gray; end
+                default: begin S_q1 <= S_lb0[S_lx]; S_q2 <= S_lb1[S_lx]; S_lb2[S_lx] <= S_gray; end
+            endcase
+        end
+    end
+
+    // ---- 三行各一条 3 级像素延迟线，对齐到同一个 x 窗口 ----
+    reg [7:0] S_g1;             // 当前行灰度，补 1 拍与 RAM 读出对齐
+    always @(posedge I_clk) S_g1 <= S_gray;
+
+    reg [7:0] A0, A1, A2;       // 行 y-1
+    reg [7:0] B0, B1, B2;       // 行 y-2
+    reg [7:0] D0, D1, D2;       // 行 y
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            A0 <= 8'd0; A1 <= 8'd0; A2 <= 8'd0;
+            B0 <= 8'd0; B1 <= 8'd0; B2 <= 8'd0;
+            D0 <= 8'd0; D1 <= 8'd0; D2 <= 8'd0;
+        end
+        else begin
+            A2 <= A1; A1 <= A0; A0 <= S_q1;
+            B2 <= B1; B1 <= B0; B0 <= S_q2;
+            D2 <= D1; D1 <= D0; D0 <= S_g1;
+        end
+    end
+
+    // ---- 卷积（全用无符号宽度，避免有符号运算的坑）----
+    wire [12:0] S_gxp = {5'd0, B0} + {4'd0, A0, 1'b0} + {5'd0, D0};   // 正侧
+    wire [12:0] S_gxn = {5'd0, B2} + {4'd0, A2, 1'b0} + {5'd0, D2};   // 负侧
+    wire [12:0] S_gx  = (S_gxp >= S_gxn) ? (S_gxp - S_gxn) : (S_gxn - S_gxp);
+
+    wire [12:0] S_gyp = {5'd0, D2} + {4'd0, D1, 1'b0} + {5'd0, D0};
+    wire [12:0] S_gyn = {5'd0, B2} + {4'd0, B1, 1'b0} + {5'd0, B0};
+    wire [12:0] S_gy  = (S_gyp >= S_gyn) ? (S_gyp - S_gyn) : (S_gyn - S_gyp);
+
+    wire [12:0] S_gmag  = S_gx + S_gy;                                 // 最大 4*255 = 1020
+    wire [7:0]  S_sobel = (S_gmag > 13'd255) ? 8'd255 : S_gmag[7:0];
+
+    // 前两行行缓存还没填满，输出黑，避免上电首帧花屏
+    wire S_sob_ok = (S_ln >= 10'd2);
+
+    //==================================================================
+    //  输出选择：纯组合 4 选 1
+    //    mode 0/1/2 与输入严格同拍；mode 3 晚 1 行 + 2 像素（见上）
     //==================================================================
     assign O_data = (I_mode == 2'd0) ? I_data :
                     (I_mode == 2'd2) ? (S_bin ? 24'hFF_FF_FF : 24'h00_00_00) :
+                    (I_mode == 2'd3) ? (S_sob_ok ? {S_sobel, S_sobel, S_sobel}
+                                                 : 24'h00_00_00) :
                                        {S_gray, S_gray, S_gray};
 
 endmodule

@@ -94,15 +94,16 @@ module osd_overlay #(
     //------------------------------------------------------------------
     //  算法 -> 字模表（★ 新增算法在这里加一行）
     //------------------------------------------------------------------
-    reg [2:0] S_base;       // 起始字形序号
+    reg [3:0] S_base;       // 起始字形序号
     reg [1:0] S_nchars;     // 本标签的字数
 
     always @(*) begin
         case (I_mode)
-            2'd0:    begin S_base = 3'd0; S_nchars = 2'd2; end   // 原图
-            2'd1:    begin S_base = 3'd2; S_nchars = 2'd2; end   // 灰度
-            2'd2:    begin S_base = 3'd4; S_nchars = 2'd3; end   // 二值化
-            default: begin S_base = 3'd0; S_nchars = 2'd2; end   // 未定义 -> 原图
+            2'd0:    begin S_base = 4'd0; S_nchars = 2'd2; end   // 原图
+            2'd1:    begin S_base = 4'd2; S_nchars = 2'd2; end   // 灰度
+            2'd2:    begin S_base = 4'd4; S_nchars = 2'd3; end   // 二值化
+            2'd3:    begin S_base = 4'd7; S_nchars = 2'd2; end   // 边缘（Sobel）
+            default: begin S_base = 4'd0; S_nchars = 2'd2; end   // 未定义 -> 原图
         endcase
     end
 
@@ -147,7 +148,7 @@ module osd_overlay #(
     wire [3:0] S_col    = (S_x - TEXT_X) & 4'hF;           // 字内列
     wire [3:0] S_row    = (S_y - TEXT_Y);                  // 字内行
 
-    wire [2:0] S_glyph  = S_base + S_char_i[2:0];
+    wire [3:0] S_glyph  = S_base + S_char_i;
 
     wire [15:0] S_font_row;
 

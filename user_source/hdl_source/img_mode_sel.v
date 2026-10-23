@@ -17,7 +17,7 @@
 //      KEY1 → 原图（直通）
 //      KEY2 → 灰度
 //      KEY3 → 二值化
-//      KEY4 → 循环：原图 → 灰度 → 二值化 → 原图 …
+//      KEY4 → 循环：原图 → 灰度 → 二值化 → 边缘(Sobel) → 原图 …
 //      上电默认取 MODE_RST。
 //
 //  时序
@@ -109,7 +109,7 @@ module img_mode_sel #(
             O_mode <= 2'd2;                                 // KEY3 二值化
         end
         else if (S_press[3]) begin
-            O_mode <= (O_mode >= 2'd2) ? 2'd0 : (O_mode + 2'd1);   // KEY4 循环
+            O_mode <= (O_mode >= 2'd3) ? 2'd0 : (O_mode + 2'd1);   // KEY4 循环
         end
     end
 

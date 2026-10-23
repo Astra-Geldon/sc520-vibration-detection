@@ -37,7 +37,7 @@ LOGO_W, LOGO_H = 128, 80          # OSD 上显示的 Logo 尺寸
 WPD = 16                          # 每个 32bit word 装几个像素（2bit/px）
 
 # ★ 字形表：顺序编号，只能追加
-CHARS = "原图灰度二值化"
+CHARS = "原图灰度二值化边缘"
 
 FONT_CANDIDATES = [
     r"C:\Windows\Fonts\simsun.ttc",
@@ -141,19 +141,19 @@ def gen_font():
     L.append("//")
     L.append("//  生成脚本：tools/gen_osd_assets.py")
     L.append("//  字符表  ：%s" % CHARS)
-    L.append("//  地址    ：{字形序号[2:0], 行号[3:0]}，每行 16 bit（bit15 = 最左像素）")
+    L.append("//  地址    ：{字形序号[3:0], 行号[3:0]}，每行 16 bit（bit15 = 最左像素）")
     L.append("//")
     L.append("//  ★ 新增算法文字：在 CHARS 里**追加**汉字 -> 重跑生成脚本 -> 重新编译")
     L.append("//=====================================================================")
     L.append("module osd_font_rom (")
-    L.append("    input  wire [6:0]  I_addr,")
+    L.append("    input  wire [7:0]  I_addr,")
     L.append("    output reg  [15:0] O_row")
     L.append(");")
     L.append("    always @(*) begin")
     L.append("        case (I_addr)")
     for gi, rows in enumerate(glyphs):
         for ri, v in enumerate(rows):
-            L.append("            7'd%d : O_row = 16'h%04X;   // %s 第 %d 行"
+            L.append("            8'd%d : O_row = 16'h%04X;   // %s 第 %d 行"
                      % (gi * 16 + ri, v, CHARS[gi], ri))
     L.append("            default: O_row = 16'h0000;")
     L.append("        endcase")
