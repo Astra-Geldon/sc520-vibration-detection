@@ -62,6 +62,24 @@
 
 //`define VIB_NO_DISPLAY
 
+// =====================================================================
+//  ★★ 图像处理"按键实时切换"开关（2026-10-23）★★
+//
+//  打开（默认）= 用板载 4 个按键 KEY1~KEY4 选择（按下=低）：
+//        SW3 拨上 → 强制原图    SW2 拨上 → 二值化
+//        KEY1=原图  KEY2=灰度  KEY3=二值化  KEY4=循环
+//  注释掉      = 回到编译期固定模式（用下面的 IMG_MODE），资源可回到只综合一种
+//
+//  ★ 与队友功能的分隔：本开关只影响两个地方 ——
+//      · img_proc 的 I_mode（显示通路上最后一个纯组合选择）
+//      · 新增 4 个顶层输入 I_key[3:0]（KEY1~KEY4 = D5/A9/B9/C7，按下=0）
+//    不发散：I_button（ae_set 的曝光按键）、I_button 原引脚、ISP/AWB、
+//    振动链路、HDMI 发射核 一行都没动。
+//    （注：手册核对后 I_button 现在的 N2/J14 并不是板载按键，属历史遗留；
+//      为了不影响 ae_set，这里原样保留，另开 I_key 端口。）
+// =====================================================================
+`define IMG_MODE_KEY
+
 module design_top_wrapper (
     input wire        I_sys_clk,
     input wire        I_rst_n,
@@ -72,6 +90,10 @@ module design_top_wrapper (
     output wire       O_cam_rst,
       
     inout wire [1:0]  I_button,
+
+    // 板载乒乓开关 SW1~SW4（拨上=1），用于图像处理模式选择
+    // 引脚见 pin.adc：A4 / B4 / E11 / D11
+    input wire [3:0]  I_key,
 
     output wire       O_screen_pwm,
     output wire       O_tmds_ch0_p,
@@ -338,11 +360,13 @@ module design_top_wrapper (
 
     // ===== 基础图像处理（基础要求 2.3(2)）=====
     //   插在 video_out 与 hdmi_mixer 之间，同属 S_hdmi_pixel_clk 域。
-    //   IMG_MODE: 0=直通 1=灰度 2=二值化（详见 img_proc.v 文件头）
+    //   I_mode: 0=原图 1=灰度 2=二值化（详见 img_proc.v 文件头）
     //   灰度/二值化是纯组合、零延迟，因此 mixer 的时序对齐不用改。
-    //   进阶要求(1)的按键实时切换留到阶段 4：把 IMG_MODE 换成运行期寄存器即可。
-    localparam integer IMG_MODE = 2;
+    //   `IMG_KEY_SW 打开时由板载按键 I_button[1] 运行期切换；
+    //   关掉宏则退回编译期固定模式 IMG_MODE。
+    localparam integer IMG_MODE = 0;      // 上电默认：0=原图（切法见 img_mode_sel.v）
     wire[23:0]  S_imgp_data;
+    wire[ 1:0]  S_img_mode;
 
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -1113,8 +1137,32 @@ isp_top u_isp_top (
     //  基础图像处理：video_out -> img_proc -> hdmi_mixer
     //    纯组合、零延迟，mixer 的 2 级对齐照旧
     //------------------------------------------------------------------
+//----------------------------------------------------------------------
+//  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
+//      KEY1=原图   KEY2=灰度   KEY3=二值化   KEY4=循环切换
+//    独立模块 img_mode_sel.v（内部 10ms 去抖 + 按下锁存），只输出 2 bit 模式码。
+//    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
+//----------------------------------------------------------------------
+`ifdef IMG_MODE_KEY
+    img_mode_sel #(
+        .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
+        .CLK_HZ     ( 74250000   ),   // = S_hdmi_pixel_clk
+        .DB_MS      ( 10         )
+    )u_img_mode_sel(
+        .I_clk      ( S_hdmi_pixel_clk ),
+        .I_rst_n    ( S_hdmi_rst_n     ),
+        .I_key_n    ( I_key            ),   // {KEY4,KEY3,KEY2,KEY1}，按下=0
+        .O_mode     ( S_img_mode       )
+    );
+`else
+    assign S_img_mode = IMG_MODE[1:0];
+`endif
+
+    //------------------------------------------------------------------
+    //  基础图像处理：video_out -> img_proc -> hdmi_mixer
+    //    纯组合、零延迟，mixer 的 2 级对齐照旧
+    //------------------------------------------------------------------
     img_proc #(
-        .MODE       ( IMG_MODE ),
         .THRESH     ( 48       ),
         .ADAPT_EN   ( 1        )
     )u_img_proc(
@@ -1122,6 +1170,7 @@ isp_top u_isp_top (
         .I_rst_n    ( S_hdmi_rst_n     ),
         .I_vs       ( S_hdmi_vsync     ),
         .I_de       ( S_hdmi_de        ),
+        .I_mode     ( S_img_mode       ),
         .I_data     ( S_video_rd_data  ),
         .O_data     ( S_imgp_data      )
     );

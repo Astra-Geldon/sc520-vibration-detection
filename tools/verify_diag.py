@@ -33,9 +33,28 @@ print('=== 显示通路关闭 ===')
 chk('VIB_NO_DISPLAY 已定义', '`define VIB_NO_DISPLAY' in top)
 chk('video_out 被 ifndef 包住',
     re.search(r'`ifndef VIB_NO_DISPLAY\s*\n\s*video_out u_video_out', top) is not None)
-# 注意：不能要求 hdmi_mixer 紧跟 `ifndef —— img_proc 是插在它们之间的（img_proc.v）。
-# 这里只断言 hdmi_mixer / hdmi_tx 确实落在最后一个 `ifndef VIB_NO_DISPLAY 块内。
-_disp = top[top.rfind('`ifndef VIB_NO_DISPLAY'):].split('`else')[0]
+# 注意：不能要求 hdmi_mixer 紧跟 `ifndef —— img_proc/img_mode_sel 是插在它们之间的。
+# 这里按**配对扫描**取出最后一个 `ifndef VIB_NO_DISPLAY 的完整块（而不是按第一个
+# `else 切），因为块内还嵌了 `ifdef IMG_KEY_SW ... `else ... `endif，按 else 切会截断。
+def _guarded_block(text, macro):
+    idx = text.rfind('`ifndef ' + macro)
+    if idx < 0:
+        return ''
+    depth = 0
+    out = []
+    for ln in text[idx:].split('\n'):
+        s = ln.strip()
+        if s.startswith('`ifdef') or s.startswith('`ifndef'):
+            depth += 1
+        elif s.startswith('`endif'):
+            depth -= 1
+            if depth == 0:
+                break
+        out.append(ln)
+    return '\n'.join(out)
+
+
+_disp = _guarded_block(top, 'VIB_NO_DISPLAY')
 chk('hdmi_mixer/hdmi_tx 被 ifndef 包住',
     re.search(r'\bhdmi_mixer\b', _disp) is not None and
     re.search(r'\bhdmi_tx u_hdmi_tx\b', _disp) is not None)
