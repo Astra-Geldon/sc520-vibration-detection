@@ -64,6 +64,9 @@ tools/                          开发与验证脚本（本项目编写）
   check_goertzel_rtl.py         RTL vs 模型比对
   model_serial_div.py           串行除法器位精确模型
   check_div_rtl.py              除法器 RTL vs 模型比对
+  gen_osd_assets.py             生成 OSD 的 Logo ROM + 汉字点阵 ROM（可复现）
+  burn.ps1                      一键烧录（判定 PRG-2014，纯 ASCII 避免 PS5.1 解析问题）
+  capture.ps1                   暖机感知抓帧（区分"设备被占用"与"真没信号"，自动跳过黑帧）
 
 VIBRATION_PORT_PLAN.md          振动模块移植计划
 ```
