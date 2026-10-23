@@ -377,7 +377,7 @@ module design_top_wrapper (
     //   灰度/二值化是纯组合、零延迟，因此 mixer 的时序对齐不用改。
     //   `IMG_KEY_SW 打开时由板载按键 I_button[1] 运行期切换；
     //   关掉宏则退回编译期固定模式 IMG_MODE。
-    localparam integer IMG_MODE = 0;      // 上电默认：0=原图（切法见 img_mode_sel.v）
+    localparam integer IMG_MODE = 0;      // 上电默认：0=原图（KEY1~KEY4 可切，见 img_mode_sel.v）
     wire[23:0]  S_imgp_data;
     wire[23:0]  S_osd_mix;
     wire[ 1:0]  S_img_mode;
