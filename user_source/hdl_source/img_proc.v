@@ -48,7 +48,7 @@ module img_proc #(
     input  wire        I_rst_n,
     input  wire        I_vs,        // 场同步（自适应阈值用它切帧）
     input  wire        I_de,        // 像素有效
-    input  wire [ 1:0] I_mode,      // 0=原图 1=灰度 2=二值化
+    input  wire [ 2:0] I_mode,      // 0=原图 1=灰度 2=二值化 3=Sobel
     input  wire [23:0] I_data,      // 来自 video_out
     output wire [23:0] O_data       // 送 hdmi_mixer
 );
@@ -197,15 +197,17 @@ module img_proc #(
     wire [7:0]  S_sobel = (S_gmag > 13'd255) ? 8'd255 : S_gmag[7:0];
 
     // 前两行行缓存还没填满，输出黑，避免上电首帧花屏
-    wire S_sob_ok = (S_ln >= 10'd2);
+    //   行首 12 个像素也置黑：3x3 窗口左侧会取到上一行末尾的像素（行缓存地址绕回），
+    //   产生巨大梯度饱和成 255 —— 实测左侧 x=0..5 六列全白，就是这个原因。
+    wire S_sob_ok = (S_ln >= 10'd2) && (S_lx >= 11'd12);
 
     //==================================================================
     //  输出选择：纯组合 4 选 1
     //    mode 0/1/2 与输入严格同拍；mode 3 晚 1 行 + 2 像素（见上）
     //==================================================================
-    assign O_data = (I_mode == 2'd0) ? I_data :
-                    (I_mode == 2'd2) ? (S_bin ? 24'hFF_FF_FF : 24'h00_00_00) :
-                    (I_mode == 2'd3) ? (S_sob_ok ? {S_sobel, S_sobel, S_sobel}
+    assign O_data = (I_mode == 3'd0) ? I_data :
+                    (I_mode == 3'd2) ? (S_bin ? 24'hFF_FF_FF : 24'h00_00_00) :
+                    (I_mode == 3'd3) ? (S_sob_ok ? {S_sobel, S_sobel, S_sobel}
                                                  : 24'h00_00_00) :
                                        {S_gray, S_gray, S_gray};
 

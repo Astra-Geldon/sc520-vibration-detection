@@ -46,7 +46,7 @@ module osd_overlay #(
     input  wire        I_rst_n,
     input  wire        I_de,        // 像素有效
     input  wire        I_vs,        // 场同步（用来清行计数）
-    input  wire [ 1:0] I_mode,      // 当前算法（来自 img_mode_sel）
+    input  wire [ 2:0] I_mode,      // 当前算法（来自 img_mode_sel，3 bit）
     input  wire [23:0] I_data,      // 来自 img_proc
     output wire [23:0] O_data       // 送 hdmi_mixer
 );
@@ -99,10 +99,10 @@ module osd_overlay #(
 
     always @(*) begin
         case (I_mode)
-            2'd0:    begin S_base = 4'd0; S_nchars = 2'd2; end   // 原图
-            2'd1:    begin S_base = 4'd2; S_nchars = 2'd2; end   // 灰度
-            2'd2:    begin S_base = 4'd4; S_nchars = 2'd3; end   // 二值化
-            2'd3:    begin S_base = 4'd7; S_nchars = 2'd2; end   // 边缘（Sobel）
+            3'd0:    begin S_base = 4'd0; S_nchars = 2'd2; end   // 原图
+            3'd1:    begin S_base = 4'd2; S_nchars = 2'd2; end   // 灰度
+            3'd2:    begin S_base = 4'd4; S_nchars = 2'd3; end   // 二值化
+            3'd3:    begin S_base = 4'd7; S_nchars = 2'd2; end   // 边缘（Sobel）
             default: begin S_base = 4'd0; S_nchars = 2'd2; end   // 未定义 -> 原图
         endcase
     end

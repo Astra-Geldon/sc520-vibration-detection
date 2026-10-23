@@ -381,7 +381,7 @@ module design_top_wrapper (
     localparam integer IMG_MODE = 0;      // 上电默认：0=原图（KEY1~KEY4 可切，见 img_mode_sel.v）
     wire[23:0]  S_imgp_data;
     wire[23:0]  S_osd_mix;
-    wire[ 1:0]  S_img_mode;
+    wire[ 2:0]  S_img_mode;
 
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -1170,7 +1170,7 @@ isp_top u_isp_top (
         .O_mode     ( S_img_mode       )
     );
 `else
-    assign S_img_mode = IMG_MODE[1:0];
+    assign S_img_mode = IMG_MODE[2:0];
 `endif
 
     //------------------------------------------------------------------
