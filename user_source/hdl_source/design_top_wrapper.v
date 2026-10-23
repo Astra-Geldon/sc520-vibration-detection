@@ -80,6 +80,19 @@
 // =====================================================================
 `define IMG_MODE_KEY
 
+// =====================================================================
+//  ★★ OSD 叠加开关（2026-10-23，基础要求 2.3(4)）★★
+//
+//  OSD_ON       = 打开 OSD（右上角安路 Logo + 左上角算法名）
+//  OSD_LOGO_ROM = Logo 走 EG_LOGIC_BRAM + osd_logo.mif（厂商 rom_bmp.v 同款）
+//                 注释掉则 Logo 恒为透明，只留文字，便于对比排查
+//
+//  关掉 OSD_ON 后 osd_overlay 完全不例化，mixer 直接吃 img_proc 的输出，
+//  资源回到未加 OSD 的状态。
+// =====================================================================
+`define OSD_ON
+`define OSD_LOGO_ROM
+
 module design_top_wrapper (
     input wire        I_sys_clk,
     input wire        I_rst_n,
@@ -366,6 +379,7 @@ module design_top_wrapper (
     //   关掉宏则退回编译期固定模式 IMG_MODE。
     localparam integer IMG_MODE = 0;      // 上电默认：0=原图（切法见 img_mode_sel.v）
     wire[23:0]  S_imgp_data;
+    wire[23:0]  S_osd_mix;
     wire[ 1:0]  S_img_mode;
 
     reg         S_dbg_raw_seen;
@@ -1174,6 +1188,34 @@ isp_top u_isp_top (
         .I_data     ( S_video_rd_data  ),
         .O_data     ( S_imgp_data      )
     );
+    //------------------------------------------------------------------
+    //  OSD 叠加：右上角安路 Logo + 左上角算法名
+    //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
+    //------------------------------------------------------------------
+`ifdef OSD_ON
+    osd_overlay #(
+        .OSD_EN     ( 1    ),
+        .H_ACTIVE   ( 1280 ),
+        .V_ACTIVE   ( 720  ),
+        .LOGO_W     ( 128  ),
+        .LOGO_H     ( 80   ),
+        .LOGO_X     ( 1136 ),
+        .LOGO_Y     ( 16   ),
+        .TEXT_X     ( 24   ),
+        .TEXT_Y     ( 24   ),
+        .BOX_PAD    ( 8    )
+    )u_osd_overlay(
+        .I_clk      ( S_hdmi_pixel_clk ),
+        .I_rst_n    ( S_hdmi_rst_n     ),
+        .I_de       ( S_hdmi_de        ),
+        .I_vs       ( S_hdmi_vsync     ),
+        .I_mode     ( S_img_mode       ),
+        .I_data     ( S_imgp_data      ),
+        .O_data     ( S_osd_mix        )
+    );
+`else
+    assign S_osd_mix = S_imgp_data;
+`endif
 
     hdmi_mixer #(
         .H_OFFSET   ( 0    ),
@@ -1195,7 +1237,7 @@ isp_top u_isp_top (
         .I_video_last    ( S_hdmi_last        ),
         .I_debug_status  ( S_hdmi_debug_status),
         .O_video_rd_en   ( S_hdmi_window_rd_en),
-        .I_video_rd_data ( S_imgp_data       ),
+        .I_video_rd_data ( S_osd_mix        ),
         .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
         .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
         .O_hdmi_de       ( S_hdmi_out_de      ),

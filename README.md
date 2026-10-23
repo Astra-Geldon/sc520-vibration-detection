@@ -92,6 +92,7 @@ VIBRATION_PORT_PLAN.md          振动模块移植计划
 |---|---|---|---|
 | `VIB_ON` | `design_top_wrapper.v` 第 61 行 | **关闭** | 打开整条振动检测链路 |
 | `IMG_MODE_KEY` | `design_top_wrapper.v` 第 81 行 | **打开** | 允许板载按键运行期切换图像处理模式；注释掉则退回编译期固定 `IMG_MODE` |
+| `OSD_ON` | `design_top_wrapper.v` 第 93 行 | **打开** | OSD 叠加（右上角安路 Logo + 左上角算法名）；注释掉则 mixer 直接吃 `img_proc` 输出 |
 | `AWB_BYPASS` | `isp/isp_top.v` 第 2 行 | **关闭** | 旁路 FPGA 白平衡（仅用于颜色对比实验，**不要长期打开**）|
 
 关闭 `VIB_ON` 时释放约 12,400 个 slice，只保留视频通路和串口日志。
@@ -157,6 +158,24 @@ video_out.O_vdieo_data ──► img_proc ──► hdmi_mixer.I_video_rd_data
 `pin.adc` 里原有的 `I_button[0] = N2`、`I_button[1] = J14` 经开发板手册核对
 **不是板载按键**（属历史遗留）。因此 `ae_set` 的曝光加减键实际上从未生效。
 为避免影响既有逻辑，本功能没有复用它们，而是新增独立端口 `I_key[3:0]`。
+
+### 5.6 OSD 叠加（基础要求 2.3(4)）
+
+`osd_overlay.v` 插在 `img_proc` 与 `hdmi_mixer` 之间，叠加两样东西：
+
+| 位置 | 内容 | 实现 |
+|---|---|---|
+| 右上角 (1136,16) | **ANLOGIC 安路 Logo**，128×80，深蓝 A + 红色条纹，白底透明 | `osd_logo_rom.v`：640 条 case 的 LUT ROM，每 32 bit 装 16 像素（2 bit/像素） |
+| 左上角 (24,24) | **当前算法名**，16×16 汉字点阵，黑底白字 | `osd_font_rom.v`：7 个字形 × 16 行，case ROM |
+
+- Logo 素材取自厂商资料 `0 准备/HX1P35A_Contest_202606/.../lab_ex_3_tf_sdram_vga/图片/logo.bmp`
+  （640×480 的官方 Logo），离线裁剪、缩放到 128×80 并量化为 3 类（透明/深蓝/红）。
+- 叠加仍是**纯组合 3 选 1**，数据零延迟，`hdmi_mixer` 的 2 级对齐不受影响。
+- 文字随 `I_mode` 实时变化：`原图` / `灰度` / `二值化`。
+- 资源：`u_osd_overlay` 56 lut / 39 seq / 13 f7mux，整片 slice 66.21%（+286）。
+
+**扩展新算法**见 `docs/算法添加方法.md`（四步：加 img_proc 分支 → 登记字模起始序号 →
+追加汉字 → 选按键；含零延迟约束、资源预算、常见坑）。
 
 ---
 
