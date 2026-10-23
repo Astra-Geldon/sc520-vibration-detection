@@ -156,15 +156,16 @@ video_out.O_vdieo_data ──► img_proc ──► hdmi_mixer.I_video_rd_data
 
 | 项 | 用量 | 全片 |
 |---|---|---|
-| slice | **15,133** | 21,216（**71.33%**）|
-| 寄存器 | 14,496 | 42,432（34.16%）|
-| LUT6 | 12,900 | 21,216（60.80%）|
+| slice | **15,062** | 21,216（**70.99%**）|
+| 寄存器 | 14,435 | 42,432（34.02%）|
+| LUT6 | 12,804 | 21,216（60.35%）|
 | ERAM | 43 | 108（39.81%）|
 | DSP | 20 | 40（50.00%）|
-| 时序 | SWNS **+0.105 ns** / HWNS **+0.020 ns** | 无违例 |
+| 时序 | SWNS **+0.025 ns** / HWNS **+0.020 ns** | 无违例 |
 
-其中算法部分：`u_img_proc` 368 lut / 67 ripple / 155 seq / **768 dram lut**，
-`u_img_mode_sel` 70 lut / 80 ripple / 98 seq。
+其中算法部分：`u_img_proc` 368 lut / 67 ripple / 158 seq / **768 dram lut**，
+`u_osd_overlay` 54 lut / 26 f7mux / 13 f8mux，
+`u_img_mode_sel` 42 lut / 40 ripple / 52 seq。
 
 > ⚠ **768 个 `dram lut` 就是 Sobel 的 3 个行缓存**（3×2048×8 bit ÷ 64 bit/LUT）。
 > 综合日志虽然报 `Inferred 17 RAMs`（+3），但 TD 把它们实现成了 LUTRAM 而不是 ERAM，
