@@ -260,31 +260,31 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
 
   //------------------------------------------------------------------
   //  帧间平滑相关（2026-10-24，视频专用）
-  //    S_gain_calc : 本轮除法结果（钳位后，再乘 R_TRIM 微调）
-  //    S_smooth_*  : (3*old + new)，即 alpha=1/4 的分子部分，取 [21:2] 得到 /4
+  //    S_gain_calc : 本轮除法结果（钳位后）
+  //    S_smooth_*  : (63*old + new)，alpha=1/64，降低构图变化引起的全局色漂移
   //    S_awb_first : 冷启动标志，第一帧跳过平滑（否则上电后有 0.2s 颜色渐变）
   //
-  //  ★ R_TRIM = 15/16（gain_r 再压 6.25%），2026-10-24 实测加
-  //    AWB 按「整帧平均」算 gain_r，但白墙只是局部，所以压不干净：
-  //      天花板场景：白墙 RAW G/R=0.845（需要 gain_r=0.845），AWB 只给 0.944
-  //      人像场景：  白墙 G/R=0.934（video 实测，偏红 6.6%），同样欠压
-  //    两个场景都还需要再压 6~10%，取 15/16 折中（纯移位减法，无乘法器）。
-  //    若之后发现偏绿，把 R_TRIM 改回 16/16（即去掉这一行）即可。
+  // 2026-10-24：取消R增益整体衰减（trim）。空间表已归一化，
+  // 整体色偏交给AWB，避免空间校正和全局校正重复调色。
   //------------------------------------------------------------------
-  // 2026-10-24：取消 R 增益整体衰减（trim）。
-  //   原因：color_shading 表已归一化（只校空间形状，平均=1.0），
-  //   整体色偏完全交给 AWB，再加 trim 等于人为压低校正量，会让白墙回绿。
-  //   原来挂在 KEY4 上的 trim 档位改用去控制 color_shading 的强度 k。
   // 增益限制在0.5x~2.0x。异常统计只能影响这一帧的校正量，不能把通道推到16x。
   localparam [19:0] AWB_GAIN_MIN = 20'h08000;
   localparam [19:0] AWB_GAIN_MAX = 20'h20000;
   wire [19:0] S_gain_div = (|S_dquo_f[47:20]) ? AWB_GAIN_MAX : S_dquo_f[19:0];
   wire [19:0] S_gain_calc = (S_gain_div < AWB_GAIN_MIN) ? AWB_GAIN_MIN :
                              (S_gain_div > AWB_GAIN_MAX) ? AWB_GAIN_MAX : S_gain_div;
-  wire [21:0] S_smooth_r_hold = ({2'b0, in_r_r1} << 1) +
-                                 {2'b0, in_r_r1} + {2'b0, S_gain_r_hold};
-  wire [21:0] S_smooth_b_calc = ({2'b0, in_b_r1} << 1) +
-                                {2'b0, in_b_r1} + {2'b0, S_gain_calc};
+  wire [23:0] S_smooth_r_hold = ({4'b0, in_r_r1} << 5) +
+                                 ({4'b0, in_r_r1} << 4) +
+                                 ({4'b0, in_r_r1} << 3) +
+                                 ({4'b0, in_r_r1} << 2) +
+                                 ({4'b0, in_r_r1} << 1) +
+                                 {4'b0, in_r_r1} + {4'b0, S_gain_r_hold};
+  wire [23:0] S_smooth_b_calc = ({4'b0, in_b_r1} << 5) +
+                                ({4'b0, in_b_r1} << 4) +
+                                ({4'b0, in_b_r1} << 3) +
+                                ({4'b0, in_b_r1} << 2) +
+                                ({4'b0, in_b_r1} << 1) +
+                                {4'b0, in_b_r1} + {4'b0, S_gain_calc};
   reg         S_awb_first;
 
   always @(posedge I_clk or negedge I_rst_n) begin
@@ -369,8 +369,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   if (S_dcnt == 6'd0) begin
                       // 样本不足时保持上一组增益；有效帧才更新并结束冷启动状态。
                       if (S_frame_ok) begin
-                          in_r_r1 <= S_awb_first ? S_gain_r_hold : S_smooth_r_hold[21:2];
-                          in_b_r1 <= S_awb_first ? S_gain_calc   : S_smooth_b_calc[21:2];
+                          in_r_r1 <= S_awb_first ? S_gain_r_hold : S_smooth_r_hold[23:6];
+                          in_b_r1 <= S_awb_first ? S_gain_calc   : S_smooth_b_calc[23:6];
                           S_awb_first <= 1'b0;
                       end
                       S_dst   <= DIV_IDLE;
