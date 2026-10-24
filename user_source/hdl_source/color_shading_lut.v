@@ -2,14 +2,14 @@
 //  color_shading_lut.v  ——  颜色阴影校正增益表（自动生成，勿手改）
 //
 //  生成工具: 0 Project/tools/gen_shading_lut.py
-//  源图:     docs/captures/awb_v2serial/*.png
-//  网格:     10 列 x 6 行 = 60 块（每块 128 x 120 像素）
+//  源图:     docs/captures/awb_v2serial/grab_150545_01.png
+//  网格:     10 列 x 6 行 = 60 块（每块 128 像素宽 x 128 行）
 //  块索引:   blk = blk_y * 10 + blk_x,  blk_x = x[10:7], blk_y = y[9:7]
 //  格式:     Q8 定点，256 = 1.0x；只调 R/B，G 直通（保持亮度）
 //
 //  标定原理: 每块增益 = 块内 G 均值 / 块内 R(或B) 均值，
 //            使块内三通道相等，从而消除镜头/传感器的 color shading。
-//  OSD 区域的块已排除统计（Logo 右上、文字标签左上）。
+//            OSD 区域（Logo / 文字）已从统计中排除。
 //=====================================================================
 module color_shading_lut (
     input  wire [5:0] I_blk,
