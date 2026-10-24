@@ -116,7 +116,6 @@ module img_proc #(
     //      |G| = |Gx| + |Gy|（省一次开方，工程常用）
     //==================================================================
     reg [10:0] S_lx;            // 行内像素序号 0..1279
-    reg [1:0]  S_ly3;           // 行号 mod 3
     reg        S_de_d;
     reg [9:0]  S_ln;            // 本帧已收到的有效行数
 
@@ -126,7 +125,6 @@ module img_proc #(
         if (!I_rst_n) begin
             S_de_d <= 1'b0;
             S_lx   <= 11'd0;
-            S_ly3  <= 2'd0;
             S_ln   <= 10'd0;
         end
         else begin
@@ -139,27 +137,38 @@ module img_proc #(
                 S_ln  <= 10'd0;
             end
             else if (S_line_end) begin
-                S_ly3 <= (S_ly3 == 2'd2) ? 2'd0 : (S_ly3 + 2'd1);
                 S_ln  <= S_ln + 1'b1;
             end
         end
     end
 
-    // ---- 3 个轮转行缓存 ----
-    reg [7:0] S_lb0 [0:2047];
-    reg [7:0] S_lb1 [0:2047];
-    reg [7:0] S_lb2 [0:2047];
+    // ---- 2 块 ping-pong 行缓存（2026-10-24 改写，目标：让 TD 推断成 ERAM）----
+    //   行 y   写入 buf[y&1]
+    //   行 y-1 从 buf[~y&1] 读   -> 不同块，无读写冲突
+    //   行 y-2 从 buf[y&1]  读   -> 同块同地址，靠"读优先"语义拿到旧数据
+    //   每块 RAM 只有 1 写 1 读，是 TD 推断 ERAM 的标准模板。
+    //   （原来用 3 数组 + 3 路 case，被推断成 768 个 dram lut，贵得多。）
+    // (* ramstyle = "block" *) 强制映射到 ERAM：2048x8 = 16,384 bit，一块 eram20k 装得下。
+    // 不加属性时 TD 会选 LUTRAM（512 个 dram lut），加属性后应降到 0。
+    (* ramstyle = "block" *) reg [7:0] S_lb0 [0:2047];
+    (* ramstyle = "block" *) reg [7:0] S_lb1 [0:2047];
 
     reg [7:0] S_q1;             // 行 y-1 在 x 处的灰度
     reg [7:0] S_q2;             // 行 y-2 在 x 处的灰度
+    wire      S_row_odd = S_ln[0];
 
     always @(posedge I_clk) begin
         if (I_de) begin
-            case (S_ly3)
-                2'd0: begin S_q1 <= S_lb1[S_lx]; S_q2 <= S_lb2[S_lx]; S_lb0[S_lx] <= S_gray; end
-                2'd1: begin S_q1 <= S_lb2[S_lx]; S_q2 <= S_lb0[S_lx]; S_lb1[S_lx] <= S_gray; end
-                default: begin S_q1 <= S_lb0[S_lx]; S_q2 <= S_lb1[S_lx]; S_lb2[S_lx] <= S_gray; end
-            endcase
+            if (!S_row_odd) begin
+                S_q1 <= S_lb1[S_lx];          // y-1：另一块
+                S_q2 <= S_lb0[S_lx];          // y-2：同块，读到旧数据
+                S_lb0[S_lx] <= S_gray;        // 写当前行
+            end
+            else begin
+                S_q1 <= S_lb0[S_lx];
+                S_q2 <= S_lb1[S_lx];
+                S_lb1[S_lx] <= S_gray;
+            end
         end
     end
 

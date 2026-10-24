@@ -93,6 +93,16 @@
 `define OSD_ON
 `define OSD_LOGO_ROM
 
+// =====================================================================
+//  ★★ 简化自适应白平衡开关（2026-10-24）★★
+//  打开 = 用自写的 awb_simple.v 替代厂商 awb.v（省约 5,438 slice）
+//  注释掉 = 不做白平衡，画面偏紫红（传感器原始色偏）
+//  注：厂商 AWB 本身由 isp_top.v 里的 `AWB_BYPASS 控制，当前为旁路状态
+// =====================================================================
+// 2026-10-24：厂商 AWB 已恢复（见 isp_top.v），它的白平衡 + 提亮已经够用，
+//   这里不再叠加自写增益。固定增益版代码保留在 awb_simple.v，需要时再开。
+//`define AWB_SIMPLE
+
 module design_top_wrapper (
     input wire        I_sys_clk,
     input wire        I_rst_n,
@@ -379,6 +389,7 @@ module design_top_wrapper (
     //   关掉那个宏则退回编译期固定模式 IMG_MODE。
     localparam integer IMG_MODE = 0;      // 上电默认：0=原图（KEY1~KEY4 可切，见 img_mode_sel.v）
     wire[23:0]  S_imgp_data;
+    wire[23:0]  S_awb_data;
     wire[23:0]  S_osd_mix;
     wire[ 2:0]  S_img_mode;
 
@@ -1158,7 +1169,26 @@ isp_top u_isp_top (
 `endif
 
     //------------------------------------------------------------------
-    //  基础图像处理：video_out -> img_proc -> hdmi_mixer
+    //  简化自适应白平衡（2026-10-24）
+    //    替代厂商 awb.v（省约 5,438 slice）：用"上一帧统计、当前帧应用"，
+    //    零延迟、零 ERAM。详见 awb_simple.v 文件头。
+    //    `AWB_SIMPLE 关掉则整段旁路（画面会偏紫红，因为传感器色偏没被校正）。
+    //------------------------------------------------------------------
+`ifdef AWB_SIMPLE
+    awb_simple u_awb_simple (
+        .I_clk      ( S_hdmi_pixel_clk ),
+        .I_rst_n    ( S_hdmi_rst_n     ),
+        .I_vs       ( S_hdmi_vsync     ),
+        .I_de       ( S_hdmi_de        ),
+        .I_data     ( S_video_rd_data  ),
+        .O_data     ( S_awb_data       )
+    );
+`else
+    assign S_awb_data = S_video_rd_data;
+`endif
+
+    //------------------------------------------------------------------
+    //  基础图像处理：video_out -> awb_simple -> img_proc -> osd -> hdmi_mixer
     //    纯组合、零延迟，mixer 的 2 级对齐照旧
     //------------------------------------------------------------------
     img_proc #(
@@ -1170,7 +1200,7 @@ isp_top u_isp_top (
         .I_vs       ( S_hdmi_vsync     ),
         .I_de       ( S_hdmi_de        ),
         .I_mode     ( S_img_mode       ),
-        .I_data     ( S_video_rd_data  ),
+        .I_data     ( S_awb_data       ),
         .O_data     ( S_imgp_data      )
     );
     //------------------------------------------------------------------
