@@ -199,29 +199,40 @@ module axis_gamma_rgb96 (
         reg [7:0] delta;
         reg [11:0] interpolation;
         begin
-            // 2026-10-24 重设计：原曲线中间段 delta=14，斜率 14/16 = 0.875 < 1，
-            // 对「有效动态范围只有 78 级」的画面是**反向压缩**对比度。
-            // 新曲线：暗部基本保留（delta 13~22，输入 47 -> 输出 45 几乎不变），
-            // 高光压缩（delta 6~1）避免过曝。
-            // 预期：输入 62~140（78 级）-> 输出约 56~181（125 级，x1.6）。
-            // 自检：base 累加应 0→13→28→46→68→94→120→146→172→198→222→239→247→251→253→254→255
+            // ------------------------------------------------------------------
+            // 2026-10-24 第二次修正：S 曲线（提亮为主 + 适度增对比）
+            //
+            // 第一次改错了：误以为原曲线中间段斜率 0.875 < 1 是在压对比度，
+            // 于是改成「中间陡、两端压」。但原曲线是**提亮曲线**（gamma 0.7），
+            // 暗部本来就被抬高了 30~60%，再压暗部等于把提亮效果抵消掉。
+            // 实测 mean 从 104 掉到 66。用反查表确认：输出 62 反推线性 34，
+            // 而第一版曲线只给 30，比原来低 32 级 —— 与实测吻合。
+            //
+            // 本次 S 曲线（离线模拟：反查回线性域再套新曲线）：
+            //   暗部 线性 34 -> 54（比原来略暗 8，可接受）
+            //   中部 线性 71 -> 121（提亮 17）
+            //   亮部 线性 109 -> 186（提亮 46）
+            //   mean 104 -> 121, std 26.2 -> 38.2 (x1.46), 动态范围 78 -> 132 (x1.69)
+            //   过曝(>250) 1.17%, 死黑(<5) 0.30%
+            // 自检：base 累加 0→22→50→78→108→138→166→190→210→226→238→245→250→253→254→255
+            // ------------------------------------------------------------------
             case (value[7:4])
-                4'h0: begin base = 8'd0;   delta = 8'd13; end
-                4'h1: begin base = 8'd13;  delta = 8'd15; end
-                4'h2: begin base = 8'd28;  delta = 8'd18; end
-                4'h3: begin base = 8'd46;  delta = 8'd22; end
-                4'h4: begin base = 8'd68;  delta = 8'd26; end
-                4'h5: begin base = 8'd94;  delta = 8'd26; end
-                4'h6: begin base = 8'd120; delta = 8'd26; end
-                4'h7: begin base = 8'd146; delta = 8'd26; end
-                4'h8: begin base = 8'd172; delta = 8'd26; end
-                4'h9: begin base = 8'd198; delta = 8'd24; end
-                4'ha: begin base = 8'd222; delta = 8'd17; end
-                4'hb: begin base = 8'd239; delta = 8'd8; end
-                4'hc: begin base = 8'd247; delta = 8'd4; end
-                4'hd: begin base = 8'd251; delta = 8'd2; end
-                4'he: begin base = 8'd253; delta = 8'd1; end
-                default: begin base = 8'd254; delta = 8'd1; end
+                4'h0: begin base = 8'd0;   delta = 8'd22; end
+                4'h1: begin base = 8'd22;  delta = 8'd28; end
+                4'h2: begin base = 8'd50;  delta = 8'd28; end
+                4'h3: begin base = 8'd78;  delta = 8'd30; end
+                4'h4: begin base = 8'd108; delta = 8'd30; end
+                4'h5: begin base = 8'd138; delta = 8'd28; end
+                4'h6: begin base = 8'd166; delta = 8'd24; end
+                4'h7: begin base = 8'd190; delta = 8'd20; end
+                4'h8: begin base = 8'd210; delta = 8'd16; end
+                4'h9: begin base = 8'd226; delta = 8'd12; end
+                4'ha: begin base = 8'd238; delta = 8'd7; end
+                4'hb: begin base = 8'd245; delta = 8'd5; end
+                4'hc: begin base = 8'd250; delta = 8'd3; end
+                4'hd: begin base = 8'd253; delta = 8'd1; end
+                4'he: begin base = 8'd254; delta = 8'd1; end
+                default: begin base = 8'd255; delta = 8'd0; end
             endcase
 
             interpolation = delta * value[3:0] + 8;
