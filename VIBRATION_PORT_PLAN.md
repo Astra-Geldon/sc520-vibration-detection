@@ -1,5 +1,15 @@
 # 振动识别算法移植规划
 
+> ⚠️ **阅读前必看（2026-10-24 交接时补）**
+> 1. **本文是「规划」，不是已完成的功能**。文中提到的 `vib_cluster.v` / `vib_corr1d.v` /
+>    `vib_frame_store.v` / `vib_global_motion.v` / `vib_grad3x3.v` / `vib_grid_lk.v` /
+>    `vib_projection.v` / `vib_solve2x2.v` / `vib_track.v` / `isp128_to_rgb_stream.v`
+>    **在本工程里都不存在**（`grep` 过），也没有 `VIB_ON` 这个宏。
+> 2. **本文的目标工程不是当前工程**，见下行的 `D:\workplace\lab_ex1_mipi_hdmi_SC520`；
+>    当前工程是 `E:\杂七杂八\4竞赛\FPGA`（PH1P35 + SC520CS）。两者的行号/文件名引用都不能直接照搬。
+> 3. 振动部分由队友负责，**不是颜色/图像增强这条线的内容**。
+>    当前工程的真实状态见 `docs/交接文档.md`。
+>
 > 目标工程：`D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520\lab_ex1_mipi_hdmi`
 > 算法参考模型：`D:\workplace\py\PythonProject`（`multi_object` / `projection` 等方法）
 > 本文档 = 实施步骤 + 设计决策 + 对拍方法。编译由你负责。
