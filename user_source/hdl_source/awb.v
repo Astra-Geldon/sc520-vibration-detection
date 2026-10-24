@@ -142,45 +142,116 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
         end
 
   /*****************************************************************
-                           计算增益                                       
-*****************************************************************/
+        串行除法器（2026-10-24 替换原 2 个 50 级流式除法器）
+  *****************************************************************/
+  // 改造说明
+  //   原设计：2 个 divider IP（PIPLE=50），start=I_tvalid_r1 每拍启动，
+  //           配合 96bit x 50 拍的 signal_delay 做逐像素对齐。
+  //           实测这两个除法器占 u_awb 的 90%：
+  //             div_gen_G_R_r1  845 lut / 1,084 ripple / 2,803 seq
+  //             divide_G_B_r1   785 lut / 1,084 ripple / 2,710 seq
+  //           合计约 4,700 slice。
+  //   新设计：行末（I_tlast）锁存累加和，串行算 R、B 两个增益（各 48 拍），
+  //           整行使用同一增益。行消隐有 370 拍，96 拍足够算完。
+  //           signal_delay(50 拍) 保持不动，所以下游时序完全不变。
+  //
+  //   !! 商必须用移位累积（{quo[46:0], bit}），不能用 quo[cnt]<=bit 这种
+  //      变量索引赋值 —— 实测综合结果不对（详见 docs/worklog.md 2026-10-24）。
+  //   !! 用 S_dquo_f 组合出最后一位，因为 cnt==0 那一拍的试减结果还没进寄存器。
 
-  wire [47:0] dout_R[3:0];
-  wire [47:0] dout_B[3:0];
+  reg [19:0] in_r_r1;
+  reg [19:0] in_b_r1;
 
-  wire done[3:0];
+  localparam [1:0] DIV_IDLE = 2'd0,
+                   DIV_R    = 2'd1,
+                   DIV_B    = 2'd2;
 
-  wire [47:0] in_r_x1;
-  wire [47:0] in_b_x1;
-  assign in_r_x1 = dout_R[0][47:0];
-  assign in_b_x1 = dout_B[0][47:0];
+  reg [1:0]  S_dst;
+  reg [5:0]  S_dcnt;
+  reg [47:0] S_ddvd;
+  reg [31:0] S_ddvs;
+  reg [48:0] S_drem;
+  reg [47:0] S_dquo;
+  reg [31:0] S_sum_g_h;
 
+  wire [48:0] S_drem_nx = {S_drem[47:0], S_ddvd[S_dcnt]};
+  wire        S_dsub    = (S_drem_nx >= {17'd0, S_ddvs});
+  wire [47:0] S_dquo_f  = {S_dquo[46:0], S_dsub};
 
+  always @(posedge I_clk or negedge I_rst_n) begin
+      if (!I_rst_n) begin
+          S_dst     <= DIV_IDLE;
+          S_dcnt    <= 6'd47;
+          S_ddvd    <= 48'd0;
+          S_ddvs    <= 32'd1;
+          S_drem    <= 49'd0;
+          S_dquo    <= 48'd0;
+          S_sum_g_h <= 32'd1;
+          in_r_r1   <= 20'h10000;
+          in_b_r1   <= 20'h10000;
+      end
+      else begin
+          case (S_dst)
+              DIV_IDLE: begin
+                  if (I_tlast && I_tvalid) begin
+                      S_sum_g_h <= sum_g[0];
+                      S_ddvd    <= {sum_g[0], 16'd0};
+                      S_ddvs    <= sum_r[0];
+                      S_drem    <= 49'd0;
+                      S_dquo    <= 48'd0;
+                      S_dcnt    <= 6'd47;
+                      S_dst     <= DIV_R;
+                  end
+              end
 
-/*****************************************************************
-                   IP 调用                                    
-*****************************************************************/
-    //为了保证合理的延迟，这里使用了除法器
+              DIV_R: begin
+                  if (S_dsub) begin
+                      S_drem <= S_drem_nx - {17'd0, S_ddvs};
+                      S_dquo <= {S_dquo[46:0], 1'b1};
+                  end
+                  else begin
+                      S_drem <= S_drem_nx;
+                      S_dquo <= {S_dquo[46:0], 1'b0};
+                  end
 
-      divider div_gen_G_R_r1 (
-          .clk(I_clk),  // input wire aclk
-          .rst(!I_rst_n),
-          .start(I_tvalid_r1),
-          .denominator(sum_r[0]),  // input wire [31 : 0] s_axis_divisor_tdata
-          .numerator({sum_g[0],16'd0}),  // input wire [47 : 0] s_axis_dividend_tdata
-          .quotient(dout_R[0]),  // output wire [79 : 0] m_axis_dout_tdata
-          .done(done[0])
-      );
+                  if (S_dcnt == 6'd0) begin
+                      in_r_r1 <= (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
+                      S_ddvd  <= {S_sum_g_h, 16'd0};
+                      S_ddvs  <= sum_b[0];
+                      S_drem  <= 49'd0;
+                      S_dquo  <= 48'd0;
+                      S_dcnt  <= 6'd47;
+                      S_dst   <= DIV_B;
+                  end
+                  else begin
+                      S_dcnt <= S_dcnt - 1'b1;
+                  end
+              end
 
-      divider divide_G_B_r1 (
-          .clk(I_clk),  // input wire aclk
-          .rst(!I_rst_n),
-          .start(I_tvalid_r1),
-          .denominator(sum_b[0]),  // input wire [31 : 0] s_axis_divisor_tdata
-          .numerator({sum_g[0],16'd0}),  // input wire [47 : 0] s_axis_dividend_tdata
-          .quotient(dout_B[0]),  // output wire [79 : 0] m_axis_dout_tdata
-          .done()
-      );
+              DIV_B: begin
+                  if (S_dsub) begin
+                      S_drem <= S_drem_nx - {17'd0, S_ddvs};
+                      S_dquo <= {S_dquo[46:0], 1'b1};
+                  end
+                  else begin
+                      S_drem <= S_drem_nx;
+                      S_dquo <= {S_dquo[46:0], 1'b0};
+                  end
+
+                  if (S_dcnt == 6'd0) begin
+                      in_b_r1 <= (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
+                      S_dst   <= DIV_IDLE;
+                  end
+                  else begin
+                      S_dcnt <= S_dcnt - 1'b1;
+                  end
+              end
+
+              default: S_dst <= DIV_IDLE;
+          endcase
+      end
+  end
+
 
      
     signal_delay #(
@@ -198,31 +269,6 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
         /*output wire [DATA_WIDTH-1:0]*/ .O_data (data_d0    ),   //synthesis keep 
         /*output wire                 */ .O_tuser(I_tuser_r0 )
     );
-
-    
-
-/*****************************************************************
-                            ��������                                      
-*****************************************************************/
-
-    reg  [19:0]   in_r_r1;
-    reg  [19:0]   in_b_r1;
-    always @(posedge I_clk or negedge I_rst_n)begin 
-        if(!I_rst_n || I_tuser)begin
-            in_r_r1 <= 20'h10000;
-            in_b_r1 <= 20'h10000;
-        end
-        else if(done[0])begin
-            if(|in_r_x1[47:20])
-                in_r_r1 <= 20'hfffff;
-            else 
-                in_r_r1 <= in_r_x1[19:0];
-            if(|in_b_x1[47:20])
-                in_b_r1 <= 20'hfffff;
-            else 
-                in_b_r1 <= in_b_x1[19:0];
-        end
-    end
 
 
     ////信号同步
@@ -381,6 +427,5 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
     assign  I_tready = O_tready;
  
 endmodule
-
 
 
