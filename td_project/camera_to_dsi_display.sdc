@@ -6,11 +6,11 @@ derive_clocks
 rename_clock -name {pll_clk_100m} [get_clocks {u_PLL/ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst/u_PH1P_PHY_PLL.clkc[0]}]
 rename_clock -name {pll_clk_24m} [get_clocks {u_PLL/ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst/u_PH1P_PHY_PLL.clkc[1]}]
 
-# 2026-10-21：HDMI 时钟改由 pll_hdmi_7425 提供（74.25 / 371.25 MHz），
+# 2026-10-24：HDMI 时钟改回主 PLL 的 clk4/clk5（75.000 / 375.000 MHz），
 # rename 必须跟着改路径 —— 否则这两个时钟没有被正确定义/分组，
 # 时序会假性恶化（上一次实测 SWNS -4.803ns 就是这么来的）。
-rename_clock -name {HDMI_PIXEL_CLK}  [get_clocks {u_pll_hdmi_7425/ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst/u_PH1P_PHY_PLL.clkc[4]}]
-rename_clock -name {HDMI_SERIAL_CLK} [get_clocks {u_pll_hdmi_7425/ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst/u_PH1P_PHY_PLL.clkc[5]}]
+rename_clock -name {HDMI_PIXEL_CLK}  [get_clocks {u_PLL/ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst/u_PH1P_PHY_PLL.clkc[4]}]
+rename_clock -name {HDMI_SERIAL_CLK} [get_clocks {u_PLL/ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst/u_PH1P_PHY_PLL.clkc[5]}]
 
 rename_clock -name {MIPI_RX_BYTE_CLK} [get_clocks {u_mipi_dphy_rx_ph1p_mipiio_wrapper/u_ph1p_mipiio_rx_wrapper/u_PH1P_LOGIC_DPHY_MIPI_RX.o_fabric_div4_8_clk}]
 
