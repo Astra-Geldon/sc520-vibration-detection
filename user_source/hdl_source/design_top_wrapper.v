@@ -108,7 +108,7 @@
 //  打开 = 用 color_shading.v 做 10x6 分区增益，消除中央偏绿/两侧品红
 //  注释掉 = 直通，用于对比开/关效果
 // =====================================================================
-`define SHADING_ON
+//`define SHADING_ON   // 临时关闭用于诊断（诊断完恢复）
 
 module design_top_wrapper (
     input wire        I_sys_clk,

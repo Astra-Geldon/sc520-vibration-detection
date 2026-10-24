@@ -173,6 +173,7 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   reg [48:0] S_drem;
   reg [47:0] S_dquo;
   reg [31:0] S_sum_g_h;
+  reg [31:0] S_sum_b_h;   // 2026-10-24: B 通道也要锁存，原来只锁了 G
 
   wire [48:0] S_drem_nx = {S_drem[47:0], S_ddvd[S_dcnt]};
   wire        S_dsub    = (S_drem_nx >= {17'd0, S_ddvs});
@@ -187,14 +188,28 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
           S_drem    <= 49'd0;
           S_dquo    <= 48'd0;
           S_sum_g_h <= 32'd1;
+          S_sum_b_h <= 32'd1;
           in_r_r1   <= 20'h10000;
           in_b_r1   <= 20'h10000;
       end
       else begin
           case (S_dst)
               DIV_IDLE: begin
-                  if (I_tlast && I_tvalid) begin
+                  //------------------------------------------------------------------
+                  // 2026-10-24 修正：触发点从「行末 I_tlast」改成「帧首 I_tuser」
+                  //
+                  // sum_r/g/b 是「整帧累加、帧首清零」（见上方 always 块）。
+                  //   x 行末触发：用的是「到这一行为止」的部分统计 -> 帧内增益一路漂移
+                  //     实测垂直方向白墙 G/R 从 1.082（顶部）漂到 1.017（底部），
+                  //     表现为「上绿下中性」，也就是用户反馈的「背景变绿」。
+                  //   v 帧首触发：读到的是上一帧的完整统计（非阻塞赋值，清零同拍不生效）
+                  //     -> 整帧使用同一组增益，帧内均匀。
+                  //
+                  // 代价：增益比画面晚一帧（16.7ms），肉眼不可见。
+                  //------------------------------------------------------------------
+                  if (I_tuser) begin
                       S_sum_g_h <= sum_g[0];
+                      S_sum_b_h <= sum_b[0];
                       S_ddvd    <= {sum_g[0], 16'd0};
                       S_ddvs    <= sum_r[0];
                       S_drem    <= 49'd0;
@@ -217,7 +232,7 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   if (S_dcnt == 6'd0) begin
                       in_r_r1 <= (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
                       S_ddvd  <= {S_sum_g_h, 16'd0};
-                      S_ddvs  <= sum_b[0];
+                      S_ddvs  <= S_sum_b_h;
                       S_drem  <= 49'd0;
                       S_dquo  <= 48'd0;
                       S_dcnt  <= 6'd47;
