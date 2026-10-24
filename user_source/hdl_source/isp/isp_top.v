@@ -199,23 +199,29 @@ module axis_gamma_rgb96 (
         reg [7:0] delta;
         reg [11:0] interpolation;
         begin
+            // 2026-10-24 重设计：原曲线中间段 delta=14，斜率 14/16 = 0.875 < 1，
+            // 对「有效动态范围只有 78 级」的画面是**反向压缩**对比度。
+            // 新曲线：暗部基本保留（delta 13~22，输入 47 -> 输出 45 几乎不变），
+            // 高光压缩（delta 6~1）避免过曝。
+            // 预期：输入 62~140（78 级）-> 输出约 56~181（125 级，x1.6）。
+            // 自检：base 累加应 0→13→28→46→68→94→120→146→172→198→222→239→247→251→253→254→255
             case (value[7:4])
-                4'h0: begin base = 8'd0;   delta = 8'd37; end
-                4'h1: begin base = 8'd37;  delta = 8'd23; end
-                4'h2: begin base = 8'd60;  delta = 8'd19; end
-                4'h3: begin base = 8'd79;  delta = 8'd18; end
-                4'h4: begin base = 8'd97;  delta = 8'd16; end
-                4'h5: begin base = 8'd113; delta = 8'd16; end
-                4'h6: begin base = 8'd129; delta = 8'd14; end
-                4'h7: begin base = 8'd143; delta = 8'd14; end
-                4'h8: begin base = 8'd157; delta = 8'd14; end
-                4'h9: begin base = 8'd171; delta = 8'd13; end
-                4'ha: begin base = 8'd184; delta = 8'd13; end
-                4'hb: begin base = 8'd197; delta = 8'd12; end
-                4'hc: begin base = 8'd209; delta = 8'd12; end
-                4'hd: begin base = 8'd221; delta = 8'd12; end
-                4'he: begin base = 8'd233; delta = 8'd11; end
-                default: begin base = 8'd244; delta = 8'd11; end
+                4'h0: begin base = 8'd0;   delta = 8'd13; end
+                4'h1: begin base = 8'd13;  delta = 8'd15; end
+                4'h2: begin base = 8'd28;  delta = 8'd18; end
+                4'h3: begin base = 8'd46;  delta = 8'd22; end
+                4'h4: begin base = 8'd68;  delta = 8'd26; end
+                4'h5: begin base = 8'd94;  delta = 8'd26; end
+                4'h6: begin base = 8'd120; delta = 8'd26; end
+                4'h7: begin base = 8'd146; delta = 8'd26; end
+                4'h8: begin base = 8'd172; delta = 8'd26; end
+                4'h9: begin base = 8'd198; delta = 8'd24; end
+                4'ha: begin base = 8'd222; delta = 8'd17; end
+                4'hb: begin base = 8'd239; delta = 8'd8; end
+                4'hc: begin base = 8'd247; delta = 8'd4; end
+                4'hd: begin base = 8'd251; delta = 8'd2; end
+                4'he: begin base = 8'd253; delta = 8'd1; end
+                default: begin base = 8'd254; delta = 8'd1; end
             endcase
 
             interpolation = delta * value[3:0] + 8;

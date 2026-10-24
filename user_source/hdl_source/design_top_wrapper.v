@@ -103,6 +103,13 @@
 //   这里不再叠加自写增益。固定增益版代码保留在 awb_simple.v，需要时再开。
 //`define AWB_SIMPLE
 
+// =====================================================================
+//  ★★ 颜色阴影校正开关（2026-10-24）★★
+//  打开 = 用 color_shading.v 做 10x6 分区增益，消除中央偏绿/两侧品红
+//  注释掉 = 直通，用于对比开/关效果
+// =====================================================================
+`define SHADING_ON
+
 module design_top_wrapper (
     input wire        I_sys_clk,
     input wire        I_rst_n,
@@ -390,6 +397,7 @@ module design_top_wrapper (
     localparam integer IMG_MODE = 0;      // 上电默认：0=原图（KEY1~KEY4 可切，见 img_mode_sel.v）
     wire[23:0]  S_imgp_data;
     wire[23:0]  S_awb_data;
+    wire[23:0]  S_csc_data;
     wire[23:0]  S_osd_mix;
     wire[ 2:0]  S_img_mode;
 
@@ -1188,7 +1196,29 @@ isp_top u_isp_top (
 `endif
 
     //------------------------------------------------------------------
-    //  基础图像处理：video_out -> awb_simple -> img_proc -> osd -> hdmi_mixer
+    //  颜色阴影校正（2026-10-24）
+    //    实测偏色是**空间不均匀**的：左侧 G-R≈-10（品红）、中央≈+21（绿）、
+    //    右侧≈-5。跨 2 小时抓的 4 帧该分布相关系数 0.993~0.998，
+    //    所以是镜头/传感器固定 pattern，不是光源、全局 AWB 修不了。
+    //    用 10x6 分区增益校正，零延迟、零 ERAM。详见 color_shading.v。
+    //    `SHADING_ON 注释掉则直通（用于对比开/关效果）。
+    //------------------------------------------------------------------
+`ifdef SHADING_ON
+    color_shading u_color_shading (
+        .I_clk      ( S_hdmi_pixel_clk ),
+        .I_rst_n    ( S_hdmi_rst_n     ),
+        .I_vs       ( S_hdmi_vsync     ),
+        .I_de       ( S_hdmi_de        ),
+        .I_data     ( S_awb_data       ),
+        .O_data     ( S_csc_data       )
+    );
+`else
+    assign S_csc_data = S_awb_data;
+`endif
+
+    //------------------------------------------------------------------
+    //  基础图像处理：video_out -> awb_simple -> color_shading -> img_proc
+    //                              -> osd -> hdmi_mixer
     //    纯组合、零延迟，mixer 的 2 级对齐照旧
     //------------------------------------------------------------------
     img_proc #(
@@ -1200,7 +1230,7 @@ isp_top u_isp_top (
         .I_vs       ( S_hdmi_vsync     ),
         .I_de       ( S_hdmi_de        ),
         .I_mode     ( S_img_mode       ),
-        .I_data     ( S_awb_data       ),
+        .I_data     ( S_csc_data       ),
         .O_data     ( S_imgp_data      )
     );
     //------------------------------------------------------------------
