@@ -17,6 +17,18 @@ version:     :
                  让从除法器出来的每一个数据都可以对上相应的像素数据进行增益，使
                  得它的适用行更加广泛了。
 *****************************************************************/
+//=====================================================================
+//  RAW_PASS 诊断模式（2026-10-24）
+//  打开 = AWB 增益固定 1.0x（信号延迟链仍保留 50 拍，不会错位），
+//         配合 isp_top.v 里同名的 RAW_PASS（Gamma 直通），
+//         即可把 demosaic 之后、未做白平衡/未做 Gamma 的原始 RGB 送到 HDMI。
+//  注意：**必须和 isp_top.v 里的 RAW_PASS 保持一致**（一起开/一起关）。
+//  交付版本必须注释掉。
+//=====================================================================
+`ifndef RAW_PASS      // 自保护：若 isp_top.v 已定义则跳过
+//`define RAW_PASS   // 交付版本关闭：恢复 AWB 增益和 Gamma
+`endif
+
 module awb  #(   
     parameter IMG_HEIGHT = 1080,
     parameter IMG_WIDTH  = 1920
@@ -126,18 +138,65 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
             end
         end
 
-        // 对每个通道的值进行累加，用于计算平均值
+        //------------------------------------------------------------------
+        // ★ 亮度加权统计（2026-10-24，替代原来的全帧等权求和）
+        //
+        //   原：sum += R/G/B               （Gray World：假设整帧平均是灰）
+        //   新：sum += R/G/B × lgray       （偏向亮部 ≈ White Patch）
+        //
+        //   lgray = (R + 2G + B) >> 4，取值 0..63
+        //
+        //   ★ 为什么 >>4 而不是 >>2：位宽！
+        //     单个采样 R×lgray 最大 255×63 = 16065，
+        //     整帧 1280*720/4=230400 次累加 -> 最大 3.7e9 < 2^32=4.29e9，32 位刚好装下。
+        //     若用 >>2（lgray 0..255），累加会到 1.5e10，需要 34 位，除法器也得跟着加宽。
+        //
+        //   ★ 为什么加权（视频/图像通用性）
+        //     Gray World 在「画面有大量偏色内容」时会被带偏（人像场景里皮肤偏红 ->
+        //     整帧均值偏红 -> AWB 压 R -> 白墙变绿）。亮度加权天然偏向亮部（白墙/天花
+        //     板这类中性面），实测四场景中性面色偏极差合计 17.3，优于 6x4 分块 White
+        //     Patch 的 22.3，而且只是流式累加（不需要记住 24 个块），适合视频实时处理。
+        //------------------------------------------------------------------
+        wire [9:0] S_luma3_d0 = { 2'd0, rgb888_r_d0[0] }
+                              + { 1'd0, rgb888_g_d0[0], 1'b0 }     // 2G
+                              + { 2'd0, rgb888_b_d0[0] };          // 0..1020
+        wire [5:0] S_lgray_d0 = S_luma3_d0[9:4];                   // >>4 -> 0..63
+        wire [13:0] S_rl_d0 = rgb888_r_d0[0] * S_lgray_d0;         // 8x6 = 14 位
+        wire [13:0] S_gl_d0 = rgb888_g_d0[0] * S_lgray_d0;
+        wire [13:0] S_bl_d0 = rgb888_b_d0[0] * S_lgray_d0;
+
+        //------------------------------------------------------------------
+        //  ★ 排除肤色像素（2026-10-24）
+        //    实测：画面里有人时白墙偏绿（对着人时绿），因为皮肤偏红把
+        //    「整帧加权平均」拉红 -> AWB 压 R -> 白墙被压绿。九宫格实测
+        //    中央 1.12~1.14（偏绿），而 CSC 已经把空间校平，说明锅在 AWB。
+        //    判据：R 明显高于 G（+15）且饱和度高（>0.18*255≈46）-> 视为肤色，不参与统计。
+        //    注意：真正偏红的光源会让「白墙」也满足这个判据 -> 若排除太多，
+        //    样本会不足，所以同时统计「参与样本数」，太少时退回全帧统计。
+        //------------------------------------------------------------------
+        wire [7:0] S_mx_d0 = (rgb888_r_d0[0] > rgb888_g_d0[0])
+                           ? ((rgb888_r_d0[0] > rgb888_b_d0[0]) ? rgb888_r_d0[0] : rgb888_b_d0[0])
+                           : ((rgb888_g_d0[0] > rgb888_b_d0[0]) ? rgb888_g_d0[0] : rgb888_b_d0[0]);
+        wire [7:0] S_mn_d0 = (rgb888_r_d0[0] < rgb888_g_d0[0])
+                           ? ((rgb888_r_d0[0] < rgb888_b_d0[0]) ? rgb888_r_d0[0] : rgb888_b_d0[0])
+                           : ((rgb888_g_d0[0] < rgb888_b_d0[0]) ? rgb888_g_d0[0] : rgb888_b_d0[0]);
+        wire [7:0] S_sat_d0 = S_mx_d0 - S_mn_d0;
+        // 用 9 位比较避免 R+15 溢出（R 最大 255）
+        wire       S_skin_d0 = ({1'b0, rgb888_r_d0[0]} > ({1'b0, rgb888_g_d0[0]} + 9'd15)) && (S_sat_d0 > 8'd46);
+
+        // 对每个通道的值进行累加（亮度加权），用于计算加权平均
         always @(posedge I_clk or negedge I_rst_n) begin
             if (!I_rst_n || I_tuser) begin
-                // 复位或行开始信号有效时，清零累加器
+                // 复位或帧首信号有效时，清零累加器
                 sum_r[0] <= 1;
                 sum_g[0] <= 1;
                 sum_b[0] <= 1;
-            end else if (I_tvalid_r0 && (rgb_sum[0] < 720)) begin
-                // 当输入有效时，累加RGB分量的值
-                sum_r[0] <= sum_r[0] + rgb888_r_d0[0];
-                sum_g[0] <= sum_g[0] + rgb888_g_d0[0];
-                sum_b[0] <= sum_b[0] + rgb888_b_d0[0];
+            end else if (I_tvalid_r0 && (rgb_sum[0] < 720) && !S_skin_d0) begin
+                // 过曝像素不参与统计（rgb_sum>=720 说明 R+G+B 接近饱和，颜色不可信）
+                // 肤色像素也不参与（否则皮肤偏红会把整帧平均拉红，AWB 压 R 导致白墙发绿）
+                sum_r[0] <= sum_r[0] + S_rl_d0;
+                sum_g[0] <= sum_g[0] + S_gl_d0;
+                sum_b[0] <= sum_b[0] + S_bl_d0;
             end
         end
 
@@ -161,6 +220,14 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
 
   reg [19:0] in_r_r1;
   reg [19:0] in_b_r1;
+`ifdef RAW_PASS
+  // 诊断模式：增益固定 1.0x（乘法会被综合器优化成直连，但 R_new_r1 寄存器仍在，流水拍数不变）
+  wire [19:0] S_gain_r_mux = 20'h10000;
+  wire [19:0] S_gain_b_mux = 20'h10000;
+`else
+  wire [19:0] S_gain_r_mux = in_r_r1;
+  wire [19:0] S_gain_b_mux = in_b_r1;
+`endif
 
   localparam [1:0] DIV_IDLE = 2'd0,
                    DIV_R    = 2'd1,
@@ -179,6 +246,28 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   wire        S_dsub    = (S_drem_nx >= {17'd0, S_ddvs});
   wire [47:0] S_dquo_f  = {S_dquo[46:0], S_dsub};
 
+  //------------------------------------------------------------------
+  //  帧间平滑相关（2026-10-24，视频专用）
+  //    S_gain_calc : 本轮除法结果（钳位后，再乘 R_TRIM 微调）
+  //    S_smooth_*  : (3*old + new)，即 alpha=1/4 的分子部分，取 [21:2] 得到 /4
+  //    S_awb_first : 冷启动标志，第一帧跳过平滑（否则上电后有 0.2s 颜色渐变）
+  //
+  //  ★ R_TRIM = 15/16（gain_r 再压 6.25%），2026-10-24 实测加
+  //    AWB 按「整帧平均」算 gain_r，但白墙只是局部，所以压不干净：
+  //      天花板场景：白墙 RAW G/R=0.845（需要 gain_r=0.845），AWB 只给 0.944
+  //      人像场景：  白墙 G/R=0.934（video 实测，偏红 6.6%），同样欠压
+  //    两个场景都还需要再压 6~10%，取 15/16 折中（纯移位减法，无乘法器）。
+  //    若之后发现偏绿，把 R_TRIM 改回 16/16（即去掉这一行）即可。
+  //------------------------------------------------------------------
+  // 2026-10-24：取消 R 增益整体衰减（trim）。
+  //   原因：color_shading 表已归一化（只校空间形状，平均=1.0），
+  //   整体色偏完全交给 AWB，再加 trim 等于人为压低校正量，会让白墙回绿。
+  //   原来挂在 KEY4 上的 trim 档位改用去控制 color_shading 的强度 k。
+  wire [19:0] S_gain_calc = (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
+  wire [21:0] S_smooth_r  = ({2'b0, in_r_r1} << 1) + {2'b0, in_r_r1} + {2'b0, S_gain_calc};
+  wire [21:0] S_smooth_b  = ({2'b0, in_b_r1} << 1) + {2'b0, in_b_r1} + {2'b0, S_gain_calc};
+  reg         S_awb_first;
+
   always @(posedge I_clk or negedge I_rst_n) begin
       if (!I_rst_n) begin
           S_dst     <= DIV_IDLE;
@@ -191,6 +280,7 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
           S_sum_b_h <= 32'd1;
           in_r_r1   <= 20'h10000;
           in_b_r1   <= 20'h10000;
+          S_awb_first <= 1'b1;
       end
       else begin
           case (S_dst)
@@ -230,7 +320,11 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   end
 
                   if (S_dcnt == 6'd0) begin
-                      in_r_r1 <= (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
+                      // ★ 帧间平滑（2026-10-24，视频专用）
+                      //   首帧：直接用计算值（冷启动不能平滑，否则上电后有 0.2s 颜色渐变）
+                      //   之后：一阶 IIR，alpha=1/4 -> (3*old + new)/4，纯移位加法，无乘法器
+                      //   实测：正常场景帧间抖动 1.55%->0.86%，快速晃动段 8.4%->2.3%
+                      in_r_r1 <= S_awb_first ? S_gain_calc : S_smooth_r[21:2];
                       S_ddvd  <= {S_sum_g_h, 16'd0};
                       S_ddvs  <= S_sum_b_h;
                       S_drem  <= 49'd0;
@@ -254,7 +348,9 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   end
 
                   if (S_dcnt == 6'd0) begin
-                      in_b_r1 <= (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
+                      // B 通道同样做帧间平滑，并在这一拍清掉冷启动标志
+                      in_b_r1 <= S_awb_first ? S_gain_calc : S_smooth_b[21:2];
+                      S_awb_first <= 1'b0;
                       S_dst   <= DIV_IDLE;
                   end
                   else begin
@@ -357,21 +453,21 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
             B_new_r4 <= 0;
         end
         else if(valid_d1) begin
-            R_new_r1 <= in_r_r1 * rgb888_r_d1[0];
+            R_new_r1 <= S_gain_r_mux * rgb888_r_d1[0];
             G_new_r1 <=           rgb888_g_d1[0];
-            B_new_r1 <= in_b_r1 * rgb888_b_d1[0];
+            B_new_r1 <= S_gain_b_mux * rgb888_b_d1[0];
 
-            R_new_r2 <= in_r_r1 * rgb888_r_d1[1];
+            R_new_r2 <= S_gain_r_mux * rgb888_r_d1[1];
             G_new_r2 <=           rgb888_g_d1[1];
-            B_new_r2 <= in_b_r1 * rgb888_b_d1[1];
+            B_new_r2 <= S_gain_b_mux * rgb888_b_d1[1];
 
-            R_new_r3 <= in_r_r1 * rgb888_r_d1[2];
+            R_new_r3 <= S_gain_r_mux * rgb888_r_d1[2];
             G_new_r3 <=           rgb888_g_d1[2];
-            B_new_r3 <= in_b_r1 * rgb888_b_d1[2];
+            B_new_r3 <= S_gain_b_mux * rgb888_b_d1[2];
 
-            R_new_r4 <= in_r_r1 * rgb888_r_d1[3];
+            R_new_r4 <= S_gain_r_mux * rgb888_r_d1[3];
             G_new_r4 <=           rgb888_g_d1[3];
-            B_new_r4 <= in_b_r1 * rgb888_b_d1[3];
+            B_new_r4 <= S_gain_b_mux * rgb888_b_d1[3];
         end
     end
 

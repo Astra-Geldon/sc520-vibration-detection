@@ -37,7 +37,7 @@ LOGO_W, LOGO_H = 128, 80          # OSD 上显示的 Logo 尺寸
 WPD = 16                          # 每个 32bit word 装几个像素（2bit/px）
 
 # ★ 字形表：顺序编号，只能追加
-CHARS = "原图灰度二值化边缘"
+CHARS = "原图灰度二值化边缘0123"   # 2026-10-24 追加数字 0~3，用于显示 AWB 增益微调档位（字形序号 9..12）
 
 FONT_CANDIDATES = [
     r"C:\Windows\Fonts\simsun.ttc",

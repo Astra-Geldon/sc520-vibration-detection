@@ -108,7 +108,7 @@
 //  打开 = 用 color_shading.v 做 10x6 分区增益，消除中央偏绿/两侧品红
 //  注释掉 = 直通，用于对比开/关效果
 // =====================================================================
-//`define SHADING_ON   // 临时关闭用于诊断（诊断完恢复）
+`define SHADING_ON
 
 module design_top_wrapper (
     input wire        I_sys_clk,
@@ -946,6 +946,59 @@ assign S_raw_tuser  = S_axis_tuser;
 
 
 //ISP算法顶层模块
+//------------------------------------------------------------------
+//  ★ KEY4 运行期切换 AWB 的增益微调档位（免编译调参，2026-10-24）
+//    档位 0: 1.000 | 1: 0.9375 | 2: 0.875 | 3: 0.8125（作用在 gain_r/gain_b）
+//    **按一下切一档并循环**；上电默认档位 1（15/16）。
+//    用意：调白平衡时不必每改一个系数就编译一次，按键即可现场对比。
+//    正式交付前把 awb.v 的默认档位固定成选定的那档即可。
+//    （I_key[3]=KEY4，按下=0；img_mode_sel 里 KEY4 原本是保留键，此处占用）
+//
+//  ★ 2026-10-24 修正：第一版写成「按住连发」（每 7ms 切一档），
+//    按一下会连跳十几档，无法使用。现改为标准消抖 + **下降沿单次触发**：
+//      1) 2 级同步防亚稳态
+//      2) 电平需稳定 7ms 才认可（消抖）
+//      3) 只在「稳定电平由高变低」的那个时钟沿切一档，按住不放不会重复
+//------------------------------------------------------------------
+reg  [1:0]  S_k_sel;
+reg  [1:0]  S_key4_sync;
+reg         S_key4_stable;
+reg         S_key4_prev;
+reg  [18:0] S_key4_cnt;
+
+localparam [18:0] S_KEY_DEBOUNCE = 19'd524287;   // 7ms @ 75MHz
+
+always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+    if (!S_hdmi_rst_n) begin
+        S_k_sel    <= 2'd3;
+        S_key4_sync   <= 2'b11;
+        S_key4_stable <= 1'b1;
+        S_key4_prev   <= 1'b1;
+        S_key4_cnt    <= 19'd0;
+    end
+    else begin
+        S_key4_sync <= { S_key4_sync[0], I_key[3] };     // 2 级同步
+
+        // --- 消抖：输入与当前稳定值不同，且持续 7ms，才更新稳定值 ---
+        if (S_key4_sync[1] != S_key4_stable) begin
+            if (S_key4_cnt == S_KEY_DEBOUNCE) begin
+                S_key4_stable <= S_key4_sync[1];
+                S_key4_cnt    <= 19'd0;
+            end
+            else S_key4_cnt <= S_key4_cnt + 1'b1;
+        end
+        else S_key4_cnt <= 19'd0;
+
+        // --- 下降沿（按下瞬间）切一档；按住不放不会重复 ---
+        S_key4_prev <= S_key4_stable;
+        if (S_key4_prev && !S_key4_stable) begin
+            S_k_sel <= S_k_sel + 1'b1;             // 0->1->2->3->0
+        end
+    end
+end
+
+// （CSC 强度档在 hdmi 时钟域直接使用，无需跨时钟同步）
+
 isp_top u_isp_top (
 .axi4s_video_aclk(S_csi_rx_clk),
 .I_rst_n         (S_rst_n),
@@ -1210,6 +1263,7 @@ isp_top u_isp_top (
         .I_vs       ( S_hdmi_vsync     ),
         .I_de       ( S_hdmi_de        ),
         .I_data     ( S_awb_data       ),
+        .I_k_sel   ( S_k_sel         ),
         .O_data     ( S_csc_data       )
     );
 `else
@@ -1255,6 +1309,7 @@ isp_top u_isp_top (
         .I_de       ( S_hdmi_de        ),
         .I_vs       ( S_hdmi_vsync     ),
         .I_mode     ( S_img_mode       ),
+        .I_k_sel    ( S_k_sel           ),
         .I_data     ( S_imgp_data      ),
         .O_data     ( S_osd_mix        )
     );

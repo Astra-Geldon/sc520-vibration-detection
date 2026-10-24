@@ -8,6 +8,17 @@
 //   所以：这条旁路省 5,438 slice，但代价是画面错位，不可接受。
 //`define AWB_BYPASS
 
+//=====================================================================
+//  RAW_PASS 诊断模式（2026-10-24）
+//  打开 = axis_gamma_rgb96 直通（不做 Gamma），配合 awb.v 里同名宏
+//         （AWB 增益固定 1.0x），输出 demosaic 之后、未做白平衡/未做 Gamma
+//         的**原始 RGB**，用于抓到 PC 上做算法调参。
+//  注意：必须和 awb.v 里的 RAW_PASS 保持一致；交付版本必须注释掉。
+//=====================================================================
+`ifndef RAW_PASS
+//`define RAW_PASS   // 交付版本关闭：恢复 AWB 增益和 Gamma
+`endif
+
 module isp_top (
     input 			axi4s_video_aclk,
     input 			I_rst_n			,
@@ -199,6 +210,9 @@ module axis_gamma_rgb96 (
         reg [7:0] delta;
         reg [11:0] interpolation;
         begin
+`ifdef RAW_PASS
+            gamma07 = value;          // 诊断模式：Gamma 直通，输出线性原始值
+`else
             // ------------------------------------------------------------------
             // 2026-10-24 第二次修正：S 曲线（提亮为主 + 适度增对比）
             //
@@ -240,6 +254,7 @@ module axis_gamma_rgb96 (
                 gamma07 = 8'hff;
             else
                 gamma07 = base + (interpolation >> 4);
+`endif
         end
     endfunction
 

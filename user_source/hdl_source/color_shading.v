@@ -33,6 +33,7 @@ module color_shading (
     input  wire        I_vs,        // 场同步：清行计数
     input  wire        I_de,        // 像素有效
     input  wire [23:0] I_data,      // 来自 awb_simple（RGB888）
+    input  wire [ 1:0] I_k_sel,   // CSC 强度档 0:关 1:0.5 2:0.75 3:1.0
     output wire [23:0] O_data       // 送 img_proc
 );
 
@@ -80,8 +81,13 @@ module color_shading (
     //------------------------------------------------------------------
     wire [8:0] S_gr0, S_gr1, S_gb0, S_gb1;
 
-    color_shading_lut u_lut0 (.I_blk(S_bx ), .O_gain_r(S_gr0), .O_gain_b(S_gb0));
-    color_shading_lut u_lut1 (.I_blk(S_bx1), .O_gain_r(S_gr1), .O_gain_b(S_gb1));
+    // ★ 2026-10-24：改用 2 段垂直表（上段 y<360 / 下段）
+    //   原来 1D 表把垂直方向平均掉，用户反馈「顶部飘红」，实测顶/中白墙 G/R 差 0.10。
+    //   标定显示上下段中央差 0.12，分 2 段可分别校正；水平方向仍做插值（消块边界）。
+    wire S_vsel = (S_y < 10'd360) ? 1'b0 : 1'b1;
+
+    color_shading_lut u_lut0 (.I_blk(S_bx ), .I_vsel(S_vsel), .O_gain_r(S_gr0), .O_gain_b(S_gb0));
+    color_shading_lut u_lut1 (.I_blk(S_bx1), .I_vsel(S_vsel), .O_gain_r(S_gr1), .O_gain_b(S_gb1));
 
     //------------------------------------------------------------------
     //  水平线性插值（加权平均，两通道共用权重）
@@ -108,7 +114,29 @@ module color_shading (
 
     // 插值是凸组合，结果 <= max(表值) = 295 < 512，所以取 9 位就够，无需钳位
     // （省掉比较+mux 一级逻辑，实测对时序有 0.5~1ns 帮助）
-    wire [8:0] S_gain_r = S_sum_r[13:5];
+    //------------------------------------------------------------------
+    //  ★ CSC 强度缩放（2026-10-24）
+    //    表已归一化（平均=1.0，只含空间形状）。这里把「偏离 1.0 的程度」
+    //    乘系数 k，现场按场景/光源适配：
+    //      I_k_sel=0 -> k=0（CSC 关闭）  1 -> 0.5   2 -> 0.75   3 -> 1.0（默认）
+    //    gain_eff = 256 + (gain_tab - 256) * k
+    //------------------------------------------------------------------
+    wire [2:0] S_K = (I_k_sel == 2'd0) ? 3'd0 :
+                     (I_k_sel == 2'd1) ? 3'd2 :
+                     (I_k_sel == 2'd2) ? 3'd3 : 3'd4;
+
+    function [8:0] f_k_scale;
+        input [8:0] g;
+        input [2:0] K;
+        reg   [8:0] d;
+        begin
+            d = (g >= 9'd256) ? (g - 9'd256) : (9'd256 - g);
+            d = (d * K) >> 2;
+            f_k_scale = (g >= 9'd256) ? (9'd256 + d) : (9'd256 - d);
+        end
+    endfunction
+
+    wire [8:0] S_gain_r = f_k_scale(S_sum_r[13:5], S_K);
 
     //------------------------------------------------------------------
     //  增益寄存一拍（★ 只延迟增益，不延迟像素数据）
@@ -135,7 +163,7 @@ module color_shading (
             S_gain_b_r <= S_gain_b;
         end
     end
-    wire [8:0] S_gain_b = S_sum_b[13:5];
+    wire [8:0] S_gain_b = f_k_scale(S_sum_b[13:5], S_K);
 
     //------------------------------------------------------------------
     //  像素路径：纯组合，零延迟。G 直通，只动 R / B。

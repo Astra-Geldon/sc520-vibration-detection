@@ -37,9 +37,12 @@ module osd_overlay #(
     parameter integer LOGO_X      = 1136,   // 1280-128-16
     parameter integer LOGO_Y      = 16,
 
-    // ---- 文字窗口（左上角）----
+    // ---- 文字窗口 1（左上角）：算法名 ----
     parameter integer TEXT_X      = 24,     // 第一个字的左上角
     parameter integer TEXT_Y      = 24,
+    // ---- 文字窗口 2（左下角）：CSC 强度档 k ----
+    parameter integer TEXT2_X     = 24,
+    parameter integer TEXT2_Y     = 670,
     parameter integer BOX_PAD     = 8       // 黑底外扩
 )(
     input  wire        I_clk,
@@ -47,6 +50,7 @@ module osd_overlay #(
     input  wire        I_de,        // 像素有效
     input  wire        I_vs,        // 场同步（用来清行计数）
     input  wire [ 2:0] I_mode,      // 当前算法（来自 img_mode_sel，3 bit）
+    input  wire [ 1:0] I_k_sel,     // CSC 强度档（KEY4），左下角显示数字 0~3
     input  wire [23:0] I_data,      // 来自 img_proc
     output wire [23:0] O_data       // 送 hdmi_mixer
 );
@@ -94,17 +98,24 @@ module osd_overlay #(
     //------------------------------------------------------------------
     //  算法 -> 字模表（★ 新增算法在这里加一行）
     //------------------------------------------------------------------
-    reg [3:0] S_base;       // 起始字形序号
-    reg [1:0] S_nchars;     // 本标签的字数
+    // 窗口1（左上）：算法名，跟随 KEY1/KEY2 的 I_mode
+    reg [3:0] S_base1;
+    reg [1:0] S_nchars1;
+    // 窗口2（左下）：CSC 强度档 k 的数字 0~3
+    reg [3:0] S_base2;
+    reg [1:0] S_nchars2;
 
     always @(*) begin
         case (I_mode)
-            3'd0:    begin S_base = 4'd0; S_nchars = 2'd2; end   // 原图
-            3'd1:    begin S_base = 4'd2; S_nchars = 2'd2; end   // 灰度
-            3'd2:    begin S_base = 4'd4; S_nchars = 2'd3; end   // 二值化
-            3'd3:    begin S_base = 4'd7; S_nchars = 2'd2; end   // 边缘（Sobel）
-            default: begin S_base = 4'd0; S_nchars = 2'd2; end   // 未定义 -> 原图
+            3'd0:    begin S_base1 = 4'd0; S_nchars1 = 2'd2; end   // 原图
+            3'd1:    begin S_base1 = 4'd2; S_nchars1 = 2'd2; end   // 灰度
+            3'd2:    begin S_base1 = 4'd4; S_nchars1 = 2'd3; end   // 二值化
+            3'd3:    begin S_base1 = 4'd7; S_nchars1 = 2'd2; end   // 边缘
+            default: begin S_base1 = 4'd0; S_nchars1 = 2'd2; end
         endcase
+        // 字形表 CHARS = "原图灰度二值化边缘0123"，数字 0~3 序号 9~12
+        S_base2   = 4'd9 + {2'b0, I_k_sel};
+        S_nchars2 = 2'd1;
     end
 
     //------------------------------------------------------------------
@@ -134,32 +145,55 @@ module osd_overlay #(
     //------------------------------------------------------------------
     //  文字窗口（左上角黑底 + 白字）
     //------------------------------------------------------------------
-    wire [6:0] S_text_px = {S_nchars, 4'h0};                 // 16 * nchars
+    //---------------- 窗口1（左上）----------------
+    wire [6:0] S_text_px1 = {S_nchars1, 4'h0};
 
-    wire S_in_box  = (S_x >= TEXT_X - BOX_PAD) &&
-                     (S_x <  TEXT_X + S_text_px + BOX_PAD) &&
-                     (S_y >= TEXT_Y - BOX_PAD) &&
-                     (S_y <  TEXT_Y + 16 + BOX_PAD);
+    wire S_in_box1  = (S_x >= TEXT_X - BOX_PAD) &&
+                      (S_x <  TEXT_X + S_text_px1 + BOX_PAD) &&
+                      (S_y >= TEXT_Y - BOX_PAD) &&
+                      (S_y <  TEXT_Y + 16 + BOX_PAD);
 
-    wire S_in_text = (S_x >= TEXT_X) && (S_x < TEXT_X + S_text_px) &&
-                     (S_y >= TEXT_Y) && (S_y < TEXT_Y + 16);
+    wire S_in_text1 = (S_x >= TEXT_X) && (S_x < TEXT_X + S_text_px1) &&
+                      (S_y >= TEXT_Y) && (S_y < TEXT_Y + 16);
 
-    wire [3:0] S_char_i = (S_x - TEXT_X) >> 4;             // 第几个字
-    wire [3:0] S_col    = (S_x - TEXT_X) & 4'hF;           // 字内列
-    wire [3:0] S_row    = (S_y - TEXT_Y);                  // 字内行
+    wire [3:0] S_char_i1 = (S_x - TEXT_X) >> 4;
+    wire [3:0] S_col1    = (S_x - TEXT_X) & 4'hF;
+    wire [3:0] S_row1    = (S_y - TEXT_Y);
+    wire [3:0] S_glyph1  = S_base1 + S_char_i1;
 
-    wire [3:0] S_glyph  = S_base + S_char_i;
-
-    wire [15:0] S_font_row;
-
-    osd_font_rom u_font (
-        .I_addr ( {S_glyph, S_row} ),
-        .O_row  ( S_font_row       )
+    wire [15:0] S_font_row1;
+    osd_font_rom u_font1 (
+        .I_addr ( {S_glyph1, S_row1} ),
+        .O_row  ( S_font_row1        )
     );
 
-    // 16 位行位图，bit15 = 最左；用变量下标取当前列（可综合）
-    wire [3:0] S_bit_idx  = 4'd15 - S_col;
-    wire       S_text_bit = S_font_row[S_bit_idx];
+    wire [3:0] S_bit_idx1  = 4'd15 - S_col1;
+    wire       S_text_bit1 = S_font_row1[S_bit_idx1];
+
+    //---------------- 窗口2（左下，CSC 强度档）----------------
+    wire [6:0] S_text_px2 = {S_nchars2, 4'h0};
+
+    wire S_in_box2  = (S_x >= TEXT2_X - BOX_PAD) &&
+                      (S_x <  TEXT2_X + S_text_px2 + BOX_PAD) &&
+                      (S_y >= TEXT2_Y - BOX_PAD) &&
+                      (S_y <  TEXT2_Y + 16 + BOX_PAD);
+
+    wire S_in_text2 = (S_x >= TEXT2_X) && (S_x < TEXT2_X + S_text_px2) &&
+                      (S_y >= TEXT2_Y) && (S_y < TEXT2_Y + 16);
+
+    wire [3:0] S_char_i2 = (S_x - TEXT2_X) >> 4;
+    wire [3:0] S_col2    = (S_x - TEXT2_X) & 4'hF;
+    wire [3:0] S_row2    = (S_y - TEXT2_Y);
+    wire [3:0] S_glyph2  = S_base2 + S_char_i2;
+
+    wire [15:0] S_font_row2;
+    osd_font_rom u_font2 (
+        .I_addr ( {S_glyph2, S_row2} ),
+        .O_row  ( S_font_row2        )
+    );
+
+    wire [3:0] S_bit_idx2  = 4'd15 - S_col2;
+    wire       S_text_bit2 = S_font_row2[S_bit_idx2];
 
     //------------------------------------------------------------------
     //  叠加（纯组合 3 选 1）
@@ -173,8 +207,10 @@ module osd_overlay #(
     generate
         if (OSD_EN != 0) begin : g_osd_on
             assign O_data = S_logo_opaque ? S_logo_rgb  :
-                            S_in_text     ? (S_text_bit ? C_WHITE : C_BLACK) :
-                            S_in_box      ? C_BLACK :
+                            S_in_text1    ? (S_text_bit1 ? C_WHITE : C_BLACK) :
+                            S_in_box1     ? C_BLACK :
+                            S_in_text2    ? (S_text_bit2 ? C_WHITE : C_BLACK) :
+                            S_in_box2     ? C_BLACK :
                                             I_data;
         end
         else begin : g_osd_off
