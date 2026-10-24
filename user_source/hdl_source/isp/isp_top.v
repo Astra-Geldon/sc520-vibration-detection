@@ -214,38 +214,27 @@ module axis_gamma_rgb96 (
             gamma07 = value;          // 诊断模式：Gamma 直通，输出线性原始值
 `else
             // ------------------------------------------------------------------
-            // 2026-10-24 第二次修正：S 曲线（提亮为主 + 适度增对比）
+            // 2026-10-25：恢复为保守的高光保留曲线，避免墙面和标语饱和。
             //
-            // 第一次改错了：误以为原曲线中间段斜率 0.875 < 1 是在压对比度，
-            // 于是改成「中间陡、两端压」。但原曲线是**提亮曲线**（gamma 0.7），
-            // 暗部本来就被抬高了 30~60%，再压暗部等于把提亮效果抵消掉。
-            // 实测 mean 从 104 掉到 66。用反查表确认：输出 62 反推线性 34，
-            // 而第一版曲线只给 30，比原来低 32 级 —— 与实测吻合。
-            //
-            // 本次 S 曲线（离线模拟：反查回线性域再套新曲线）：
-            //   暗部 线性 34 -> 54（比原来略暗 8，可接受）
-            //   中部 线性 71 -> 121（提亮 17）
-            //   亮部 线性 109 -> 186（提亮 46）
-            //   mean 104 -> 121, std 26.2 -> 38.2 (x1.46), 动态范围 78 -> 132 (x1.69)
-            //   过曝(>250) 1.17%, 死黑(<5) 0.30%
-            // 自检：base 累加 0→22→50→78→108→138→166→190→210→226→238→245→250→253→254→255
+            // 本次曲线保留中灰层次，压低中高灰，减少高光裁剪：
+            // 自检：base累加为0→37→60→79→97→113→129→143→157→171→184→197→209→221→233→244
             // ------------------------------------------------------------------
             case (value[7:4])
-                4'h0: begin base = 8'd0;   delta = 8'd22; end
-                4'h1: begin base = 8'd22;  delta = 8'd28; end
-                4'h2: begin base = 8'd50;  delta = 8'd28; end
-                4'h3: begin base = 8'd78;  delta = 8'd30; end
-                4'h4: begin base = 8'd108; delta = 8'd30; end
-                4'h5: begin base = 8'd138; delta = 8'd28; end
-                4'h6: begin base = 8'd166; delta = 8'd24; end
-                4'h7: begin base = 8'd190; delta = 8'd20; end
-                4'h8: begin base = 8'd210; delta = 8'd16; end
-                4'h9: begin base = 8'd226; delta = 8'd12; end
-                4'ha: begin base = 8'd238; delta = 8'd7; end
-                4'hb: begin base = 8'd245; delta = 8'd5; end
-                4'hc: begin base = 8'd250; delta = 8'd3; end
-                4'hd: begin base = 8'd253; delta = 8'd1; end
-                4'he: begin base = 8'd254; delta = 8'd1; end
+                4'h0: begin base = 8'd0;   delta = 8'd37; end
+                4'h1: begin base = 8'd37;  delta = 8'd23; end
+                4'h2: begin base = 8'd60;  delta = 8'd19; end
+                4'h3: begin base = 8'd79;  delta = 8'd18; end
+                4'h4: begin base = 8'd97;  delta = 8'd16; end
+                4'h5: begin base = 8'd113; delta = 8'd16; end
+                4'h6: begin base = 8'd129; delta = 8'd14; end
+                4'h7: begin base = 8'd143; delta = 8'd14; end
+                4'h8: begin base = 8'd157; delta = 8'd14; end
+                4'h9: begin base = 8'd171; delta = 8'd13; end
+                4'ha: begin base = 8'd184; delta = 8'd13; end
+                4'hb: begin base = 8'd197; delta = 8'd12; end
+                4'hc: begin base = 8'd209; delta = 8'd12; end
+                4'hd: begin base = 8'd221; delta = 8'd12; end
+                4'he: begin base = 8'd233; delta = 8'd11; end
                 default: begin base = 8'd255; delta = 8'd0; end
             endcase
 
