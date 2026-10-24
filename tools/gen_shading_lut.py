@@ -4,6 +4,9 @@
 gen_shading_lut.py —— 从抓帧标定颜色阴影（color shading）增益表，并生成
                      user_source/hdl_source/color_shading_lut.v
 
+注意：这个脚本保留给历史10x1表格式。当前2段×10列的多场景归一化
+候选表请使用同目录的gen_shading_lut_multiscene.py，避免生成格式不匹配的RTL。
+
 背景
     实测画面偏色是空间不均匀的：左侧 G-R ≈ -10（偏品红）、中央 ≈ +21（偏绿）、
     右侧 ≈ -5。跨 2 小时抓的 4 帧该分布相关系数 0.993~0.998，说明是镜头/传感器
