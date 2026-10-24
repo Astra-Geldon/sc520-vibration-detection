@@ -129,9 +129,14 @@ module color_shading (
         input [8:0] g;
         input [2:0] K;
         reg   [8:0] d;
+        // d 最大为255，K最大为4，乘积需要10位。
+        // 安路TD对 d*K 的窄位宽表达式会截断高位；例如
+        // 192*4=768 若先截成9位，得到的强度就不是1.0档。
+        reg   [9:0] d_prod;
         begin
             d = (g >= 9'd256) ? (g - 9'd256) : (9'd256 - g);
-            d = (d * K) >> 2;
+            d_prod = d * K;
+            d = d_prod >> 2;
             f_k_scale = (g >= 9'd256) ? (9'd256 + d) : (9'd256 - d);
         end
     endfunction
