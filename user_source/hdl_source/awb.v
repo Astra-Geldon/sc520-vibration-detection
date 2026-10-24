@@ -80,6 +80,11 @@ module awb  #(
   reg  [31:0]         sum_g[0:3];
   reg  [31:0]         sum_b[0:3];
 
+  // 统计有效样本数。当前每个96位包取1个像素，720p一帧最多约230400个样本。
+  // 没有样本数保护时，过曝/肤色筛选可能让累加器只剩初始值1，进而算出异常大增益。
+  reg  [19:0]         sample_count;
+  localparam integer  AWB_MIN_SAMPLES = 4096;
+
   
   wire  [95:0]        data_d0 ;
   wire                valid_d0;
@@ -134,7 +139,10 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                 rgb_sum[0] <= 0;
             end
             else if(I_tvalid)begin
-                rgb_sum[0] <= rgb888_r_d[0] + rgb888_g_d[0] + rgb888_b_d[0];
+                // 显式扩展到10位，避免三路8位相加时发生位宽截断。
+                rgb_sum[0] <= {2'b0, rgb888_r_d[0]} +
+                              {2'b0, rgb888_g_d[0]} +
+                              {2'b0, rgb888_b_d[0]};
             end
         end
 
@@ -191,12 +199,14 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                 sum_r[0] <= 1;
                 sum_g[0] <= 1;
                 sum_b[0] <= 1;
+                sample_count <= 0;
             end else if (I_tvalid_r0 && (rgb_sum[0] < 720) && !S_skin_d0) begin
                 // 过曝像素不参与统计（rgb_sum>=720 说明 R+G+B 接近饱和，颜色不可信）
                 // 肤色像素也不参与（否则皮肤偏红会把整帧平均拉红，AWB 压 R 导致白墙发绿）
                 sum_r[0] <= sum_r[0] + S_rl_d0;
                 sum_g[0] <= sum_g[0] + S_gl_d0;
                 sum_b[0] <= sum_b[0] + S_bl_d0;
+                sample_count <= sample_count + 1'b1;
             end
         end
 
@@ -210,9 +220,9 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   //             div_gen_G_R_r1  845 lut / 1,084 ripple / 2,803 seq
   //             divide_G_B_r1   785 lut / 1,084 ripple / 2,710 seq
   //           合计约 4,700 slice。
-  //   新设计：行末（I_tlast）锁存累加和，串行算 R、B 两个增益（各 48 拍），
-  //           整行使用同一增益。行消隐有 370 拍，96 拍足够算完。
-  //           signal_delay(50 拍) 保持不动，所以下游时序完全不变。
+  //   新设计：帧首锁存上一帧累加和，串行算 R、B 两个增益（各 48 拍），
+  //           整帧使用同一增益。行消隐有 370 拍，96 拍足够算完；
+  //           signal_delay延迟到100拍，覆盖完整计算窗口。
   //
   //   !! 商必须用移位累积（{quo[46:0], bit}），不能用 quo[cnt]<=bit 这种
   //      变量索引赋值 —— 实测综合结果不对（详见 docs/worklog.md 2026-10-24）。
@@ -241,6 +251,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   reg [47:0] S_dquo;
   reg [31:0] S_sum_g_h;
   reg [31:0] S_sum_b_h;   // 2026-10-24: B 通道也要锁存，原来只锁了 G
+  reg        S_frame_ok;
+  reg [19:0] S_gain_r_hold;
 
   wire [48:0] S_drem_nx = {S_drem[47:0], S_ddvd[S_dcnt]};
   wire        S_dsub    = (S_drem_nx >= {17'd0, S_ddvs});
@@ -263,9 +275,16 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   //   原因：color_shading 表已归一化（只校空间形状，平均=1.0），
   //   整体色偏完全交给 AWB，再加 trim 等于人为压低校正量，会让白墙回绿。
   //   原来挂在 KEY4 上的 trim 档位改用去控制 color_shading 的强度 k。
-  wire [19:0] S_gain_calc = (|S_dquo_f[47:20]) ? 20'hfffff : S_dquo_f[19:0];
-  wire [21:0] S_smooth_r  = ({2'b0, in_r_r1} << 1) + {2'b0, in_r_r1} + {2'b0, S_gain_calc};
-  wire [21:0] S_smooth_b  = ({2'b0, in_b_r1} << 1) + {2'b0, in_b_r1} + {2'b0, S_gain_calc};
+  // 增益限制在0.5x~2.0x。异常统计只能影响这一帧的校正量，不能把通道推到16x。
+  localparam [19:0] AWB_GAIN_MIN = 20'h08000;
+  localparam [19:0] AWB_GAIN_MAX = 20'h20000;
+  wire [19:0] S_gain_div = (|S_dquo_f[47:20]) ? AWB_GAIN_MAX : S_dquo_f[19:0];
+  wire [19:0] S_gain_calc = (S_gain_div < AWB_GAIN_MIN) ? AWB_GAIN_MIN :
+                             (S_gain_div > AWB_GAIN_MAX) ? AWB_GAIN_MAX : S_gain_div;
+  wire [21:0] S_smooth_r_hold = ({2'b0, in_r_r1} << 1) +
+                                 {2'b0, in_r_r1} + {2'b0, S_gain_r_hold};
+  wire [21:0] S_smooth_b_calc = ({2'b0, in_b_r1} << 1) +
+                                {2'b0, in_b_r1} + {2'b0, S_gain_calc};
   reg         S_awb_first;
 
   always @(posedge I_clk or negedge I_rst_n) begin
@@ -278,6 +297,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
           S_dquo    <= 48'd0;
           S_sum_g_h <= 32'd1;
           S_sum_b_h <= 32'd1;
+          S_frame_ok <= 1'b0;
+          S_gain_r_hold <= 20'h10000;
           in_r_r1   <= 20'h10000;
           in_b_r1   <= 20'h10000;
           S_awb_first <= 1'b1;
@@ -300,6 +321,7 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   if (I_tuser) begin
                       S_sum_g_h <= sum_g[0];
                       S_sum_b_h <= sum_b[0];
+                      S_frame_ok <= (sample_count >= AWB_MIN_SAMPLES);
                       S_ddvd    <= {sum_g[0], 16'd0};
                       S_ddvs    <= sum_r[0];
                       S_drem    <= 49'd0;
@@ -320,11 +342,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   end
 
                   if (S_dcnt == 6'd0) begin
-                      // ★ 帧间平滑（2026-10-24，视频专用）
-                      //   首帧：直接用计算值（冷启动不能平滑，否则上电后有 0.2s 颜色渐变）
-                      //   之后：一阶 IIR，alpha=1/4 -> (3*old + new)/4，纯移位加法，无乘法器
-                      //   实测：正常场景帧间抖动 1.55%->0.86%，快速晃动段 8.4%->2.3%
-                      in_r_r1 <= S_awb_first ? S_gain_calc : S_smooth_r[21:2];
+                      // 先保存R结果，等B完成后再和B一起提交，避免两路增益在一帧内混用。
+                      S_gain_r_hold <= S_gain_calc;
                       S_ddvd  <= {S_sum_g_h, 16'd0};
                       S_ddvs  <= S_sum_b_h;
                       S_drem  <= 49'd0;
@@ -348,9 +367,12 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   end
 
                   if (S_dcnt == 6'd0) begin
-                      // B 通道同样做帧间平滑，并在这一拍清掉冷启动标志
-                      in_b_r1 <= S_awb_first ? S_gain_calc : S_smooth_b[21:2];
-                      S_awb_first <= 1'b0;
+                      // 样本不足时保持上一组增益；有效帧才更新并结束冷启动状态。
+                      if (S_frame_ok) begin
+                          in_r_r1 <= S_awb_first ? S_gain_r_hold : S_smooth_r_hold[21:2];
+                          in_b_r1 <= S_awb_first ? S_gain_calc   : S_smooth_b_calc[21:2];
+                          S_awb_first <= 1'b0;
+                      end
                       S_dst   <= DIV_IDLE;
                   end
                   else begin
@@ -369,7 +391,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
         .IMG_HEIGHT   (IMG_HEIGHT),
         .IMG_WIDTH    (IMG_WIDTH ),
         .DATA_WIDTH   (96  ),
-        .DELAY_CYCLE  (50)
+        // 串行除法需要约96拍；延迟覆盖完整计算窗口后，当前帧首像素不会使用旧增益。
+        .DELAY_CYCLE  (100)
     )signal_delay_d (
         /*input                       */ .I_clk  (I_clk  ),
         /*input                       */ .I_rst_n(I_rst_n),
