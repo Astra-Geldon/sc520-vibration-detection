@@ -4,11 +4,11 @@
 > 1. **本文是「规划」，不是已完成的功能**。文中提到的 `vib_cluster.v` / `vib_corr1d.v` /
 >    `vib_frame_store.v` / `vib_global_motion.v` / `vib_grad3x3.v` / `vib_grid_lk.v` /
 >    `vib_projection.v` / `vib_solve2x2.v` / `vib_track.v` / `isp128_to_rgb_stream.v`
->    **在本工程里都不存在**（`grep` 过），也没有 `VIB_ON` 这个宏。
+>    **在本工程里都不存在**。当前工程另有`VIB_ON`总开关，默认关闭；不能据本文规划判断当前振动功能状态。
 > 2. **本文的目标工程不是当前工程**，见下行的 `D:\workplace\lab_ex1_mipi_hdmi_SC520`；
->    当前工程是 `E:\杂七杂八\4竞赛\FPGA`（PH1P35 + SC520CS）。两者的行号/文件名引用都不能直接照搬。
+>    当前工程是`E:\杂七杂八\4竞赛\FPGA\0 Project`（PH1P35+SC520CS）。两者的行号/文件名引用都不能直接照搬。
 > 3. 振动部分由队友负责，**不是颜色/图像增强这条线的内容**。
->    当前工程的真实状态见 `docs/交接文档.md`。
+>    当前工程配置以[README.md](README.md)为准；本地交接见`docs/交接文档.md`。本次文档核对基线为`73c0f35`（2026-10-26）。
 >
 > 目标工程：`D:\workplace\lab_ex1_mipi_hdmi_SC520 (2)\lab_ex1_mipi_hdmi_SC520\lab_ex1_mipi_hdmi`
 > 算法参考模型：`D:\workplace\py\PythonProject`（`multi_object` / `projection` 等方法）
