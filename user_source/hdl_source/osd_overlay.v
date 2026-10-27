@@ -8,7 +8,8 @@
 //  显示内容
 //      右上角：ANLOGIC 安路 Logo   128×80，双色（深蓝 A + 红色条纹），白底透明
 //      左上角：当前算法名称        16×16 汉字点阵，黑底白字
-//                 mode 0 -> 原图     mode 1 -> 灰度     mode 2 -> 二值化
+//                 只显示算法名，不显示原图/增强图标记
+//      二值化诊断（TH_DEBUG_EN=1）：算法名下一行 T=128 A/L，A=自适应，L=已锁定
 //
 //  ★ 关键：仍然保持"数据零延迟"
 //      O_data 相对 I_data 是**纯组合**的（一个 3 选 1 mux），
@@ -26,6 +27,8 @@
 //=====================================================================
 module osd_overlay #(
     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
+    parameter integer TH_DEBUG_EN = 0,      // 二值化实际阈值/锁定状态诊断
+    parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
     // ---- 画面尺寸（与 VTC 一致）----
     parameter integer H_ACTIVE    = 1280,
@@ -50,7 +53,10 @@ module osd_overlay #(
     input  wire        I_de,        // 像素有效
     input  wire        I_vs,        // 场同步（用来清行计数）
     input  wire [ 2:0] I_mode,      // 当前算法（来自 img_mode_sel，3 bit）
-    input  wire [ 1:0] I_k_sel,     // CSC 强度档（KEY4），左下角显示数字 0~3
+    input  wire        I_src_raw,   // 二值化来源：1=原图，0=视觉增强输入
+    input  wire [ 1:0] I_k_sel,     // 兼容保留，KEY4 已释放
+    input  wire [ 7:0] I_threshold, // 二值比较器实际使用的阈值
+    input  wire        I_th_locked, // 实际已提交的锁定状态
     input  wire [23:0] I_data,      // 来自 img_proc
     output wire [23:0] O_data       // 送 hdmi_mixer
 );
@@ -100,22 +106,22 @@ module osd_overlay #(
     //------------------------------------------------------------------
     // 窗口1（左上）：算法名，跟随 KEY1/KEY2 的 I_mode
     reg [3:0] S_base1;
-    reg [1:0] S_nchars1;
+    reg [2:0] S_nchars1;
     // 窗口2（左下）：CSC 强度档 k 的数字 0~3
     reg [3:0] S_base2;
     reg [1:0] S_nchars2;
 
     always @(*) begin
         case (I_mode)
-            3'd0:    begin S_base1 = 4'd0; S_nchars1 = 2'd2; end   // 原图
-            3'd1:    begin S_base1 = 4'd2; S_nchars1 = 2'd2; end   // 灰度
-            3'd2:    begin S_base1 = 4'd4; S_nchars1 = 2'd3; end   // 二值化
-            3'd3:    begin S_base1 = 4'd7; S_nchars1 = 2'd2; end   // 边缘
-            default: begin S_base1 = 4'd0; S_nchars1 = 2'd2; end
+            3'd0:    begin S_base1 = 4'd0; S_nchars1 = 3'd2; end   // 原图（增强彩色）
+            3'd1:    begin S_base1 = 4'd2; S_nchars1 = 3'd2; end   // 灰度
+            3'd2:    begin S_base1 = 4'd4; S_nchars1 = 3'd3; end   // 二值化
+            3'd3:    begin S_base1 = 4'd7; S_nchars1 = 3'd2; end   // 边缘
+            default: begin S_base1 = 4'd0; S_nchars1 = 3'd3; end
         endcase
         // 字形表 CHARS = "原图灰度二值化边缘0123"，数字 0~3 序号 9~12
         S_base2   = 4'd9 + {2'b0, I_k_sel};
-        S_nchars2 = 2'd1;
+        S_nchars2 = 2'd0;
     end
 
     //------------------------------------------------------------------
@@ -132,15 +138,22 @@ module osd_overlay #(
 
 
     // Logo 点阵 ROM：LUT 实现（640 条 case），无厂商原语依赖
-    wire [31:0] S_logo_word;
-    osd_logo_rom u_logo_rom (
-        .I_addr ( {S_ly[6:0], S_lx[6:4]} ),
-        .O_word ( S_logo_word             )
-    );
-
-    // 32 bit word 里装 16 个像素（2 bit/像素），取 S_lx[3:0] 对应的那一个
-    wire [4:0]  S_px_shift = 5'd30 - {S_lx[3:0], 1'b0};        // 2*(15-lx)
-    wire [1:0]  S_logo_q   = (S_logo_word >> S_px_shift) & 2'b11;
+    wire [1:0] S_logo_q;
+    generate
+        if (LOGO_EN != 0) begin : g_logo_on
+            wire [31:0] S_logo_word;
+            osd_logo_rom u_logo_rom (
+                .I_addr ( {S_ly[6:0], S_lx[6:4]} ),
+                .O_word ( S_logo_word )
+            );
+            // 32 bit word里装16个像素，取当前x对应像素。
+            wire [4:0] S_px_shift = 5'd30 - {S_lx[3:0], 1'b0};
+            assign S_logo_q = (S_logo_word >> S_px_shift) & 2'b11;
+        end
+        else begin : g_logo_off
+            assign S_logo_q = 2'd0;
+        end
+    endgenerate
 
     //------------------------------------------------------------------
     //  文字窗口（左上角黑底 + 白字）
@@ -159,6 +172,7 @@ module osd_overlay #(
     wire [3:0] S_char_i1 = (S_x - TEXT_X) >> 4;
     wire [3:0] S_col1    = (S_x - TEXT_X) & 4'hF;
     wire [3:0] S_row1    = (S_y - TEXT_Y);
+    // 算法名只显示实际算法，不再追加 0/1 后缀。
     wire [3:0] S_glyph1  = S_base1 + S_char_i1;
 
     wire [15:0] S_font_row1;
@@ -173,13 +187,8 @@ module osd_overlay #(
     //---------------- 窗口2（左下，CSC 强度档）----------------
     wire [6:0] S_text_px2 = {S_nchars2, 4'h0};
 
-    wire S_in_box2  = (S_x >= TEXT2_X - BOX_PAD) &&
-                      (S_x <  TEXT2_X + S_text_px2 + BOX_PAD) &&
-                      (S_y >= TEXT2_Y - BOX_PAD) &&
-                      (S_y <  TEXT2_Y + 16 + BOX_PAD);
-
-    wire S_in_text2 = (S_x >= TEXT2_X) && (S_x < TEXT2_X + S_text_px2) &&
-                      (S_y >= TEXT2_Y) && (S_y < TEXT2_Y + 16);
+    wire S_in_box2  = 1'b0;
+    wire S_in_text2 = 1'b0;
 
     wire [3:0] S_char_i2 = (S_x - TEXT2_X) >> 4;
     wire [3:0] S_col2    = (S_x - TEXT2_X) & 4'hF;
@@ -195,6 +204,26 @@ module osd_overlay #(
     wire [3:0] S_bit_idx2  = 4'd15 - S_col2;
     wire       S_text_bit2 = S_font_row2[S_bit_idx2];
 
+    // 诊断文字复用当前像素坐标，仍为纯组合叠加；关闭参数后整段裁剪。
+    wire S_threshold_box, S_threshold_white;
+    generate
+        if (TH_DEBUG_EN != 0) begin : g_threshold_text
+            osd_threshold_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32)) u_line (
+                .I_x         ( S_x            ),
+                .I_y         ( S_y            ),
+                .I_enable    ( I_de && (I_mode == 3'd2) ),
+                .I_threshold ( I_threshold    ),
+                .I_locked    ( I_th_locked    ),
+                .O_box       ( S_threshold_box ),
+                .O_white     ( S_threshold_white )
+            );
+        end
+        else begin : g_no_threshold_text
+            assign S_threshold_box = 1'b0;
+            assign S_threshold_white = 1'b0;
+        end
+    endgenerate
+
     //------------------------------------------------------------------
     //  叠加（纯组合 3 选 1）
     //     Logo 不透明像素 > 文字框（黑底/白字） > 原视频
@@ -202,13 +231,14 @@ module osd_overlay #(
     wire [23:0] S_logo_rgb = (S_logo_q == 2'd1) ? C_NAVY :
                              (S_logo_q == 2'd2) ? C_RED  : 24'h00_00_00;
 
-    wire S_logo_opaque = S_in_logo && (S_logo_q != 2'd0);
+    wire S_logo_opaque = (LOGO_EN != 0) && S_in_logo && (S_logo_q != 2'd0);
 
     generate
         if (OSD_EN != 0) begin : g_osd_on
             assign O_data = S_logo_opaque ? S_logo_rgb  :
                             S_in_text1    ? (S_text_bit1 ? C_WHITE : C_BLACK) :
                             S_in_box1     ? C_BLACK :
+                            S_threshold_box ? (S_threshold_white ? C_WHITE : C_BLACK) :
                             S_in_text2    ? (S_text_bit2 ? C_WHITE : C_BLACK) :
                             S_in_box2     ? C_BLACK :
                                             I_data;
@@ -218,4 +248,83 @@ module osd_overlay #(
         end
     endgenerate
 
+endmodule
+
+// Seven 6x8 character cells, 2x scale: "T=128 A" / "T=128 L".
+// Each glyph is 5x7 pixels plus spacing; no ROM latency or vendor primitive.
+module osd_threshold_line #(
+    parameter integer TEXT_X = 24,
+    parameter integer TEXT_Y = 56
+)(
+    input wire [10:0] I_x,
+    input wire [9:0] I_y,
+    input wire I_enable,
+    input wire [7:0] I_threshold,
+    input wire I_locked,
+    output wire O_box,
+    output wire O_white
+);
+    function [11:0] f_decimal;
+        input [7:0] value;
+        reg [11:0] digits;
+        integer i;
+        begin
+            digits = 12'd0;
+            for (i = 7; i >= 0; i = i - 1) begin
+                if (digits[3:0] >= 4'd5) digits[3:0] = digits[3:0] + 4'd3;
+                if (digits[7:4] >= 4'd5) digits[7:4] = digits[7:4] + 4'd3;
+                if (digits[11:8] >= 4'd5) digits[11:8] = digits[11:8] + 4'd3;
+                digits = {digits[10:0], value[i]};
+            end
+            f_decimal = digits;
+        end
+    endfunction
+
+    // Rows packed top-to-bottom, bit4 at the left of each five-bit row.
+    function [34:0] f_glyph;
+        input [3:0] glyph;
+        begin
+            case (glyph)
+                4'd0: f_glyph = {5'b01110,5'b10001,5'b10011,5'b10101,5'b11001,5'b10001,5'b01110};
+                4'd1: f_glyph = {5'b00100,5'b01100,5'b00100,5'b00100,5'b00100,5'b00100,5'b01110};
+                4'd2: f_glyph = {5'b01110,5'b10001,5'b00001,5'b00010,5'b00100,5'b01000,5'b11111};
+                4'd3: f_glyph = {5'b11110,5'b00001,5'b00001,5'b01110,5'b00001,5'b00001,5'b11110};
+                4'd4: f_glyph = {5'b00010,5'b00110,5'b01010,5'b10010,5'b11111,5'b00010,5'b00010};
+                4'd5: f_glyph = {5'b11111,5'b10000,5'b10000,5'b11110,5'b00001,5'b00001,5'b11110};
+                4'd6: f_glyph = {5'b01110,5'b10000,5'b10000,5'b11110,5'b10001,5'b10001,5'b01110};
+                4'd7: f_glyph = {5'b11111,5'b00001,5'b00010,5'b00100,5'b01000,5'b01000,5'b01000};
+                4'd8: f_glyph = {5'b01110,5'b10001,5'b10001,5'b01110,5'b10001,5'b10001,5'b01110};
+                4'd9: f_glyph = {5'b01110,5'b10001,5'b10001,5'b01111,5'b00001,5'b00001,5'b01110};
+                4'd10: f_glyph = {5'b11111,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100}; // T
+                4'd11: f_glyph = {5'b00000,5'b11111,5'b00000,5'b11111,5'b00000,5'b00000,5'b00000}; // =
+                4'd12: f_glyph = {5'b01110,5'b10001,5'b10001,5'b11111,5'b10001,5'b10001,5'b10001}; // A
+                4'd13: f_glyph = {5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b11111}; // L
+                default: f_glyph = 35'd0; // blank
+            endcase
+        end
+    endfunction
+
+    wire [11:0] S_decimal = f_decimal(I_threshold);
+    wire [10:0] S_local_x = I_x - TEXT_X;
+    wire [9:0] S_local_y = I_y - TEXT_Y;
+    reg [3:0] S_glyph_id;
+    reg [3:0] S_cell_x;
+    always @(*) begin
+        if      (S_local_x < 11'd12) begin S_glyph_id = 4'd10; S_cell_x = S_local_x; end
+        else if (S_local_x < 11'd24) begin S_glyph_id = 4'd11; S_cell_x = S_local_x - 11'd12; end
+        else if (S_local_x < 11'd36) begin S_glyph_id = S_decimal[11:8]; S_cell_x = S_local_x - 11'd24; end
+        else if (S_local_x < 11'd48) begin S_glyph_id = S_decimal[7:4]; S_cell_x = S_local_x - 11'd36; end
+        else if (S_local_x < 11'd60) begin S_glyph_id = S_decimal[3:0]; S_cell_x = S_local_x - 11'd48; end
+        else if (S_local_x < 11'd72) begin S_glyph_id = 4'd14; S_cell_x = S_local_x - 11'd60; end
+        else                        begin S_glyph_id = I_locked ? 4'd13 : 4'd12; S_cell_x = S_local_x - 11'd72; end
+    end
+    wire [2:0] S_col = S_cell_x[3:1];
+    wire [2:0] S_row = S_local_y[3:1];
+    wire [34:0] S_bitmap = f_glyph(S_glyph_id);
+    wire [5:0] S_bit_index = 6'd34 - ({3'd0, S_row} * 6'd5) - {3'd0, S_col};
+    wire S_in_text = (I_x >= TEXT_X) && (I_x < TEXT_X + 84) &&
+                     (I_y >= TEXT_Y) && (I_y < TEXT_Y + 14);
+    assign O_box = I_enable && (I_x >= TEXT_X - 4) && (I_x < TEXT_X + 84 + 4) &&
+                   (I_y >= TEXT_Y - 4) && (I_y < TEXT_Y + 14 + 4);
+    assign O_white = I_enable && S_in_text && (S_col < 3'd5) && S_bitmap[S_bit_index];
 endmodule

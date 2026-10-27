@@ -67,7 +67,7 @@
 //
 //  打开（默认）= 用板载 4 个按键 KEY1~KEY4 选择（按下=低）：
 //        SW3 拨上 → 强制原图    SW2 拨上 → 二值化
-//        KEY1=原图  KEY2=灰度  KEY3=二值化  KEY4=循环
+//        KEY1=增强彩色 KEY2=算法循环 KEY3=释放 KEY4=释放
 //  注释掉      = 回到编译期固定模式（用下面的 IMG_MODE），资源可回到只综合一种
 //
 //  ★ 与队友功能的分隔：本开关只影响两个地方 ——
@@ -400,6 +400,11 @@ module design_top_wrapper (
     wire[23:0]  S_csc_data;
     wire[23:0]  S_osd_mix;
     wire[ 2:0]  S_img_mode;
+    wire        S_img_src_raw;
+    wire        S_img_th_lock_req;
+    wire        S_img_th_locked;
+    wire[ 7:0]  S_img_threshold;
+    wire        S_img_k_step;
 
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -947,54 +952,17 @@ assign S_raw_tuser  = S_axis_tuser;
 
 //ISP算法顶层模块
 //------------------------------------------------------------------
-//  ★ KEY4 运行期切换颜色校正强度（免编译调参，2026-10-24）
+//  ★ 颜色校正强度固定（KEY4 已释放）
 //    档位 0: 关闭 | 1: k=0.5 | 2: k=0.75 | 3: k=1.0
 //    **按一下切一档并循环**；上电默认档位 2（k=0.75）。
-//    用意：调颜色校正强度时不必每改一个系数就编译一次，按键即可现场对比。
-//    （I_key[3]=KEY4，按下=0；img_mode_sel 里 KEY4 原本是保留键，此处占用）
+//    当前固定使用默认档位 2，KEY4 不再参与颜色校正或阈值控制。
 //
 //  ★ 2026-10-24 修正：第一版写成「按住连发」（每 7ms 切一档），
 //    按一下会连跳十几档，无法使用。现改为标准消抖 + **下降沿单次触发**：
-//      1) 2 级同步防亚稳态
-//      2) 电平需稳定 7ms 才认可（消抖）
-//      3) 只在「稳定电平由高变低」的那个时钟沿切一档，按住不放不会重复
+//      KEY4 已释放，不再生成同步、去抖和切换逻辑。
 //------------------------------------------------------------------
-reg  [1:0]  S_k_sel;
-reg  [1:0]  S_key4_sync;
-reg         S_key4_stable;
-reg         S_key4_prev;
-reg  [18:0] S_key4_cnt;
-
-localparam [18:0] S_KEY_DEBOUNCE = 19'd524287;   // 7ms @ 75MHz
-
-always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-    if (!S_hdmi_rst_n) begin
-        S_k_sel    <= 2'd2;
-        S_key4_sync   <= 2'b11;
-        S_key4_stable <= 1'b1;
-        S_key4_prev   <= 1'b1;
-        S_key4_cnt    <= 19'd0;
-    end
-    else begin
-        S_key4_sync <= { S_key4_sync[0], I_key[3] };     // 2 级同步
-
-        // --- 消抖：输入与当前稳定值不同，且持续 7ms，才更新稳定值 ---
-        if (S_key4_sync[1] != S_key4_stable) begin
-            if (S_key4_cnt == S_KEY_DEBOUNCE) begin
-                S_key4_stable <= S_key4_sync[1];
-                S_key4_cnt    <= 19'd0;
-            end
-            else S_key4_cnt <= S_key4_cnt + 1'b1;
-        end
-        else S_key4_cnt <= 19'd0;
-
-        // --- 下降沿（按下瞬间）切一档；按住不放不会重复 ---
-        S_key4_prev <= S_key4_stable;
-        if (S_key4_prev && !S_key4_stable) begin
-            S_k_sel <= S_k_sel + 1'b1;             // 0->1->2->3->0
-        end
-    end
-end
+// KEY4 已释放：颜色校正固定在原来的默认档位 2，按键不再改变它。
+wire [1:0] S_k_sel = 2'd2;
 
 // （CSC 强度档在 hdmi 时钟域直接使用，无需跨时钟同步）
 
@@ -1205,12 +1173,12 @@ isp_top u_isp_top (
 `ifndef VIB_NO_DISPLAY
     //------------------------------------------------------------------
     //  基础图像处理：video_out -> img_proc -> hdmi_mixer
-    //    纯组合、零延迟，mixer 的 2 级对齐照旧
+    //    彩色/灰度同拍；多数滤波中心晚1行1像素，Sobel保持原有延迟；不改HDMI同步
     //------------------------------------------------------------------
 //----------------------------------------------------------------------
 //  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
-//      KEY1=原图   KEY2=灰度   KEY3=二值化   KEY4=循环切换
-//    独立模块 img_mode_sel.v（内部 10ms 去抖 + 按下锁存），只输出 2 bit 模式码。
+//      KEY1=增强彩色 KEY2=算法循环 KEY3=释放 KEY4=释放
+//    独立模块 img_mode_sel.v（内部10ms去抖 + 按下锁存），输出3 bit模式码。
 //    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
 //----------------------------------------------------------------------
 `ifdef IMG_MODE_KEY
@@ -1222,11 +1190,18 @@ isp_top u_isp_top (
         .I_clk      ( S_hdmi_pixel_clk ),
         .I_rst_n    ( S_hdmi_rst_n     ),
         .I_key_n    ( I_key            ),   // {KEY4,KEY3,KEY2,KEY1}，按下=0
-        .O_mode     ( S_img_mode       )
+        .O_mode     ( S_img_mode       ),
+        // KEY3已释放；最终二值化固定使用增强图像。
+        .O_th_lock  ( S_img_th_lock_req),
+        .O_k_step   ( S_img_k_step     )
     );
 `else
     assign S_img_mode = IMG_MODE[2:0];
+    assign S_img_th_lock_req = 1'b0;
+    assign S_img_k_step = 1'b0;
 `endif
+    // 最终二值化固定增强源，KEY3不再改变视频或OSD状态。
+    assign S_img_src_raw = 1'b0;
 
     //------------------------------------------------------------------
     //  简化自适应白平衡（2026-10-24）
@@ -1271,12 +1246,18 @@ isp_top u_isp_top (
 
     //------------------------------------------------------------------
     //  基础图像处理：video_out -> awb_simple -> color_shading -> img_proc
+    //    灰度/Sobel固定video_out原图；二值化固定增强图像，KEY3释放
+    //    mode=0 始终显示增强后的 S_csc_data，二值化来源选择不影响彩色画面
     //                              -> osd -> hdmi_mixer
-    //    纯组合、零延迟，mixer 的 2 级对齐照旧
+    //    彩色/灰度同拍；多数滤波中心晚1行1像素，Sobel保持原有延迟；不改HDMI同步
     //------------------------------------------------------------------
     img_proc #(
         .THRESH     ( 48       ),
-        .ADAPT_EN   ( 1        )
+        .ADAPT_EN   ( 1        ),
+        .BIN_MAJORITY_EN ( 0    ),
+        .TH_LOCK_EN ( 0         ),
+        .GAUSSIAN_PRE_EN ( 0    ),
+        .BINARY_FIXED_EN ( 1    )
     )u_img_proc(
         .I_clk      ( S_hdmi_pixel_clk ),
         .I_rst_n    ( S_hdmi_rst_n     ),
@@ -1284,7 +1265,12 @@ isp_top u_isp_top (
         .I_de       ( S_hdmi_de        ),
         .I_mode     ( S_img_mode       ),
         .I_data     ( S_csc_data       ),
-        .O_data     ( S_imgp_data      )
+        .I_raw_data ( S_video_rd_data  ),
+        .I_src_raw  ( S_img_src_raw    ),
+        .I_th_lock  ( S_img_th_lock_req),
+        .O_data     ( S_imgp_data      ),
+        .O_threshold( S_img_threshold ),
+        .O_th_locked( S_img_th_locked )
     );
     //------------------------------------------------------------------
     //  OSD 叠加：右上角安路 Logo + 左上角算法名
@@ -1293,6 +1279,8 @@ isp_top u_isp_top (
 `ifdef OSD_ON
     osd_overlay #(
         .OSD_EN     ( 1    ),
+        .TH_DEBUG_EN( 0    ),
+        .LOGO_EN    ( 0    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),
         .LOGO_W     ( 128  ),
@@ -1308,6 +1296,9 @@ isp_top u_isp_top (
         .I_de       ( S_hdmi_de        ),
         .I_vs       ( S_hdmi_vsync     ),
         .I_mode     ( S_img_mode       ),
+        .I_src_raw  ( S_img_src_raw    ),
+        .I_threshold( S_img_threshold ),
+        .I_th_locked( S_img_th_locked ),
         .I_k_sel    ( S_k_sel           ),
         .I_data     ( S_imgp_data      ),
         .O_data     ( S_osd_mix        )
