@@ -3,16 +3,23 @@
 // shared energy multiplier, raw peak threshold and peak*7 > rest*2 admission.
 // The failed reference's PN_FLOOR/rank-bound history/stable0 gate are removed.
 // Input gain remains the current, coherently captured LK/AGC scale. Thresholds
-// use peak>>8: measured still0..1, measured8Hz2723..3523. Texture exponents
+// use peak>>8. 2026-10-28: raise only the absolute floor 25 -> 64:
+// board static false boxes measured31/32; the measured real3Hz track>=924.
+// This suppresses marginal peaks, not all disturbances/harmonics. Texture exponents
 // are diagnostic only; they cannot truncate a valid peak out of admission.
+// 2026-10-28: change confirmation only. Two matched windows both >=512
+// confirm at the existing speed; all other qualified tracks need three.
+// A single strong window cannot publish or lend strength to another slot.
 // Included by design_top_wrapper.v; do not also register this file in .al.
 `ifndef VIB_GZ_PEAK_V
 `define VIB_GZ_PEAK_V
 module vib_gz_peak #(
     parameter NBIN=17, parameter NB=48, parameter BIN_MIN=0,
-    parameter integer TONE_RATIO=0
+    parameter integer TONE_RATIO=0,
+    parameter integer COMMON_MOTION_ON=0
 )(
     input wire clk, rst_n, trig,
+    input wire i_motion_veto, // same completed window; latched only at trig
     input wire [5:0] i_fx_blk, // compatibility; no fixed-block master track
     input wire [39:0] i_axx_exp,
     input wire i_tick,
@@ -20,8 +27,8 @@ module vib_gz_peak #(
     output reg [9:0] st_addr,
     input wire [63:0] st_data,
     output reg busy, done,
-    output reg [5:0] o_ntonal, // raw peak>25, before spectral prominence
-    output reg [5:0] o_qact,   // raw peak>25 AND prominence, before confirmation
+    output reg [5:0] o_ntonal, // raw peak>64, before spectral prominence
+    output reg [5:0] o_qact,   // raw peak>64 AND prominence, before confirmation
     output reg [5:0] o_best_blk,
     output reg [31:0] o_best_mag,
     output reg [4:0] o_best_bin,
@@ -43,7 +50,8 @@ module vib_gz_peak #(
     output reg [2:0] o_confirmed
 );
     localparam integer MAG_SH=8;
-    localparam [31:0] TONE_MIN=32'd25;
+    localparam [31:0] TONE_MIN=32'd64;
+    localparam [31:0] STRONG_MIN=32'd512; // provisional RAW peak>>8 tier boundary
     function signed [15:0] coef_of;
         input [4:0] k;
         begin
@@ -92,6 +100,7 @@ module vib_gz_peak #(
                      SUM_WAIT=11, SUM_CHECK=12, PICK=13, COMMIT=14,
                      EMIT=15, FIN=16;
     reg [4:0] state;
+    reg window_veto;
     reg [5:0] blk,scan_blk;
     reg [4:0] bin;
     reg [9:0] base;
@@ -161,6 +170,7 @@ module vib_gz_peak #(
     reg [5:0] prev_blk[0:3],next_blk[0:3];
     reg [4:0] prev_bin[0:3],next_bin[0:3];
     reg [2:0] prev_streak[0:3],next_streak[0:3];
+    reg prev_strong[0:3]; // strength of this slot's previous matched window
     reg [31:0] next_mag[0:3];
     reg match_phase;
     reg [1:0] slot;
@@ -177,7 +187,7 @@ module vib_gz_peak #(
     wire used1=(next_streak[1]!=0)&&pos_near(scan_blk,next_blk[1])&&(candidate_bin==next_bin[1]);
     wire used2=(next_streak[2]!=0)&&pos_near(scan_blk,next_blk[2])&&(candidate_bin==next_bin[2]);
     wire used3=(next_streak[3]!=0)&&pos_near(scan_blk,next_blk[3])&&(candidate_bin==next_bin[3]);
-    wire eligible=qualified_map[scan_blk]&&!(used0||used1||used2||used3)&&
+    wire eligible=!window_veto&&qualified_map[scan_blk]&&!(used0||used1||used2||used3)&&
         (!match_phase||matches_previous);
     wire pick_better=(pick_blk==6'd63)||
         (match_phase&&exact_candidate&&!pick_exact)||
@@ -188,13 +198,16 @@ module vib_gz_peak #(
     reg [2:0] confirmed_count;
     reg [5:0] first_blk;
     reg [7:0] first_hz;
-    wire slot_confirmed=(next_streak[slot]>=3'd2);
+    wire current_strong=(next_mag[slot]>=STRONG_MIN);
+    wire slot_confirmed=(next_streak[slot]>=3'd3)||
+        ((next_streak[slot]>=3'd2)&&prev_strong[slot]&&current_strong);
     wire [10:0] grid_x={8'd0,first_blk[2:0]}*11'd160;
     wire [10:0] grid_y={8'd0,first_blk[5:3]}*11'd120;
     integer j;
     always @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             state<=IDLE; busy<=0; done<=0; st_addr<=0;
+            window_veto<=0;
             blk<=0; bin<=0; base<=0; scan_blk<=0; scan_count<=0; coef<=0;
             cs1<=0; cs12<=0; sq1<=0; energy<=0;
             block_peak<=0; block_bin<=0; block_sum<=0;
@@ -217,6 +230,7 @@ module vib_gz_peak #(
             o_dbg_streak<=0; o_dbg_aexp<=0; o_confirmed<=0;
             for(j=0;j<4;j=j+1) begin
                 prev_blk[j]<=63; prev_bin[j]<=0; prev_streak[j]<=0;
+                prev_strong[j]<=0;
                 next_blk[j]<=63; next_bin[j]<=0; next_streak[j]<=0; next_mag[j]<=0;
             end
             for(j=0;j<48;j=j+1) aexp[j]<=0;
@@ -234,6 +248,7 @@ module vib_gz_peak #(
             end
             case(state)
             IDLE: if(trig) begin
+                window_veto<=COMMON_MOTION_ON ? i_motion_veto : 1'b0;
                 busy<=1; blk<=0; bin<=0; base<=0; st_addr<=0; coef<=coef_of(0);
                 scan_count<=0; qualified_map<=0; raw_count<=0; qual_count<=0;
                 block_peak<=0; block_bin<=0; block_sum<=0;
@@ -317,6 +332,7 @@ module vib_gz_peak #(
                 // Four slots emit independently; no energy-rank master gate.
                 prev_blk[slot]<=next_blk[slot]; prev_bin[slot]<=next_bin[slot];
                 prev_streak[slot]<=next_streak[slot];
+                prev_strong[slot]<=(next_streak[slot]!=0)&&current_strong;
                 emit_streak[slot*3+:3]<=next_streak[slot];
                 if(slot_confirmed) begin
                     emit_pos[slot*8+:8]<={1'b0,1'b1,next_blk[slot]};

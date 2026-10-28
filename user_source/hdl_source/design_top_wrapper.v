@@ -24,12 +24,19 @@
 `include "vibration/vib_goertzel.v"
 
 // Shared 48-block, 17-bin vibration chain. Each module is included once.
+// Four-reference consistency experiment retained, disabled for board A/B.
+// Enable this BEFORE the includes only when deliberately retesting it.
+//`define VIB_COMMON_MOTION_ON
 `include "vibration/vib_lk_grid_multi.v"
 `include "vibration/vib_eram_dp.v"
 `include "vibration/vib_gz_multi.v"
 `include "vibration/vib_gz_peak.v"
+`ifdef VIB_COMMON_MOTION_ON
+`include "vibration/vib_common_motion.v"
+`include "vibration/vib_motion_window.v"
+`endif
 
-// 屏幕调试标记（固定块外框 + 左上角 L 形参考标记）。同样不要登记进 .al。
+// 目标框、框内编号/频率和白色网格刻度。由此include，不要重复登记进.al。
 `include "vibration/vib_osd_marker.v"
 
 // 阶段 0 探针：48x17 状态阵列 + 上电自检（验证能不能被综合成 RAM）
@@ -331,8 +338,9 @@ module design_top_wrapper (
     // OSD 标记
     wire        S_osd_vs, S_osd_de;
     wire [23:0] S_osd_data;
-    reg  [31:0] S_fx_pos_p1, S_fx_pos_p2;
-    reg  [31:0] S_obj_pos_p1, S_obj_pos_p2;
+    reg  [31:0] S_obj_pos_p2, S_obj_hz_p2;
+    (* ASYNC_REG = "TRUE" *) reg [1:0] S_obj_tgl_p;
+    reg S_obj_tgl_d;
     // 阶段 0：48x17 存储自检
     wire [31:0] S_gzcrc_w, S_gzcrc_r;
     wire        S_gzcrc_ok;
@@ -353,6 +361,9 @@ module design_top_wrapper (
 
     // 阶段 2A：8x6 网格快照诊断信号（48 块共享 Goertzel 的输入候选）
     (* keep = "true" *) wire [255:0] S2_br_bx;
+`ifdef VIB_COMMON_MOTION_ON
+    wire [319:0] S2_br_motion;
+`endif
     (* keep = "true" *) wire [2:0]   S2_br_row;
     (* keep = "true" *) wire         S2_br_tick;
     (* keep = "true" *) wire [4:0]   S2_agc_exp;
@@ -398,6 +409,7 @@ module design_top_wrapper (
     wire [127:0]       S_pk_obj_pn;      // 已确认目标原始峰值，与 obj_pos 同槽位
     wire [31:0]        S_pk_fx_pn;       // 本窗口全局原始峰值，尺度 raw peak>>8
     wire [31:0]        S_pk_tn, S_pk_raw_hz;
+    wire [31:0]        S_motion_info;
     wire [4:0]         S_pk_aexp;
     wire [2:0]         S_pk_confirmed;
     wire [4:0]         S_legacy_bin;
@@ -1425,27 +1437,25 @@ isp_top u_isp_top (
     );
 
     //==================================================================
-    //  屏幕调试标记：在 hdmi_mixer 和 hdmi_tx 之间叠加
-    //    · 左上角绿色 L 形参考标记 → 判断画面有没有镜像/翻转
-    //        正常：长臂指向右；镜像：长臂指向左
-    //    · 固定纹理块的品红外框（2 像素）
-    //  这两样都画在算法取数之后，不影响振动算法。
-    //
-    //  st_fx_pos 在 S_ddr_clk 域，这里是 S_hdmi_pixel_clk 域，
-    //  加两级同步；它是慢变信号（128 帧更新一次），单帧采错无所谓。
+    //  框内编号1..4、十进制频率、白色边缘网格刻度；已去掉绿色参考L。
+    //  叠加在算法取数之后。位置与频率必须来自同一窗口：先同步完成
+    //  toggle，再复制已稳定的总线。源总线一直保持到下一次窗口完成。
+    //  marker内部再于帧消隐期统一锁存，避免活动帧中途更换标签。
     //==================================================================
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
-            S_fx_pos_p1 <= 32'd0;
-            S_fx_pos_p2 <= 32'd0;
-            S_obj_pos_p1 <= 32'd0;
             S_obj_pos_p2 <= 32'd0;
+            S_obj_hz_p2 <= 32'd0;
+            S_obj_tgl_p <= 2'd0;
+            S_obj_tgl_d <= 1'b0;
         end
         else begin
-            S_fx_pos_p1 <= S_fx_pos;
-            S_fx_pos_p2 <= S_fx_pos_p1;
-            S_obj_pos_p1 <= S_pk_obj_pos;
-            S_obj_pos_p2 <= S_obj_pos_p1;
+            S_obj_tgl_p <= {S_obj_tgl_p[0], S_pk_done_tgl};
+            S_obj_tgl_d <= S_obj_tgl_p[1];
+            if (S_obj_tgl_p[1] != S_obj_tgl_d) begin
+                S_obj_pos_p2 <= S_pk_obj_pos;
+                S_obj_hz_p2 <= S_pk_obj_hz10;
+            end
         end
     end
 
@@ -1456,8 +1466,8 @@ isp_top u_isp_top (
         .I_vs   ( S_hdmi_out_vsync ),
         .I_de   ( S_hdmi_out_de    ),
         .I_data ( S_hdmi_out_data  ),
-        .I_pos  ( S_fx_pos_p2      ),
         .I_obj_pos ( S_obj_pos_p2   ),
+        .I_obj_hz10( S_obj_hz_p2    ),
         .O_vs   ( S_osd_vs         ),
         .O_de   ( S_osd_de         ),
         .O_data ( S_osd_data       )
@@ -1731,6 +1741,9 @@ isp_top u_isp_top (
         .st_b_itsm      ( S2_b_itsm              ),
         .i_it_sum       ( S_it_sum               ),
         .st_br_bx       ( S2_br_bx               ),
+`ifdef VIB_COMMON_MOTION_ON
+        .st_br_motion   ( S2_br_motion           ),
+`endif
         .st_br_row      ( S2_br_row              ),
         .st_br_tick     ( S2_br_tick             ),
         .st_fx_pos      ( S2_fx_pos              ),
@@ -1789,10 +1802,39 @@ isp_top u_isp_top (
 
     // 17 个频点覆盖 2.0~10.0Hz，步进 0.5Hz。
     // TONE_RATIO=0 采用旧工程 raw 峰值突出度；四目标按位置/频率独立确认。
-    vib_gz_peak #(.NBIN(17), .NB(48), .BIN_MIN(0), .TONE_RATIO(0)) u_vib_gz_peak (
+    // Four-reference 2D coherence is evaluated before row5 arrives. The
+    // window collector binds even frame64 to this exact Goertzel window.
+    wire S_motion_veto;
+`ifdef VIB_COMMON_MOTION_ON
+    wire S_motion_ready, S_motion_valid, S_motion_frame;
+    vib_common_motion u_vib_common_motion (
+        .clk(S_ddr_clk), .rst_n(S_rst_n),
+        .i_pair(S2_br_motion), .i_row(S2_br_row), .i_tick(S2_br_tick),
+        .o_ready(S_motion_ready), .o_valid(S_motion_valid), .o_motion(S_motion_frame), .o_busy()
+    );
+    vib_motion_window u_vib_motion_window (
+        .clk(S_ddr_clk), .rst_n(S_rst_n),
+        .i_tick(S2_br_tick), .i_row(S2_br_row),
+        .i_ready(S_motion_ready), .i_valid(S_motion_valid), .i_motion(S_motion_frame),
+        .i_scan_trig(S_pk_trig), .o_veto(S_motion_veto), .o_info(S_motion_info)
+    );
+`else
+    // Keep the experiment's source; elaborate neither solver nor snapshots.
+    // Constant zero also lets synthesis remove the scanner's veto register.
+    assign S_motion_veto=1'b0;
+    assign S_motion_info=32'd0;
+`endif
+    vib_gz_peak #(.NBIN(17), .NB(48), .BIN_MIN(0), .TONE_RATIO(0),
+`ifdef VIB_COMMON_MOTION_ON
+                  .COMMON_MOTION_ON(1)
+`else
+                  .COMMON_MOTION_ON(0)
+`endif
+    ) u_vib_gz_peak (
         .clk        ( S_ddr_clk       ),
         .rst_n      ( S_rst_n         ),
         .trig       ( S_pk_trig       ),
+        .i_motion_veto( S_motion_veto  ),
         .i_fx_blk   ( S2_fx_pos[5:0]  ),
         .i_axx_exp  ( S2_axx_exp      ),
         .i_tick     ( S2_br_tick      ),
@@ -1875,6 +1917,7 @@ isp_top u_isp_top (
     assign S_pk_fb8       = 32'd0;
     assign S_pk_fb12      = 32'd0;
     assign S_pk_tn        = 32'd0;
+    assign S_motion_info  = 32'd0;
     assign S_pk_raw_hz    = 32'd0;
     assign S_pk_aexp      = 5'd0;
     assign S_pk_confirmed = 3'd0;
@@ -2225,6 +2268,7 @@ isp_top u_isp_top (
     reg [31:0]  c_fx_pn;
     reg [31:0]  c_qact;
     reg [31:0]  c_raw_bin, c_raw_hz, c_raw_aexp, c_confirmed, c_tn;
+    reg [31:0]  c_motion_info;
     //------------------------------------------------------------------
     //  ★ 2026-10-27：窗口周期计数 —— 用来反推<b>真实帧率</b>
     //    fs = 64 帧 / 周期（周期单位 = I_sys_clk 50MHz 的拍数）
@@ -2276,6 +2320,7 @@ isp_top u_isp_top (
             c_raw_aexp <= {27'd0, S_pk_aexp};
             c_confirmed<= {29'd0, S_pk_confirmed};
             c_tn       <= S_pk_tn;
+            c_motion_info <= S_motion_info;
             c_mb_streak <= {20'd0, S_pk_streak};
             c_mb_clr <= S_mb_clrcnt;
             c_tonal_map <= S_pk_tonal_map;
@@ -2394,6 +2439,7 @@ isp_top u_isp_top (
         .raw_aexp            (c_raw_aexp),
         .confirmed           (c_confirmed),
         .tn_status           (c_tn),
+        .motion_info         (c_motion_info),
         .tx                 (O_uart_tx)
     );
 

@@ -1,0 +1,726 @@
+[
+  {
+    "file": "r00020005_camera_shake_1.txt",
+    "sha256": "210d24b8d59925d236213988d5dd4c85b27c89cf3f7c8c7f9bf3a1dfb4dd54d0",
+    "revision": "00020005",
+    "prints": 10,
+    "unique_windows": 9,
+    "motion_gated_windows": 2,
+    "four_confirmed_slots": 0,
+    "four_expected_frequencies": 0,
+    "windows": [
+      {
+        "window": 106,
+        "time": "22:23:10.606",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 3,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 20,
+            "magnitude": 533
+          }
+        ]
+      },
+      {
+        "window": 107,
+        "time": "22:23:11.597",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 3,
+            "block": 19,
+            "row_1based": 3,
+            "column_1based": 4,
+            "hz10": 25,
+            "magnitude": 478
+          }
+        ]
+      },
+      {
+        "window": 108,
+        "time": "22:23:12.606",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 109,
+        "time": "22:23:13.598",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 110,
+        "time": "22:23:14.606",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 111,
+        "time": "22:23:15.598",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 112,
+        "time": "22:23:17.597",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 113,
+        "time": "22:23:18.605",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 114,
+        "time": "22:23:19.597",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 3,
+            "block": 4,
+            "row_1based": 1,
+            "column_1based": 5,
+            "hz10": 25,
+            "magnitude": 600
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "r00020005_camera_shake_2.txt",
+    "sha256": "a94abb13e59209e7156533f044ae597c891cc0fc8c599cd730fa91f55ac3d86c",
+    "revision": "00020005",
+    "prints": 10,
+    "unique_windows": 10,
+    "motion_gated_windows": 3,
+    "four_confirmed_slots": 0,
+    "four_expected_frequencies": 0,
+    "windows": [
+      {
+        "window": 155,
+        "time": "22:24:03.595",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 156,
+        "time": "22:24:04.604",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 157,
+        "time": "22:24:05.595",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 158,
+        "time": "22:24:06.603",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 159,
+        "time": "22:24:07.595",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 160,
+        "time": "22:24:08.603",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 3,
+            "block": 26,
+            "row_1based": 4,
+            "column_1based": 3,
+            "hz10": 30,
+            "magnitude": 161131
+          }
+        ]
+      },
+      {
+        "window": 161,
+        "time": "22:24:09.595",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 162,
+        "time": "22:24:10.603",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 163,
+        "time": "22:24:11.595",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 164,
+        "time": "22:24:12.603",
+        "confirmed": 0,
+        "objects": []
+      }
+    ]
+  },
+  {
+    "file": "r00020006_four_targets_3_5_8_10hz.txt",
+    "sha256": "7540f93f4d0e3686567435eae40710027830a117ec6c5d605c4d99d2619f3dfc",
+    "revision": "00020006",
+    "prints": 20,
+    "unique_windows": 19,
+    "motion_gated_windows": 0,
+    "four_confirmed_slots": 10,
+    "four_expected_frequencies": 3,
+    "windows": [
+      {
+        "window": 179,
+        "time": "22:37:52.598",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 4,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 100
+          }
+        ]
+      },
+      {
+        "window": 180,
+        "time": "22:37:53.605",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 4,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 88
+          }
+        ]
+      },
+      {
+        "window": 181,
+        "time": "22:37:54.597",
+        "confirmed": 1,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 35,
+            "row_1based": 5,
+            "column_1based": 4,
+            "hz10": 30,
+            "magnitude": 687
+          }
+        ]
+      },
+      {
+        "window": 182,
+        "time": "22:37:55.605",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 183,
+        "time": "22:37:56.598",
+        "confirmed": 3,
+        "objects": [
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 1458
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 804
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 100,
+            "magnitude": 751
+          }
+        ]
+      },
+      {
+        "window": 184,
+        "time": "22:37:57.605",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 233
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 1693
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 1017
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 100,
+            "magnitude": 855
+          }
+        ]
+      },
+      {
+        "window": 185,
+        "time": "22:37:59.605",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 219
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 95,
+            "magnitude": 1246
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 95,
+            "magnitude": 725
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 95,
+            "magnitude": 594
+          }
+        ]
+      },
+      {
+        "window": 186,
+        "time": "22:38:00.597",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 246
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 2029
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 1104
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 100,
+            "magnitude": 982
+          }
+        ]
+      },
+      {
+        "window": 187,
+        "time": "22:38:01.605",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 304
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 1912
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 1201
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 100,
+            "magnitude": 1041
+          }
+        ]
+      },
+      {
+        "window": 188,
+        "time": "22:38:02.597",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 238
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 2135
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 1228
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 100,
+            "magnitude": 1066
+          }
+        ]
+      },
+      {
+        "window": 189,
+        "time": "22:38:03.605",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 111
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 1284
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 626
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 95,
+            "magnitude": 678
+          }
+        ]
+      },
+      {
+        "window": 190,
+        "time": "22:38:04.597",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 11,
+            "row_1based": 2,
+            "column_1based": 4,
+            "hz10": 50,
+            "magnitude": 98
+          },
+          {
+            "slot": 2,
+            "block": 34,
+            "row_1based": 5,
+            "column_1based": 3,
+            "hz10": 100,
+            "magnitude": 2237
+          },
+          {
+            "slot": 3,
+            "block": 39,
+            "row_1based": 5,
+            "column_1based": 8,
+            "hz10": 100,
+            "magnitude": 1069
+          },
+          {
+            "slot": 4,
+            "block": 32,
+            "row_1based": 5,
+            "column_1based": 1,
+            "hz10": 100,
+            "magnitude": 1134
+          }
+        ]
+      },
+      {
+        "window": 191,
+        "time": "22:38:05.604",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 192,
+        "time": "22:38:06.597",
+        "confirmed": 0,
+        "objects": []
+      },
+      {
+        "window": 193,
+        "time": "22:38:07.605",
+        "confirmed": 2,
+        "objects": [
+          {
+            "slot": 3,
+            "block": 14,
+            "row_1based": 2,
+            "column_1based": 7,
+            "hz10": 80,
+            "magnitude": 591
+          },
+          {
+            "slot": 4,
+            "block": 37,
+            "row_1based": 5,
+            "column_1based": 6,
+            "hz10": 100,
+            "magnitude": 2114
+          }
+        ]
+      },
+      {
+        "window": 194,
+        "time": "22:38:08.597",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 33,
+            "row_1based": 5,
+            "column_1based": 2,
+            "hz10": 30,
+            "magnitude": 2540
+          },
+          {
+            "slot": 2,
+            "block": 9,
+            "row_1based": 2,
+            "column_1based": 2,
+            "hz10": 50,
+            "magnitude": 579
+          },
+          {
+            "slot": 3,
+            "block": 14,
+            "row_1based": 2,
+            "column_1based": 7,
+            "hz10": 80,
+            "magnitude": 573
+          },
+          {
+            "slot": 4,
+            "block": 37,
+            "row_1based": 5,
+            "column_1based": 6,
+            "hz10": 100,
+            "magnitude": 2150
+          }
+        ]
+      },
+      {
+        "window": 195,
+        "time": "22:38:09.605",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 33,
+            "row_1based": 5,
+            "column_1based": 2,
+            "hz10": 30,
+            "magnitude": 3394
+          },
+          {
+            "slot": 2,
+            "block": 9,
+            "row_1based": 2,
+            "column_1based": 2,
+            "hz10": 50,
+            "magnitude": 657
+          },
+          {
+            "slot": 3,
+            "block": 14,
+            "row_1based": 2,
+            "column_1based": 7,
+            "hz10": 80,
+            "magnitude": 596
+          },
+          {
+            "slot": 4,
+            "block": 37,
+            "row_1based": 5,
+            "column_1based": 6,
+            "hz10": 100,
+            "magnitude": 1840
+          }
+        ]
+      },
+      {
+        "window": 196,
+        "time": "22:38:10.597",
+        "confirmed": 4,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 33,
+            "row_1based": 5,
+            "column_1based": 2,
+            "hz10": 30,
+            "magnitude": 4584
+          },
+          {
+            "slot": 2,
+            "block": 9,
+            "row_1based": 2,
+            "column_1based": 2,
+            "hz10": 50,
+            "magnitude": 640
+          },
+          {
+            "slot": 3,
+            "block": 14,
+            "row_1based": 2,
+            "column_1based": 7,
+            "hz10": 80,
+            "magnitude": 665
+          },
+          {
+            "slot": 4,
+            "block": 37,
+            "row_1based": 5,
+            "column_1based": 6,
+            "hz10": 100,
+            "magnitude": 2262
+          }
+        ]
+      },
+      {
+        "window": 197,
+        "time": "22:38:11.605",
+        "confirmed": 3,
+        "objects": [
+          {
+            "slot": 1,
+            "block": 33,
+            "row_1based": 5,
+            "column_1based": 2,
+            "hz10": 30,
+            "magnitude": 3127
+          },
+          {
+            "slot": 2,
+            "block": 9,
+            "row_1based": 2,
+            "column_1based": 2,
+            "hz10": 50,
+            "magnitude": 1103
+          },
+          {
+            "slot": 3,
+            "block": 14,
+            "row_1based": 2,
+            "column_1based": 7,
+            "hz10": 80,
+            "magnitude": 411
+          }
+        ]
+      }
+    ]
+  }
+]

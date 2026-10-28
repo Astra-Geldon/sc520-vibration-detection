@@ -87,6 +87,12 @@ module vib_lk_grid_multi (
     input  wire [31:0]       i_it_sum,    // 来自 vib_prev_frame_ddr 的 ITSM
     // ---- 块行结束时 8 个横向块的 bx 快照（给 48 块 Goertzel 引擎）----
     output reg  [255:0]      st_br_bx,     // 8 块 x 32 位，块 0 在最低位
+`ifdef VIB_COMMON_MOTION_ON
+    // Four separated reference blocks: zero-based (row,col)=(1/4,1/6).
+    // Low/high160 bits: col1/col6; each tensor={by,bx,axy,ayy,axx}.
+    // Read-only snapshots; never used as an activity-block count.
+    output reg  [319:0]      st_br_motion,
+`endif
     output reg  [2:0]        st_br_row,    // 块行号 0..5
     output reg               st_br_tick,   // 1 拍脉冲：本拍快照有效
 
@@ -686,6 +692,9 @@ module vib_lk_grid_multi (
             st_b_bcol <= 3'd0;  st_b_brow <= 3'd0;
             st_solve_req <= 1'b0;
             st_br_bx   <= 256'd0;
+`ifdef VIB_COMMON_MOTION_ON
+            st_br_motion <= 320'd0;
+`endif
             st_br_row  <= 3'd0;
             st_br_tick <= 1'b0;
             st_axx_exp <= 40'd0;
@@ -895,6 +904,11 @@ module vib_lk_grid_multi (
                         // ---- 给 48 块 Goertzel 引擎的 8 块快照 ----
                         st_br_bx   <= {acc_bx[7], acc_bx[6], acc_bx[5], acc_bx[4],
                                        acc_bx[3], acc_bx[2], acc_bx[1], acc_bx[0]};
+`ifdef VIB_COMMON_MOTION_ON
+                        if((brow_now==3'd1)||(brow_now==3'd4))
+                            st_br_motion <= {acc_by[6],acc_bx[6],acc_axy[6],acc_ayy[6],acc_axx[6],
+                                             acc_by[1],acc_bx[1],acc_axy[1],acc_ayy[1],acc_axx[1]};
+`endif
                         st_br_row  <= brow_now;
                         st_br_tick <= 1'b1;
                         // ★ 纹理指数与 st_br_bx 同沿打拍（清零前采样），

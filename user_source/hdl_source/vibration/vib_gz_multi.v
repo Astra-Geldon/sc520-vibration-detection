@@ -164,10 +164,13 @@ module vib_gz_multi #(
     wire [5:0]  blk_abs = {row_snap, col};
 
     //==================================================================
-    //  输入 AGC（2026-10-24）：暗屏时 bx 掉两个数量级，固定的 >>>12 会把它
-    //  移成 0。这里按"历史最强的纹理能量"做参考，把 v 的移位从 6 改成 6-gain。
+    //  输入 AGC：参考上一完整帧6行的最大纹理指数，下限仍为18。
+    //  2026-10-28：历史最大值只升不降，会在移动/纹理变化后永久抬高
+    //  暗块增益。改为逐帧重新统计，参考只在第6行处理结束后提交，
+    //  避免一帧内6行使用不同的参考。原有gain上限6和四档移位不变。
     //==================================================================
-    reg  [4:0] agc_ref;      // 见过的最大 axx 对数（4 倍粒度以上，2 倍粒度）
+    reg [4:0] agc_frame_max; // 本帧6行最大值，每帧重置到18
+    reg  [4:0] agc_ref;      // 上一完整帧的最大值，允许随当前场景下降
     assign o_dbg_agc_ref = agc_ref;
     wire [4:0] agc_diff = (agc_ref > i_agc_exp) ? (agc_ref - i_agc_exp) : 5'd0;
     wire [4:0] agc_gain = (agc_diff > 5'd6) ? 5'd6 : agc_diff;
@@ -224,7 +227,8 @@ module vib_gz_multi #(
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-        agc_ref <= 5'd18;
+            agc_ref <= 5'd18;
+            agc_frame_max <= 5'd18;
             bx_snap   <= 256'd0;
             row_snap  <= 3'd0;
             snap_vld  <= 1'b0;
@@ -267,8 +271,8 @@ module vib_gz_multi #(
             if (i_tick) begin
                 o_tick_cnt <= o_tick_cnt + 32'd1;
                 bx_snap  <= i_bx8;
-                // AGC 参考：只升不降，亮过一次之后暗场景就能被放大
-                if (i_agc_exp > agc_ref) agc_ref <= i_agc_exp;
+                // 本帧统计，包含最后一行；由S_END统一提交并重新开始。
+                if (i_agc_exp > agc_frame_max) agc_frame_max <= i_agc_exp;
                 row_snap <= i_row;
                 snap_vld <= 1'b1;
             end
@@ -373,6 +377,8 @@ module vib_gz_multi #(
             end
             S_END: begin
                 if (rowcnt == (NROW - 1)) begin
+                    agc_ref       <= agc_frame_max;
+                    agc_frame_max <= 5'd18;
                     rowcnt       <= 6'd0;
                     o_dbg_rate   <= rec_cnt;      // 不再额外 +136
                     rec_cnt      <= 32'd0;
