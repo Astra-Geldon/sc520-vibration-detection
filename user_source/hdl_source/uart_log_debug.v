@@ -9,19 +9,63 @@
 //  串口：115200 8N1；板子 TX(H1) 接 USB-TTL 的 RXD，GND 共地
 //
 //  ---------------------------------------------------------------------
-//  每轮先打 1 行横幅，再打 2 行状态，每行 15 字节，共 67 字节//  （115200 下约 5.8 ms 打完，所以"每秒一轮"绰绰有余）：
+//  每轮先打 1 行横幅，再打 44 行状态，每行 15 字节，共 697 字节
+//  （115200 下约 60.5 ms 打完，所以"每秒一轮"绰绰有余）：
 //
 //      SC520 MIPI-HDMI UART LOG 115200 8N1\r\n
-//      SEC  00000000   运行秒数（每轮 +1）
-//      VSUM 00000000   抽头 Σ灰度（摄像头活着的证据）
+//      SEC  00000000   运行秒数
+//      VOFP 00000000   抽头每帧像素数，应为230400
+//      VOFL 00000000   抽头每帧行数，应为360
+//      ITPX 00000000   上一帧差分像素数，应为230400
+//      ITLN 00000000   上一帧差分行数，应为360
+//      VSUM 00000000   抽头每帧灰度和
+//      MBFR 00000000   刚完成窗口的帧数，应为64
+//      ACT  00000000   原始峰值raw>>8大于25的块数，突出度筛选前，0到48
+//      HZ1  00000000   已确认目标1频率乘10，无效为0
+//      HZ2  00000000   已确认目标2频率乘10，无效为0
+//      HZ3  00000000   已确认目标3频率乘10，无效为0
+//      HZ4  00000000   已确认目标4频率乘10，无效为0
+//      AGCR 00000000   AGC参考对数
+//      PBLK 00000000   本窗口全局原始峰值块，块号=row乘8加col
+//      STK0 00000000   四个独立目标槽连续匹配窗口数，每槽3bit
+//      CLRC 00000000   状态清零写次数，应为816即0x330
+//      PKMG 00000000   本窗口全局原始峰值raw>>8，与PBLK对应
+//      FXBX 00000000   LK诊断固定块bx
+//      FXEN 00000000   LK诊断固定块能量
+//      F04  00000000   本窗口PBLK的4Hz频点能量raw>>8，bin4
+//      F06  00000000   本窗口PBLK的6Hz频点能量raw>>8，bin8
+//      F10  00000000   本窗口PBLK的10Hz频点能量raw>>8，bin16
+//      F08  00000000   本窗口PBLK的8Hz频点能量raw>>8，bin12
+//      TON1 00000000   原始峰值与突出度合格块位图低32位
+//      TON2 00000000   原始峰值与突出度合格块位图高16位
+//      OBP1 00000000   四个网格框，每字节bit6有效、bit5至3行、bit2至0列
+//      FBPN 00000000   PBLK原始峰值raw>>8，保留旧字段名，等于PKMG
+//      OBM1 00000000   已确认目标1原始峰值raw>>8，与OBP1同槽位
+//      OBM2 00000000   已确认目标2原始峰值raw>>8，与OBP1同槽位
+//      OBM3 00000000   已确认目标3原始峰值raw>>8，与OBP1同槽位
+//      OBM4 00000000   已确认目标4原始峰值raw>>8，与OBP1同槽位
+//      CHLK 00000000   本窗口最强合格块号，无合格块为63
+//      QACT 00000000   原始峰值大于25且突出度通过的块数，确认前，0到48
+//      WPRD 00000000   窗口周期，单位为50MHz时钟拍
+//      VTAP 00000000   抽头异常计数，应为0
+//      ITER 00000000   上一帧缓存异常计数，应为0
+//      SCNC 00000000   刚完成窗口的频点扫描计数
+//      WINC 00000000   已完成窗口数，8bit回绕
+//      RVER 00000000   修复2版本标识，应为00020001
+//      RBIN 00000000   本窗口PBLK的原始峰值bin，0到16
+//      RHZ  00000000   本窗口原始峰值Hz10，未合格也报告，峰值0时为0
+//      AEXP 00000000   PBLK纹理指数，仅诊断，不参与候选门限
+//      CNFM 00000000   独立确认的目标数，0到4
+//      TNST 00000000   bit0原始最强块合格，bit1存在已确认目标
 //
 //  判读方法：
 //    * 能看到整齐的上面这些行        -> 波特率 / 帧格式 / 引脚 都对 ✓
 //    * SEC 每秒 +1，连续不乱         -> 时钟假设正确 ✓
-//    * DIV = 000001B2（434）         -> 分频值正确（50MHz 下 115200）✓
-//    * PXFR = 000E1000（921600）     -> 视频流是 1280x720，抽头正确 ✓
-//    * CSIH / PIXS                   -> 平均每像素几个 csi 时钟
-//    * DTRD = 00003840 且 DTER = 0   -> DDR 算法区域读写自检通过 ✓
+//    * RVER = 00020001               -> 当前为原始频谱候选修复版本
+//    * VOFP/ITPX=00038400，VOFL/ITLN=00000168 -> 640x360抽头与帧差计数正确
+//    * CLRC/SCNC=00000330，WINC递增   -> 48块乘17频点窗口持续完成
+//    * ACT/QACT/CNFM                 -> 原始能量块数/突出度合格块数/确认目标数
+//    * PBLK/RBIN/RHZ/AEXP/F04/F06/F08/F10 -> 同一窗口、同一原始最强块
 //    * 全是乱码                      -> 十有八九是 CLK_HZ 与真实时钟不符 ✗
 //
 //  ---------------------------------------------------------------------
@@ -36,10 +80,9 @@
 //  ---------------------------------------------------------------------
 //  复位说明：rst_n 接 I_rst_n（板级复位），这样 PLL 还没锁的时候
 //            串口就已经在打印了，便于定位问题。
-//            状态输入分两类，都做了两拍同步：
-//              a) 粘滞标志 / 慢变化电平（PLL/CAM/I2C/HS/...）—— 安全
-//              b) 每秒刷新的测量值（CSIH/PIXS/FPS/PXFR/DTRD/DTER）
-//                 —— 它们本来就只 1 秒变一次，跨域采样同样安全
+//            标志位在本模块中用两拍同步。
+//            多位测量值由顶层通过源域完成toggle复制到本时钟域，
+//            本模块再于每轮开始统一快照，避免字段跨窗口混用。
 //=====================================================================
 module uart_log_debug #(
     parameter integer CLK_HZ = 50_000_000,   // 本模块时钟频率（Hz）
@@ -58,7 +101,45 @@ module uart_log_debug #(
     input  wire        csi_frame_seen,      // 已解析出 CSI 帧（粘滞）
     input  wire        raw10_seen,          // 已出现 RAW10 流水（粘滞）
     input  wire        video_nonzero_seen,  // 已读到非零视频数据（粘滞）
-    input wire [31:0] vsum, // 抽头每帧 Σ灰度：非 0 说明抽头拿到像素了
+    input wire [31:0] tap_px_per_frame, // 抽头每帧像素数，应为230400
+    input wire [31:0] tap_lines, // 抽头每帧行数，应为360
+    input wire [31:0] it_px, // 上一帧差分像素数，应为230400
+    input wire [31:0] it_lines, // 上一帧差分行数，应为360
+    input wire [31:0] vsum, // 抽头每帧灰度和
+    input wire [31:0] mb_frm, // 刚完成窗口的帧数，应为64
+    input wire [31:0] mb_active, // 原始峰值raw>>8大于25的块数，突出度筛选前，0到48
+    input wire [31:0] mb_obj_hz10, // 已确认目标1频率乘10，无效为0
+    input wire [31:0] mb_agc_ref, // AGC参考对数
+    input wire [31:0] mb_best_blk, // 本窗口全局原始峰值块，块号=row乘8加col
+    input wire [31:0] mb_streak, // 四个独立目标槽连续匹配窗口数，每槽3bit
+    input wire [31:0] mb_clr, // 状态清零写次数，应为816即0x330
+    input wire [31:0] mb_mag, // 本窗口全局原始峰值raw>>8，与PBLK对应
+    input wire [31:0] fx_bx, // LK诊断固定块bx
+    input wire [31:0] fx_en, // LK诊断固定块能量
+    input wire [31:0] b2, // 本窗口PBLK的4Hz频点能量raw>>8，bin4
+    input wire [31:0] b4, // 本窗口PBLK的6Hz频点能量raw>>8，bin8
+    input wire [31:0] b8, // 本窗口PBLK的10Hz频点能量raw>>8，bin16
+    input wire [31:0] b12, // 本窗口PBLK的8Hz频点能量raw>>8，bin12
+    input wire [31:0] tonal_map_lo, // 原始峰值与突出度合格块位图低32位
+    input wire [31:0] tonal_map_hi, // 原始峰值与突出度合格块位图高16位
+    input wire [31:0] obj_pos, // 四个网格框，每字节bit6有效、bit5至3行、bit2至0列
+    input wire [31:0] fx_pn, // PBLK原始峰值raw>>8，保留旧字段名，等于PKMG
+    input wire [31:0] obj_pn0, // 已确认目标1原始峰值raw>>8，与OBP1同槽位
+    input wire [31:0] obj_pn1, // 已确认目标2原始峰值raw>>8，与OBP1同槽位
+    input wire [31:0] obj_pn2, // 已确认目标3原始峰值raw>>8，与OBP1同槽位
+    input wire [31:0] obj_pn3, // 已确认目标4原始峰值raw>>8，与OBP1同槽位
+    input wire [31:0] chal_blk, // 本窗口最强合格块号，无合格块为63
+    input wire [31:0] qact, // 原始峰值大于25且突出度通过的块数，确认前，0到48
+    input wire [31:0] wprd, // 窗口周期，单位为50MHz时钟拍
+    input wire [31:0] tap_ovf, // 抽头异常计数，应为0
+    input wire [31:0] it_err, // 上一帧缓存异常计数，应为0
+    input wire [31:0] mb_scan, // 刚完成窗口的频点扫描计数
+    input wire [31:0] mb_win, // 已完成窗口数，8bit回绕
+    input wire [31:0] raw_bin, // 本窗口PBLK的原始峰值bin，0到16
+    input wire [31:0] raw_hz, // 本窗口原始峰值Hz10，未合格也报告
+    input wire [31:0] raw_aexp, // PBLK纹理指数，仅诊断
+    input wire [31:0] confirmed, // 独立确认的目标数，0到4
+    input wire [31:0] tn_status, // bit0原始最强块合格，bit1存在已确认目标
     output wire        tx                   // 串口输出 -> O_uart_tx -> H1
 );
 
@@ -71,8 +152,8 @@ module uart_log_debug #(
     //------------------------------------------------------------------
     // 一轮消息的长度参数
     //------------------------------------------------------------------
-    localparam integer NF        = 2;   // 状态行（字段）个数
-    localparam integer FLD_LAST  = 2 - 1;
+    localparam integer NF        = 44;   // 状态行（字段）个数
+    localparam integer FLD_LAST  = 44 - 1;
     localparam integer POS_LAST  = 15 - 1;
     localparam integer BIDX_LAST = 37 - 1;
 
@@ -144,13 +225,55 @@ module uart_log_debug #(
     // 字段标签：给出第 f 个字段的第 p 个字符（p: 0..3，从左到右）
     //------------------------------------------------------------------
     function [7:0] lbl;
-        input [0:0] f;
+        input [5:0] f;
         input [1:0] p;
         reg  [31:0] s;
         begin
             case (f)
-            1'd0 : s = "SEC ";
-            1'd1 : s = "VSUM";
+            6'd0 : s = "SEC ";
+            6'd1 : s = "VOFP";
+            6'd2 : s = "VOFL";
+            6'd3 : s = "ITPX";
+            6'd4 : s = "ITLN";
+            6'd5 : s = "VSUM";
+            6'd6 : s = "MBFR";
+            6'd7 : s = "ACT ";
+            6'd8 : s = "HZ1 ";
+            6'd9 : s = "HZ2 ";
+            6'd10: s = "HZ3 ";
+            6'd11: s = "HZ4 ";
+            6'd12: s = "AGCR";
+            6'd13: s = "PBLK";
+            6'd14: s = "STK0";
+            6'd15: s = "CLRC";
+            6'd16: s = "PKMG";
+            6'd17: s = "FXBX";
+            6'd18: s = "FXEN";
+            6'd19: s = "F04 ";
+            6'd20: s = "F06 ";
+            6'd21: s = "F10 ";
+            6'd22: s = "F08 ";
+            6'd23: s = "TON1";
+            6'd24: s = "TON2";
+            6'd25: s = "OBP1";
+            6'd26: s = "FBPN";
+            6'd27: s = "OBM1";
+            6'd28: s = "OBM2";
+            6'd29: s = "OBM3";
+            6'd30: s = "OBM4";
+            6'd31: s = "CHLK";
+            6'd32: s = "QACT";
+            6'd33: s = "WPRD";
+            6'd34: s = "VTAP";
+            6'd35: s = "ITER";
+            6'd36: s = "SCNC";
+            6'd37: s = "WINC";
+            6'd38: s = "RVER";
+            6'd39: s = "RBIN";
+            6'd40: s = "RHZ ";
+            6'd41: s = "AEXP";
+            6'd42: s = "CNFM";
+            6'd43: s = "TNST";
             default: s = "????";
             endcase
             case (p)
@@ -169,8 +292,50 @@ module uart_log_debug #(
 
     always @(*) begin
         case (fld)
-        1'd0 : v = run_sec           ; // 运行秒数（每轮 +1）
-        1'd1 : v = vsum              ; // 抽头 Σ灰度（摄像头活着的证据）
+        6'd0 : v = run_sec           ; // 运行秒数
+        6'd1 : v = snap[1]           ; // 抽头每帧像素数，应为230400
+        6'd2 : v = snap[2]           ; // 抽头每帧行数，应为360
+        6'd3 : v = snap[3]           ; // 上一帧差分像素数，应为230400
+        6'd4 : v = snap[4]           ; // 上一帧差分行数，应为360
+        6'd5 : v = snap[5]           ; // 抽头每帧灰度和
+        6'd6 : v = snap[6]           ; // 刚完成窗口的帧数，应为64
+        6'd7 : v = snap[7]           ; // 原始峰值raw>>8大于25的块数，突出度筛选前，0到48
+        6'd8 : v = snap[8]           ; // 已确认目标1频率乘10，无效为0
+        6'd9 : v = snap[9]           ; // 已确认目标2频率乘10，无效为0
+        6'd10: v = snap[10]          ; // 已确认目标3频率乘10，无效为0
+        6'd11: v = snap[11]          ; // 已确认目标4频率乘10，无效为0
+        6'd12: v = snap[12]          ; // AGC参考对数
+        6'd13: v = snap[13]          ; // 本窗口全局原始峰值块，块号=row乘8加col
+        6'd14: v = snap[14]          ; // 四个独立目标槽连续匹配窗口数，每槽3bit
+        6'd15: v = snap[15]          ; // 状态清零写次数，应为816即0x330
+        6'd16: v = snap[16]          ; // 本窗口全局原始峰值raw>>8，与PBLK对应
+        6'd17: v = snap[17]          ; // LK诊断固定块bx
+        6'd18: v = snap[18]          ; // LK诊断固定块能量
+        6'd19: v = snap[19]          ; // 本窗口PBLK的4Hz频点能量raw>>8，bin4
+        6'd20: v = snap[20]          ; // 本窗口PBLK的6Hz频点能量raw>>8，bin8
+        6'd21: v = snap[21]          ; // 本窗口PBLK的10Hz频点能量raw>>8，bin16
+        6'd22: v = snap[22]          ; // 本窗口PBLK的8Hz频点能量raw>>8，bin12
+        6'd23: v = snap[23]          ; // 原始峰值与突出度合格块位图低32位
+        6'd24: v = snap[24]          ; // 原始峰值与突出度合格块位图高16位
+        6'd25: v = snap[25]          ; // 四个网格框，每字节bit6有效、bit5至3行、bit2至0列
+        6'd26: v = snap[26]          ; // PBLK原始峰值raw>>8，保留旧字段名，等于PKMG
+        6'd27: v = snap[27]          ; // 已确认目标1原始峰值raw>>8，与OBP1同槽位
+        6'd28: v = snap[28]          ; // 已确认目标2原始峰值raw>>8，与OBP1同槽位
+        6'd29: v = snap[29]          ; // 已确认目标3原始峰值raw>>8，与OBP1同槽位
+        6'd30: v = snap[30]          ; // 已确认目标4原始峰值raw>>8，与OBP1同槽位
+        6'd31: v = snap[31]          ; // 本窗口最强合格块号，无合格块为63
+        6'd32: v = snap[32]          ; // 原始峰值大于25且突出度通过的块数，确认前，0到48
+        6'd33: v = snap[33]          ; // 窗口周期，单位为50MHz时钟拍
+        6'd34: v = snap[34]          ; // 抽头异常计数，应为0
+        6'd35: v = snap[35]          ; // 上一帧缓存异常计数，应为0
+        6'd36: v = snap[36]          ; // 刚完成窗口的频点扫描计数
+        6'd37: v = snap[37]          ; // 已完成窗口数，8bit回绕
+        6'd38: v = snap[38]          ; // 修复2版本标识，应为00020001
+        6'd39: v = snap[39]          ; // 本窗口PBLK的原始峰值bin，0到16
+        6'd40: v = snap[40]          ; // 本窗口原始峰值Hz10，未合格也报告，峰值0时为0
+        6'd41: v = snap[41]          ; // PBLK纹理指数，仅诊断，不参与候选门限
+        6'd42: v = snap[42]          ; // 独立确认的目标数，0到4
+        6'd43: v = snap[43]          ; // bit0原始最强块合格，bit1存在已确认目标
         default:  v = 32'd0;
         endcase
     end
@@ -197,23 +362,59 @@ module uart_log_debug #(
     // ★ 整轮日志的快照（本轮新增，修一个真实的观测问题）
     //
     //   下面的 v 是**组合译码**：每个字段是"发到它那一刻"才去取值。
-    //   而一轮要发 5.8 ms，一帧只有 16.7 ms —— 于是
-    //     ITSM(字段25) 与 ITSS(字段29) 相隔 4 字段 = 60 字节 = 5.2 ms，
-    //     约 31% 的概率落在相邻两帧上。
-    //   实测出现过 |ITSS| > ITSM（= 1.67e7 > 1.78e5），这违反三角不等式
-    //   |ΣIt| <= Σ|It|，同帧绝不可能 —— 说明两个字段本来就来自不同帧，
-    //   不是算法算错。
-    //
-    //   修法：每秒开轮的那一拍，把所有"会变的"字段（13 号及之后）
-    //         一次性打进快照寄存器，整轮日志都从快照读 -> 同一轮内自洽。
-    //   代价：0 个 32bit 寄存器。标志位/常量不必快照。
+    //   一轮要发 60.5 ms，期间顶层窗口快照可能更新。
+    //   每秒开轮的那一拍，把SEC之外的字段一次性打进快照寄存器，
+    //   整轮日志都从快照读，频率、位置、原始频谱和候选计数保持一致。
+    //   代价：43 个 32bit 寄存器。标志位/常量不必快照。
     //------------------------------------------------------------------
     wire        snap_ld = (st_r == ST_TICK) && tick_1s;   // 开轮那一拍
     reg  [31:0] snap [0:NF-1];
 
     always @(posedge clk) begin
         if (snap_ld) begin
-
+            snap[ 1] <= tap_px_per_frame;
+            snap[ 2] <= tap_lines;
+            snap[ 3] <= it_px;
+            snap[ 4] <= it_lines;
+            snap[ 5] <= vsum;
+            snap[ 6] <= mb_frm;
+            snap[ 7] <= mb_active;
+            snap[ 8] <= {24'd0,mb_obj_hz10[7:0]};
+            snap[ 9] <= {24'd0,mb_obj_hz10[15:8]};
+            snap[10] <= {24'd0,mb_obj_hz10[23:16]};
+            snap[11] <= {24'd0,mb_obj_hz10[31:24]};
+            snap[12] <= mb_agc_ref;
+            snap[13] <= mb_best_blk;
+            snap[14] <= mb_streak;
+            snap[15] <= mb_clr;
+            snap[16] <= mb_mag;
+            snap[17] <= fx_bx;
+            snap[18] <= fx_en;
+            snap[19] <= b2;
+            snap[20] <= b4;
+            snap[21] <= b8;
+            snap[22] <= b12;
+            snap[23] <= tonal_map_lo;
+            snap[24] <= tonal_map_hi;
+            snap[25] <= obj_pos;
+            snap[26] <= fx_pn;
+            snap[27] <= obj_pn0;
+            snap[28] <= obj_pn1;
+            snap[29] <= obj_pn2;
+            snap[30] <= obj_pn3;
+            snap[31] <= chal_blk;
+            snap[32] <= qact;
+            snap[33] <= wprd;
+            snap[34] <= tap_ovf;
+            snap[35] <= it_err;
+            snap[36] <= mb_scan;
+            snap[37] <= mb_win;
+            snap[38] <= 32'h0002_0001;
+            snap[39] <= raw_bin;
+            snap[40] <= raw_hz;
+            snap[41] <= raw_aexp;
+            snap[42] <= confirmed;
+            snap[43] <= tn_status;
         end
     end
 
@@ -270,7 +471,7 @@ module uart_log_debug #(
     //------------------------------------------------------------------
     reg              in_banner;   // 1 = 正在发横幅
     reg  [5:0] bidx;        // 横幅字节下标
-    reg  [0:0] fld;         // 字段号
+    reg  [5:0] fld;         // 字段号
     reg  [3:0] pos;         // 字段内字节位置
 
     //------------------------------------------------------------------

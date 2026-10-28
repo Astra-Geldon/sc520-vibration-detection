@@ -16,11 +16,11 @@
 #
 # 用法：cd td_project && echo 'source patch/phaseB_patch_db.tcl' | td_commands_prompt.exe
 
+source [file join [file dirname [info script]] td_device.tcl]
+
 if {[catch {
     set p0 [pwd]
-    cd F:/Anlogic/arch
-    import_device ph1_35p.db -package PH1P35MDG324 -speed 3
-    cd $p0
+    sc520_import_device
 
     import_db baseline_rtl.db
 

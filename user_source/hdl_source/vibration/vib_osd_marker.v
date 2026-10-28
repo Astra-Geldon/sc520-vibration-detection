@@ -1,4 +1,4 @@
-﻿//=============================================================================
+//=============================================================================
 //  vib_osd_marker.v  ——  在 HDMI 画面上叠加调试标记
 //
 //  目的：上板时肉眼对齐"手机方块"和"固定纹理块"的实时位置。
@@ -13,6 +13,9 @@
 //    2) 固定纹理块的**外框**（品红，2 像素粗）
 //         坐标来自 st_fx_pos = {29'd0, valid, row[2:0], col[2:0]}
 //         块大小：显示 1280x720 / 网格 8x6 → 每块 160x120 像素
+//    3) 边缘刻度尺（2026-10-27，白色，32 像素长）
+//         上沿 7 条竖刻度分开 8 列，左沿 5 条横刻度分开 6 行；
+//         只画在边缘，画面中间不画线。用来肉眼判定"目标在第几块"。
 //
 //  ★ 这个模块插在 hdmi_mixer → hdmi_tx 之间，**在算法取数之后**，
 //    所以画的标记完全不影响振动算法（算法从 ISP 输出取数）。
@@ -30,6 +33,7 @@ module vib_osd_marker (
     input  wire        I_de,
     input  wire [23:0] I_data,
     input  wire [31:0] I_pos,       // {29'd0, valid, row[2:0], col[2:0]}
+    input  wire [31:0] I_obj_pos,   // 4 个 {valid,row,col}，每个占 8 bit
     output reg         O_vs,
     output reg         O_de,
     output reg  [23:0] O_data
@@ -46,6 +50,26 @@ module vib_osd_marker (
     wire [2:0]  col     = I_pos[2:0];
     wire [2:0]  row     = I_pos[5:3];
     wire        fxv     = I_pos[6];
+
+    function box_hit;
+        input [7:0] p;
+        reg [2:0] c, r;
+        reg [10:0] x0, x1;
+        reg [9:0] y0, y1;
+        begin
+            c = p[2:0]; r = p[5:3];
+            x0 = c * 11'd160; x1 = x0 + 11'd159;
+            y0 = r * 10'd120; y1 = y0 + 10'd119;
+            box_hit = p[6] && (x >= x0) && (x <= x1) &&
+                      (y >= y0) && (y <= y1) &&
+                      (((x <= x0 + 11'd1) || (x >= x1 - 11'd1)) ||
+                       ((y <= y0 + 10'd1) || (y >= y1 - 10'd1)));
+        end
+    endfunction
+    wire frm0 = box_hit(I_obj_pos[7:0]);
+    wire frm1 = box_hit(I_obj_pos[15:8]);
+    wire frm2 = box_hit(I_obj_pos[23:16]);
+    wire frm3 = box_hit(I_obj_pos[31:24]);
 
     // 固定块的外框（显示像素坐标）
     // 块大小：显示 1280x720 / 网格 8x6 → 每块 160x120 显示像素
@@ -65,6 +89,43 @@ module vib_osd_marker (
     wire on_edge = (x >= bx0 && x <= bx0 + 11'd1) || (x >= bx1 - 11'd1 && x <= bx1) ||
                 (y >= by0 && y <= by0 + 10'd1) || (y >= by1 - 10'd1 && y <= by1);
     wire frm = fxv && in_x && in_y && on_edge;
+
+    //------------------------------------------------------------------
+    //  刻度尺（2026-10-27）—— 只为让眼睛能读出"手机在第几块"
+    //    上沿 7 条竖刻度 → 把 8 列分开（列边界在 x = 160k, k=1..7）
+    //    左沿 5 条横刻度 → 把 6 行分开（行边界在 y = 120k, k=1..5）
+    //    每条**只在边缘**画 TICK_LEN 像素，画面中间一根线都不画；
+    //    宽 2 像素、白色。
+    //    ★ 画在目标框**之下**（后写的 frm0~3 会覆盖它），刻度不抢框的显示。
+    //------------------------------------------------------------------
+    localparam [10:0] TICK_XLEN = 11'd32;   // 上沿刻度长度（像素）
+    localparam [9:0]  TICK_YLEN = 10'd32;   // 左沿刻度长度（像素）
+
+    reg tick_top, tick_left;
+
+    always @(*) begin
+        tick_top  = 1'b0;
+        tick_left = 1'b0;
+        // 上沿：y 在前 32 行内，且 x 落在 160 的整数倍上（2 像素宽）
+        if (y < TICK_YLEN) begin
+            case (x)
+            11'd160,  11'd161,  11'd320,  11'd321,
+            11'd480,  11'd481,  11'd640,  11'd641,
+            11'd800,  11'd801,  11'd960,  11'd961,
+            11'd1120, 11'd1121 : tick_top = 1'b1;
+            default: ;
+            endcase
+        end
+        // 左沿：x 在前 32 列内，且 y 落在 120 的整数倍上（2 像素宽）
+        if (x < TICK_XLEN) begin
+            case (y)
+            10'd120, 10'd121, 10'd240, 10'd241,
+            10'd360, 10'd361, 10'd480, 10'd481,
+            10'd600, 10'd601 : tick_left = 1'b1;
+            default: ;
+            endcase
+        end
+    end
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -92,9 +153,17 @@ module vib_osd_marker (
 
                 // 叠加（后写覆盖）
                 if (ref_sq || ref_bar)
-                    O_data <= 24'h00FF00;      // 绿
-                else if (frm)
-                    O_data <= 24'hFF00FF;      // 品红
+                    O_data <= 24'h00FF00;      // 绿：左上角 L 形参考
+                else if (tick_top || tick_left)
+                    O_data <= 24'hFFFFFF;      // 白：边缘刻度尺
+                else if (frm0)
+                    O_data <= 24'hFF00FF;
+                else if (frm1)
+                    O_data <= 24'h00FFFF;
+                else if (frm2)
+                    O_data <= 24'hFFFF00;
+                else if (frm3)
+                    O_data <= 24'hFF8000;
             end
             else begin
                 x <= 11'd0;

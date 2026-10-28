@@ -1,0 +1,9 @@
+{
+  "source": "user_source/hdl_source/vibration/vib_gz_peak.v",
+  "groups": 219,
+  "windows": 447,
+  "expected_windows": 447,
+  "returncode": 0,
+  "failures": [],
+  "scope": "Actual scanner RTL with independently calculated Goertzel-state stimuli and behavioral synchronous result RAM. No LK, engine, CDC, timing or vendor RAM verification."
+}

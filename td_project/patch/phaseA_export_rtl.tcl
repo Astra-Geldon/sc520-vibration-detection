@@ -11,6 +11,8 @@
 #
 # 用法：cd td_project && echo 'source patch/phaseA_export_rtl.tcl' | td_commands_prompt.exe
 
+source [file join [file dirname [info script]] td_device.tcl]
+
 set ::ERR 0
 proc step {name body} {
     puts ""
@@ -27,7 +29,7 @@ set ::P0 [pwd]
 puts "START DIR = $::P0"
 
 # device db 需要当前目录能找到 ph1_35p.db
-step device { cd F:/Anlogic/arch ; import_device ph1_35p.db -package PH1P35MDG324 -speed 3 ; cd $::P0 }
+step device { sc520_import_device }
 
 step open      { open_project camera_to_dsi_display.al }
 step elaborate { elaborate -top design_top_wrapper }

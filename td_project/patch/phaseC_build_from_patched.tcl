@@ -5,6 +5,8 @@
 #
 # 用法：cd td_project && echo 'source patch/phaseC_build_from_patched.tcl' | td_commands_prompt.exe
 
+source [file join [file dirname [info script]] td_device.tcl]
+
 set ::ERR 0
 proc step {name body} {
     puts ""
@@ -20,7 +22,7 @@ proc step {name body} {
 set ::P0 [pwd]
 puts "START DIR = $::P0"
 
-step device  { cd F:/Anlogic/arch ; import_device ph1_35p.db -package PH1P35MDG324 -speed 3 ; cd $::P0 }
+step device  { sc520_import_device }
 step import  { import_db patched_rtl.db }
 
 # 确认补丁还在（防呆：import_db 后重新数 pin）

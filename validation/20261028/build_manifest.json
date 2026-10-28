@@ -1,0 +1,26 @@
+[
+  {
+    "path": "td_project/camera_to_dsi_display_Runs/phy_1/camera_to_dsi_display.bit",
+    "bytes": 1789539,
+    "sha256": "4882108cb2bc5e3c3ea2a54827a1715d75f3df4b5dd6d548191a8f17d8120795",
+    "mtime_local": "2026-10-28T19:24:41.762671"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display_Runs/phy_1/camera_to_dsi_display_compress.bit",
+    "bytes": 1454065,
+    "sha256": "091de247b2a3fa995f546aed31683ee52cf1d92f766ca2edcda74d0a1ef3e77e",
+    "mtime_local": "2026-10-28T19:24:41.499526"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display_Runs/phy_1/camera_to_dsi_display_phy.area",
+    "bytes": 56292,
+    "sha256": "d21845f9a80b74245bbf7b21872b7da8b2bbf0c895a00905d99747173a70edcd",
+    "mtime_local": "2026-10-28T19:24:31.073789"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display_Runs/phy_1/camera_to_dsi_display_phy.ts",
+    "bytes": 62,
+    "sha256": "4382fcb9bbd1d37880fb2508aec43177cad487b2374e54350de9cb9f91fd3a62",
+    "mtime_local": "2026-10-28T19:24:36.451227"
+  }
+]

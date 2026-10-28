@@ -1,0 +1,9 @@
+{
+  "rtl_engine_source": "user_source/hdl_source/vibration/vib_gz_multi.v",
+  "rtl_peak_source": "user_source/hdl_source/vibration/vib_gz_peak.v",
+  "state_words_compared": 816,
+  "windows": 3,
+  "failures": [],
+  "returncode": 0,
+  "scope": "Actual engine+scanner RTL, real BX sample amplitudes20000..120000, AEXP/AGC22. Known-zero test RAM initial condition, synchronous one-clock behavioral RAM. No LK/CDC/vendor timing/power-up validation."
+}

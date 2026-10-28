@@ -23,6 +23,12 @@
 // 振动频率识别（17 频点 Goertzel，128 帧窗口）。同样**不要**登记进 .al。
 `include "vibration/vib_goertzel.v"
 
+// Shared 48-block, 17-bin vibration chain. Each module is included once.
+`include "vibration/vib_lk_grid_multi.v"
+`include "vibration/vib_eram_dp.v"
+`include "vibration/vib_gz_multi.v"
+`include "vibration/vib_gz_peak.v"
+
 // 屏幕调试标记（固定块外框 + 左上角 L 形参考标记）。同样不要登记进 .al。
 `include "vibration/vib_osd_marker.v"
 
@@ -59,6 +65,11 @@
 //  去掉下行注释 = 打开整条振动链路；保持注释 = 关闭（省约 12,400 slice）
 // =====================================================================
 //`define VIB_ON
+
+// Enable the shared multi-block chain; keep the legacy single-block chain off.
+`define VIB_FRAME_DIFF_ON
+`define VIB_STAGE2_LK_ON
+`define VIB_STAGE2_GZ_ON
 
 //`define VIB_NO_DISPLAY
 
@@ -321,6 +332,7 @@ module design_top_wrapper (
     wire        S_osd_vs, S_osd_de;
     wire [23:0] S_osd_data;
     reg  [31:0] S_fx_pos_p1, S_fx_pos_p2;
+    reg  [31:0] S_obj_pos_p1, S_obj_pos_p2;
     // 阶段 0：48x17 存储自检
     wire [31:0] S_gzcrc_w, S_gzcrc_r;
     wire        S_gzcrc_ok;
@@ -338,6 +350,84 @@ module design_top_wrapper (
     wire signed [31:0] S_lk_b_bx,  S_lk_b_by,  S_lk_b_en;
     wire [2:0]         S_lk_b_bcol, S_lk_b_brow;
     wire               S_lk_solve_req;
+
+    // 阶段 2A：8x6 网格快照诊断信号（48 块共享 Goertzel 的输入候选）
+    (* keep = "true" *) wire [255:0] S2_br_bx;
+    (* keep = "true" *) wire [2:0]   S2_br_row;
+    (* keep = "true" *) wire         S2_br_tick;
+    (* keep = "true" *) wire [4:0]   S2_agc_exp;
+    wire [39:0]  S2_axx_exp;
+    wire signed [31:0] S2_fx_bx, S2_fx_by, S2_fx_en;
+    wire signed [32:0] S2_fx_tex;
+    wire signed [31:0] S2_fx_axx, S2_fx_ayy, S2_fx_axy;
+    wire [31:0]        S2_fx_pos;
+    wire signed [31:0] S2_b_axx, S2_b_ayy, S2_b_axy;
+    wire signed [31:0] S2_b_bx, S2_b_by, S2_b_en;
+    wire [2:0]         S2_b_bcol, S2_b_brow;
+    wire [31:0]        S2_b_itsm;
+    wire               S2_tgl, S2_solve_req, S2_fx_tick;
+    wire [31:0]        S2_px, S2_err;
+    wire signed [31:0] S2_axx, S2_ayy, S2_axy, S2_bx, S2_by, S2_en;
+    wire [7:0]         S2_dbg_m0, S2_dbg_m1, S2_dbg_m2, S2_dbg_p0, S2_dbg_pa, S2_dbg_pb;
+    wire [31:0]        S2_dbg_ae, S2_dbg_af, S2_dbg_xa, S2_dbg_xb;
+    wire [5:0]         S2_dbg_sel;
+    wire [7:0]         S2_dbg_la, S2_dbg_lb, S2_dbg_lc;
+
+    // 阶段 2B：48 块共享 Goertzel + 峰值扫描
+    wire [7:0]         S_mb_frm;
+    wire               S_mb_tgl, S_mb_busy;
+    wire [5:0]         S_mb_blk, S_mb_rowcnt;
+    wire [4:0]         S_mb_bin;
+    wire [31:0]        S_mb_rate, S_mb_ticks, S_mb_clrcnt;
+    wire [4:0]         S_mb_agc_ref;
+    wire [9:0]         S_pk_addr;
+    wire [63:0]        S_pk_data;
+    wire               S_pk_done, S_pk_busy;
+    wire               S_pk_trig;
+    wire [5:0]         S_pk_ntonal, S_pk_bestblk;
+    wire [5:0]         S_pk_qact;        // 原始峰值与突出度通过的块数，确认前
+    wire [31:0]        S_pk_bestmag;
+    wire [4:0]         S_pk_bestbin;
+    wire [7:0]         S_pk_hz10, S_pk_wincnt;
+    wire [31:0]        S_pk_scancnt;
+    wire [31:0]        S_pk_bin0, S_pk_bin12;
+    wire [31:0]        S_pk_fb2, S_pk_fb4, S_pk_fb8, S_pk_fb12;
+    wire [31:0]        S_pk_obj_pos, S_pk_obj_hz10;
+    // 频谱/目标诊断均在扫描完成时锁存；保留旧 pn 端口名，值改为 raw peak>>8。
+    wire [47:0]        S_pk_tonal_map;   // 合格块位图，bit n = row*8+col
+    wire [127:0]       S_pk_obj_pn;      // 已确认目标原始峰值，与 obj_pos 同槽位
+    wire [31:0]        S_pk_fx_pn;       // 本窗口全局原始峰值，尺度 raw peak>>8
+    wire [31:0]        S_pk_tn, S_pk_raw_hz;
+    wire [4:0]         S_pk_aexp;
+    wire [2:0]         S_pk_confirmed;
+    wire [4:0]         S_legacy_bin;
+    wire [7:0]         S_legacy_hz10;
+    wire [63:0]        S_legacy_mag;
+    wire                S_legacy_valid, S_legacy_tonal, S_legacy_tgl;
+    wire [31:0]        S_display_obj_pos, S_display_obj_hz10;
+    wire [5:0]         S_pk_fx_sel, S_pk_chal_blk;
+    wire [11:0]        S_pk_streak;
+    reg  [1:0]         S_mb_tgl_s;
+    reg                S_pk_done_tgl;
+    wire S_selected_tgl, S_selected_done;
+`ifdef VIB_LEGACY_GZ_ON
+    // 旧模块的 frm_tgl 每帧翻转，不能拿它作为窗口完成标志；valid 只在窗口末脉冲。
+    assign S_selected_tgl  = S_legacy_valid;
+    assign S_selected_done = S_legacy_valid;
+`else
+    assign S_selected_tgl  = S_mb_tgl;
+    assign S_selected_done = S_pk_done;
+`endif
+    wire               S_mb_tgl_p = S_mb_tgl_s[1] ^ S_mb_tgl_s[0];
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if (!S_rst_n) S_mb_tgl_s <= 2'b00;
+        else          S_mb_tgl_s <= {S_mb_tgl_s[0], S_selected_tgl};
+    end
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if (!S_rst_n) S_pk_done_tgl <= 1'b0;
+        else if (S_selected_done) S_pk_done_tgl <= ~S_pk_done_tgl;
+    end
+    assign S_pk_trig = S_mb_tgl_p & ~S_pk_busy;
 
     // B2c-2a 求解器
     wire signed [31:0] S_sv_u, S_sv_v;
@@ -1348,14 +1438,18 @@ isp_top u_isp_top (
         if (!S_hdmi_rst_n) begin
             S_fx_pos_p1 <= 32'd0;
             S_fx_pos_p2 <= 32'd0;
+            S_obj_pos_p1 <= 32'd0;
+            S_obj_pos_p2 <= 32'd0;
         end
         else begin
             S_fx_pos_p1 <= S_fx_pos;
             S_fx_pos_p2 <= S_fx_pos_p1;
+            S_obj_pos_p1 <= S_pk_obj_pos;
+            S_obj_pos_p2 <= S_obj_pos_p1;
         end
     end
 
-`ifdef VIB_ON   // vib_osd_marker
+`ifdef VIB_STAGE2_GZ_ON   // vib_osd_marker
     vib_osd_marker u_vib_osd_marker (
         .clk    ( S_hdmi_pixel_clk ),
         .rst_n  ( S_hdmi_rst_n     ),
@@ -1363,11 +1457,12 @@ isp_top u_isp_top (
         .I_de   ( S_hdmi_out_de    ),
         .I_data ( S_hdmi_out_data  ),
         .I_pos  ( S_fx_pos_p2      ),
+        .I_obj_pos ( S_obj_pos_p2   ),
         .O_vs   ( S_osd_vs         ),
         .O_de   ( S_osd_de         ),
         .O_data ( S_osd_data       )
     );
-`endif   // VIB_ON   (vib_osd_marker)
+`endif   // VIB_STAGE2_GZ_ON   (vib_osd_marker)
 
 //=============================================================================
 //  VIB_ON 未定义时：振动链路关闭，这里补齐 tie-off
@@ -1375,16 +1470,21 @@ isp_top u_isp_top (
 //    · 关闭：gauss3x3 / prev_frame_ddr / lk_grid / lk_solve /
 //            goertzel / gz_store / osd_marker
 //=============================================================================
-`ifndef VIB_ON
+`ifndef VIB_FRAME_DIFF_ON
     assign S_vib_ddr_wr_en   = 1'b0;
     assign S_vib_ddr_rd_en   = 1'b0;
     assign S_vib_ddr_addr    = 32'd0;
     assign S_vib_ddr_wr_data = 128'd0;
     assign S_vib_ddr_want    = 1'b0;
-    assign S_fx_pos          = 32'd0;
-    assign S_osd_vs          = S_hdmi_out_vsync;
-    assign S_osd_de          = S_hdmi_out_de;
-    assign S_osd_data        = S_hdmi_out_data;
+`endif
+
+// 阶段 1仍然使用帧差 DDR，但 VIB_ON 没有打开振动 OSD；因此 HDMI TX
+// 必须继续使用 mixer 的正常视频输出，不能因为帧差宏打开而留下未驱动端口。
+`ifndef VIB_STAGE2_GZ_ON
+    assign S_fx_pos   = 32'd0;
+    assign S_osd_vs   = S_hdmi_out_vsync;
+    assign S_osd_de   = S_hdmi_out_de;
+    assign S_osd_data = S_hdmi_out_data;
 `endif
 
     hdmi_tx u_hdmi_tx(
@@ -1463,7 +1563,7 @@ isp_top u_isp_top (
     //    自检：GOFP 应 = 0x00038400（230400），GOFL 应 = 360 = 0x00000168
     //    注意本模块输出行比输入行晚一行（竖直 3 行窗口），末行靠回放补齐
     // =================================================================
-`ifdef VIB_ON   // vib_gauss3x3
+`ifdef VIB_FRAME_DIFF_ON   // vib_gauss3x3
     vib_gauss3x3 u_vib_gauss3x3 (
         .clk            ( S_csi_rx_clk           ),
         .rst_n          ( S_rst_n                ),
@@ -1482,9 +1582,9 @@ isp_top u_isp_top (
         .st_g_lines     ( S_g_lines              ),
         .st_tgl         ( S_g_tgl                )
     );
-`endif   // VIB_ON   (vib_gauss3x3)
+`endif   // VIB_FRAME_DIFF_ON   (vib_gauss3x3)
 
-`ifdef VIB_ON   // vib_prev_frame_ddr
+`ifdef VIB_FRAME_DIFF_ON   // vib_prev_frame_ddr
     vib_prev_frame_ddr u_vib_prev_frame_ddr (
         .csi_clk        ( S_csi_rx_clk           ),
         .csi_rst_n      ( S_rst_n                ),
@@ -1517,10 +1617,10 @@ isp_top u_isp_top (
         .lk_cur_w       ( S_lk_cur_w             ),
         .lk_prev_w      ( S_lk_prev               )
     );
-`endif   // VIB_ON   (vib_prev_frame_ddr)
+`endif   // VIB_FRAME_DIFF_ON   (vib_prev_frame_ddr)
 
     // =================================================================
-`ifdef VIB_ON   // DDR二选一
+`ifdef VIB_FRAME_DIFF_ON   // DDR二选一
     //  DDR 算法客户端二选一：自检完成前给自检，完成后给上一帧缓存
     //    两者共用 vib_ddr_arb 的同一个 vib 端口，必须互斥。
     //    ready / 读回也按同样条件门控，避免未选中那个误收数据。
@@ -1539,7 +1639,7 @@ isp_top u_isp_top (
     assign S_pf_rd_valid     = S_vib_ddr_rd_valid & ~S_dt_active;
     assign S_dt_rd_data      = S_vib_ddr_rd_data;
     assign S_pf_rd_data      = S_vib_ddr_rd_data;
-`endif   // VIB_ON   (DDR二选一)
+`endif   // VIB_FRAME_DIFF_ON   (DDR二选一)
 
     // =================================================================
     //  实测 S_csi_rx_clk 频率 / ISP 像素率 / 帧率 / 每帧像素数
@@ -1600,7 +1700,7 @@ isp_top u_isp_top (
     //  串口日志输出 (UART log)  ——  从老工程 lab_ex1_mipi_hdmi 移植
     //    时钟  : I_sys_clk = 50MHz（见 camera_to_dsi_display.sdc: sys_clk_50m）
     //    引脚  : O_uart_tx -> H1（见 pin.adc）
-    //    格式  : 115200 8N1；上电先打一轮，之后每 1 秒一轮，共 18 行
+    //    格式  : 115200 8N1；上电先打一轮，之后每 1 秒一轮，字段由生成器管理
     //    内容  : 见 uart_log_debug.v 文件头说明
     //    复位  : 用 I_rst_n，这样 PLL 还没锁的时候串口就已经在打印了
     // =================================================================
@@ -1610,6 +1710,187 @@ isp_top u_isp_top (
     //          LKAX/LKAY 是块(0,0)的 ΣdIx²/ΣdIy²（dIx = g[x+1]-g[x-1] 未除 2）
     //          与 Python 对比：axx_hw = 4*axx_py，bx_hw = 2*bx_py，en 相同
     // =================================================================
+`ifdef VIB_STAGE2_LK_ON
+    // Enhanced 8x6 grid snapshots feed the shared 17-bin Goertzel engine.
+    // 旧单块 LK 仍由 VIB_ON 控制，两个模块不会同时驱动同一信号。
+    (* keep_hierarchy = "yes" *) vib_lk_grid_multi u_vib_lk_grid_multi (
+        .clk            ( S_ddr_clk              ),
+        .rst_n          ( S_rst_n                ),
+        .word_valid     ( S_lk_word_valid        ),
+        .word_cur       ( S_lk_cur_w             ),
+        .word_prev      ( S_lk_prev              ),
+        .st_axx         ( S2_axx                 ),
+        .st_ayy         ( S2_ayy                 ),
+        .st_axy         ( S2_axy                 ),
+        .st_bx          ( S2_bx                  ),
+        .st_by          ( S2_by                  ),
+        .st_en          ( S2_en                  ),
+        .st_px          ( S2_px                  ),
+        .st_err         ( S2_err                 ),
+        .st_tgl         ( S2_tgl                 ),
+        .st_b_itsm      ( S2_b_itsm              ),
+        .i_it_sum       ( S_it_sum               ),
+        .st_br_bx       ( S2_br_bx               ),
+        .st_br_row      ( S2_br_row              ),
+        .st_br_tick     ( S2_br_tick             ),
+        .st_fx_pos      ( S2_fx_pos              ),
+        .st_fx_bx       ( S2_fx_bx               ),
+        .st_fx_by       ( S2_fx_by               ),
+        .st_fx_en       ( S2_fx_en               ),
+        .st_fx_tex      ( S2_fx_tex              ),
+        .st_fx_axx      ( S2_fx_axx              ),
+        .st_fx_ayy      ( S2_fx_ayy              ),
+        .st_fx_axy      ( S2_fx_axy              ),
+        .st_fx_tick     ( S2_fx_tick             ),
+        .st_b_axx       ( S2_b_axx               ),
+        .st_b_ayy       ( S2_b_ayy               ),
+        .st_b_axy       ( S2_b_axy               ),
+        .st_b_bx        ( S2_b_bx                ),
+        .st_b_by        ( S2_b_by                ),
+        .st_b_en        ( S2_b_en                ),
+        .st_b_bcol      ( S2_b_bcol              ),
+        .st_b_brow      ( S2_b_brow              ),
+        .st_solve_req   ( S2_solve_req           ),
+        .st_solve_ack   ( 1'b0                   ),
+        .o_px_valid     (                        ),
+        .o_px_it        (                        ),
+        .o_px_x         (                        ),
+        .o_px_y         (                        ),
+        .o_axx_exp      ( S2_axx_exp             ),
+        .o_agc_exp      ( S2_agc_exp             )
+    );
+`endif
+
+`ifdef VIB_STAGE2_GZ_ON
+`ifndef VIB_LEGACY_GZ_ON
+    vib_gz_multi #(
+        .NFRM(64), .NBIN(17), .NROW(6), .NCOL(8)
+    ) u_vib_gz_multi (
+        .clk        ( S_ddr_clk       ),
+        .rst_n      ( S_rst_n         ),
+        .i_bx8      ( S2_br_bx        ),
+        .i_agc_exp  ( S2_agc_exp      ),
+        .i_row      ( S2_br_row       ),
+        .i_tick     ( S2_br_tick      ),
+        .o_frm      ( S_mb_frm        ),
+        .o_frm_tgl  ( S_mb_tgl        ),
+        .o_busy     ( S_mb_busy       ),
+        .o_dbg_blk  ( S_mb_blk        ),
+        .o_dbg_bin  ( S_mb_bin        ),
+        .o_dbg_rate ( S_mb_rate       ),
+        .o_dbg_rowcnt( S_mb_rowcnt   ),
+        .o_tick_cnt ( S_mb_ticks      ),
+        .i_pk_done  ( S_pk_done       ),
+        .o_clr_cnt  ( S_mb_clrcnt     ),
+        .o_dbg_agc_ref( S_mb_agc_ref  ),
+        .pk_b_addr  ( S_pk_addr       ),
+        .pk_b_data  ( S_pk_data       )
+    );
+
+    // 17 个频点覆盖 2.0~10.0Hz，步进 0.5Hz。
+    // TONE_RATIO=0 采用旧工程 raw 峰值突出度；四目标按位置/频率独立确认。
+    vib_gz_peak #(.NBIN(17), .NB(48), .BIN_MIN(0), .TONE_RATIO(0)) u_vib_gz_peak (
+        .clk        ( S_ddr_clk       ),
+        .rst_n      ( S_rst_n         ),
+        .trig       ( S_pk_trig       ),
+        .i_fx_blk   ( S2_fx_pos[5:0]  ),
+        .i_axx_exp  ( S2_axx_exp      ),
+        .i_tick     ( S2_br_tick      ),
+        .i_row      ( S2_br_row       ),
+        .st_addr    ( S_pk_addr       ),
+        .st_data    ( S_pk_data       ),
+        .busy       ( S_pk_busy       ),
+        .done       ( S_pk_done       ),
+        .o_ntonal   ( S_pk_ntonal     ),
+        .o_qact     ( S_pk_qact       ),
+        .o_best_blk ( S_pk_bestblk    ),
+        .o_best_mag ( S_pk_bestmag    ),
+        .o_best_bin ( S_pk_bestbin    ),
+        .o_best_hz10( S_pk_hz10       ),
+        .o_mb_bin0  ( S_pk_bin0       ),
+        .o_mb_b12   ( S_pk_bin12      ),
+        .o_fb2       ( S_pk_fb2       ),
+        .o_fb4       ( S_pk_fb4       ),
+        .o_fb8       ( S_pk_fb8       ),
+        .o_fb12      ( S_pk_fb12      ),
+        .o_tn        ( S_pk_tn        ),
+        .o_raw_hz    ( S_pk_raw_hz    ),
+        .o_trk_pos   (                ),
+        .o_bb_x0     (                ),
+        .o_bb_y0     (                ),
+        .o_bb_x1     (                ),
+        .o_bb_y1     (                ),
+        .o_bb_vld    (                ),
+        .o_obj_pos   ( S_pk_obj_pos   ),
+        .o_obj_hz10  ( S_pk_obj_hz10  ),
+        .o_tonal_map ( S_pk_tonal_map ),
+        .o_obj_pn    ( S_pk_obj_pn    ),
+        .o_fx_pn     ( S_pk_fx_pn     ),
+        .o_scan_cnt  ( S_pk_scancnt   ),
+        .o_win_cnt   ( S_pk_wincnt    ),
+        .o_dbg_fx_sel   ( S_pk_fx_sel   ),
+        .o_dbg_chal_blk ( S_pk_chal_blk ),
+        .o_dbg_streak   ( S_pk_streak   ),
+        .o_dbg_aexp     ( S_pk_aexp     ),
+        .o_confirmed    ( S_pk_confirmed)
+    );
+`else
+    // 旧工程单块 Goertzel 对照链：固定使用纹理最强块的 bx，
+    // 每个窗口给出一个频率结果。当前多目标链保持不例化，节省 DSP。
+    vib_goertzel #(.NFRM(128), .NBIN(17)) u_vib_legacy_goertzel (
+        .clk       ( S_ddr_clk       ),
+        .rst_n     ( S_rst_n         ),
+        .tick      ( S2_fx_tick      ),
+        .bx        ( S2_fx_bx        ),
+        .peak_bin  ( S_legacy_bin    ),
+        .peak_hz10 ( S_legacy_hz10   ),
+        .peak_mag  ( S_legacy_mag    ),
+        .valid     ( S_legacy_valid  ),
+        .frm_cnt   (                 ),
+        .frm_tgl   ( S_legacy_tgl    ),
+        .dbg_hp    (                 ),
+        .dbg_in    (                 ),
+        .dbg_s1    (                 )
+    );
+    assign S_pk_done    = 1'b0;
+    assign S_pk_busy    = 1'b0;
+    assign S_pk_hz10    = S_legacy_hz10;
+    assign S_pk_bestmag = S_legacy_mag[31:0];
+    // 当前工程版本的 vib_goertzel 没有 tonal/total_mag/psum_hi 端口。
+    // 旧链路用窗口有效结果和峰值绝对门限作为旁路判据。
+    wire legacy_keep = (S_legacy_mag > 64'd4000);
+    assign S_pk_obj_pos = legacy_keep ?
+                          {25'd0, S2_fx_pos[6:0]} : 32'd0;
+    assign S_pk_obj_hz10 = legacy_keep ?
+                           {24'd0, S_legacy_hz10} : 32'd0;
+    assign S_pk_ntonal  = legacy_keep ? 6'd1 : 6'd0;
+    assign S_pk_qact    = legacy_keep ? 6'd1 : 6'd0;
+    assign S_pk_scancnt = 32'd0;
+    // 多块诊断在旧单块分支不存在，显式接地；与活动分支互斥。
+    assign S_pk_bestbin   = 5'd0;
+    assign S_pk_bestblk   = 6'd0;
+    assign S_pk_chal_blk  = 6'd0;
+    assign S_pk_fb2       = 32'd0;
+    assign S_pk_fb4       = 32'd0;
+    assign S_pk_fb8       = 32'd0;
+    assign S_pk_fb12      = 32'd0;
+    assign S_pk_tn        = 32'd0;
+    assign S_pk_raw_hz    = 32'd0;
+    assign S_pk_aexp      = 5'd0;
+    assign S_pk_confirmed = 3'd0;
+    assign S_pk_tonal_map = 48'd0;
+    assign S_pk_obj_pn    = 128'd0;
+    assign S_pk_fx_pn     = 32'd0;
+    assign S_pk_wincnt  = 8'd0;
+    assign S_pk_fx_sel  = S2_fx_pos[5:0];
+    assign S_pk_streak  = legacy_keep ? 12'd1 : 12'd0;
+    assign S_mb_agc_ref = 5'd18;
+    assign S_mb_clrcnt  = 32'd17;
+    // 当前工程没有打开旧 VIB_ON 单块 LK，OSD 的固定块标记改用阶段2A块坐标。
+`endif
+    assign S_fx_pos = S2_fx_pos;
+`endif
+
 `ifdef VIB_ON   // vib_lk_grid
     vib_lk_grid u_vib_lk_grid (
         .clk            ( S_ddr_clk              ),
@@ -1920,6 +2201,97 @@ isp_top u_isp_top (
     end
 
 
+    // ---- 组 3b：ddr 域 · 48 块 Goertzel 窗口结果 ----
+    reg [1:0] tgl_mb_s;
+    reg       tgl_mb_d;
+    always @(posedge I_sys_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            tgl_mb_s <= 2'b00;
+            tgl_mb_d <= 1'b0;
+        end else begin
+            tgl_mb_s <= {tgl_mb_s[0], S_pk_done_tgl};
+            tgl_mb_d <= tgl_mb_s[1];
+        end
+    end
+    wire upd_mb = tgl_mb_s[1] ^ tgl_mb_d;
+    reg [31:0] c_mb_frm, c_mb_hz10, c_mb_mag, c_mb_scan, c_mb_win, c_mb_ticks, c_mb_ntonal;
+    reg [31:0] c_mb_obj_pos, c_mb_obj_hz10, c_mb_active;
+    reg [31:0] c_mb_agc_ref, c_mb_best_blk, c_mb_streak, c_mb_clr;
+    reg [31:0] c_mb_fxbx, c_mb_fxen, c_mb_b2, c_mb_b4, c_mb_b8, c_mb_b12;
+    // 频谱、候选和确认诊断随窗口完成 toggle 原子复制。
+    reg [47:0]  c_tonal_map;
+    reg [127:0] c_obj_pn;
+    reg [31:0]  c_chal_blk;
+    reg [31:0]  c_fx_pn;
+    reg [31:0]  c_qact;
+    reg [31:0]  c_raw_bin, c_raw_hz, c_raw_aexp, c_confirmed, c_tn;
+    //------------------------------------------------------------------
+    //  ★ 2026-10-27：窗口周期计数 —— 用来反推<b>真实帧率</b>
+    //    fs = 64 帧 / 周期（周期单位 = I_sys_clk 50MHz 的拍数）
+    //    预期值：60 fps -> 53,333,333 = 0x032DCDCD
+    //            48 fps -> 66,666,666 = 0x03F9A0A0
+    //    系数按 fs=59.5Hz 标定；64*50MHz/WPRD 可核对实际采样率。
+    //    频点编码固定为 Hz10=20+5*bin；采样率偏差会影响真实中心频率。
+    //    32 位 @50MHz 约 85.9 秒绕一圈，窗口约 1 秒，两次快照之间不会绕。
+    //------------------------------------------------------------------
+    reg [31:0] wcnt;
+    reg [31:0] wcnt_prev, c_wprd;
+    always @(posedge I_sys_clk or negedge I_rst_n) begin
+        if (!I_rst_n) wcnt <= 32'd0;
+        else          wcnt <= wcnt + 32'd1;
+    end
+    always @(posedge I_sys_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            c_wprd <= 32'd0;
+            wcnt_prev <= 32'd0;
+        end else if (upd_mb) begin
+            c_wprd    <= wcnt - wcnt_prev;
+            wcnt_prev <= wcnt;
+        end
+    end
+    always @(posedge I_sys_clk) begin
+        if (upd_mb) begin
+            // Goertzel 在窗口完成后会把当前帧计数清零；这里报告刚完成的
+            // 64 帧窗口，避免 UART 的 MBFR 永远显示 0。
+`ifdef VIB_LEGACY_GZ_ON
+            c_mb_frm   <= 32'd128;
+`else
+            c_mb_frm   <= 32'd64;
+`endif
+            c_mb_hz10  <= {24'd0, S_pk_hz10};
+            c_mb_mag   <= S_pk_bestmag;
+            c_mb_scan  <= S_pk_scancnt;
+            c_mb_win   <= {24'd0, S_pk_wincnt};
+            c_mb_ticks <= S_mb_ticks;
+            c_mb_ntonal<= {26'd0, S_pk_ntonal};
+            c_qact      <= {26'd0, S_pk_qact};
+            c_mb_obj_pos <= S_pk_obj_pos;
+            c_mb_obj_hz10 <= S_pk_obj_hz10;
+            c_mb_active <= {26'd0, S_pk_ntonal};
+            c_mb_agc_ref <= {27'd0, S_mb_agc_ref};
+            // PBLK/RBIN/RHZ/AEXP 和 F04/F06/F08/F10 均指本窗口全局 raw 最强块。
+            c_mb_best_blk <= {26'd0, S_pk_bestblk};
+            c_raw_bin  <= {27'd0, S_pk_bestbin};
+            c_raw_hz   <= S_pk_raw_hz;
+            c_raw_aexp <= {27'd0, S_pk_aexp};
+            c_confirmed<= {29'd0, S_pk_confirmed};
+            c_tn       <= S_pk_tn;
+            c_mb_streak <= {20'd0, S_pk_streak};
+            c_mb_clr <= S_mb_clrcnt;
+            c_tonal_map <= S_pk_tonal_map;
+            c_obj_pn    <= S_pk_obj_pn;
+            c_chal_blk  <= {26'd0, S_pk_chal_blk};
+            c_fx_pn     <= S_pk_fx_pn;
+            c_mb_fxbx <= S2_fx_bx;
+            c_mb_fxen <= S2_fx_en;
+            c_mb_b2   <= S_pk_fb2;
+            c_mb_b4   <= S_pk_fb4;
+            c_mb_b8   <= S_pk_fb8;
+            c_mb_b12  <= S_pk_fb12;
+        end
+    end
+
+
     // ---- 组 4：ddr 域 · 2x2 求解结果 ----
     reg  [1:0] tgl_sv_s;
     reg        tgl_sv_d;
@@ -1983,42 +2355,45 @@ isp_top u_isp_top (
         .csi_frame_seen     (S_dbg_csi_seen),
         .raw10_seen         (S_dbg_raw10_seen),
         .video_nonzero_seen (S_dbg_video_nonzero_seen),
-// MUTE         .it_sum             (c_it_sum),
-// MUTE         .it_err             (c_it_err),
-// MUTE         .lk_en              (c_lk_en),
-// MUTE         .lk_px              (c_lk_px),
-// MUTE         .lk_err             (c_lk_err),
-// MUTE         .fxpos              (c_fx_pos),
-// MUTE         .fxbx               (c_fx_bx),
-// MUTE         .fxby               (c_fx_by),
-// MUTE         .fxen               (c_fx_en),
-// MUTE         .fxtex              (c_fx_tex[31:0]),   // LINT-OK: Σmin 恒 >= 0，截断安全
-// MUTE         .lk_ae              (c_lk_dbg_ae),
-// MUTE         .lk_af              (c_lk_dbg_af),
-// MUTE         .lk_xa              (c_lk_dbg_xa),
-// MUTE         .lk_xb              (c_lk_dbg_xb),
-        .vsum               (c_tap_sum),
-// MUTE         .itpx               (c_it_px),
-// MUTE         .gpx                (c_g_px),
-// MUTE         .gln                (c_g_lines),
-// MUTE         .lk_u               (c_sv_u),
-// MUTE         .lk_v               (c_sv_v),
-// MUTE         .lk_va              (c_sv_valid),
-// MUTE         .lk_bl              (c_sv_bcol),
-// MUTE         .lk_br              (c_sv_brow),
-
-// MUTE         .gzs1               (c_gz_s1),
-// MUTE         .gzwc               (S_gzcrc_w),
-// MUTE         .gzrc               (S_gzcrc_r),
-// MUTE         .gzok               ({31'd0, S_gzcrc_ok}),
-
-
-// MUTE         .gzhz               ({24'd0, c_gz_hz10}),
-// MUTE         .gzbn               ({27'd0, c_gz_bin}),
-// MUTE         .gzmg               (c_gz_mag),
-// MUTE         .gzfr               ({24'd0, c_gz_fcnt}),
-// MUTE         .lk_is              (c_sv_itsm),
-// MUTE         .lk_be              (c_sv_en),
+        .tap_px_per_frame    (c_tap_px),
+        .tap_lines           (c_tap_lines),
+        .it_px               (c_it_px),
+        .it_lines            (c_it_lines),
+        .vsum                (c_tap_sum),
+        .mb_frm              (c_mb_frm),
+        .mb_active           (c_mb_active),
+        .mb_obj_hz10         (c_mb_obj_hz10),
+        .mb_agc_ref          (c_mb_agc_ref),
+        .mb_best_blk         (c_mb_best_blk),
+        .mb_streak           (c_mb_streak),
+        .mb_clr              (c_mb_clr),
+        .mb_mag              (c_mb_mag),
+        .fx_bx               (c_mb_fxbx),
+        .fx_en               (c_mb_fxen),
+        .b2                  (c_mb_b2),
+        .b4                  (c_mb_b4),
+        .b8                  (c_mb_b8),
+        .b12                 (c_mb_b12),
+        .tonal_map_lo        (c_tonal_map[31:0]),
+        .tonal_map_hi        ({16'd0, c_tonal_map[47:32]}),
+        .obj_pos             (c_mb_obj_pos),
+        .fx_pn               (c_fx_pn),
+        .obj_pn0             (c_obj_pn[31:0]),
+        .obj_pn1             (c_obj_pn[63:32]),
+        .obj_pn2             (c_obj_pn[95:64]),
+        .obj_pn3             (c_obj_pn[127:96]),
+        .chal_blk            (c_chal_blk),
+        .qact                (c_qact),
+        .wprd                (c_wprd),
+        .tap_ovf             (c_tap_ovf),
+        .it_err              (c_it_err),
+        .mb_scan             (c_mb_scan),
+        .mb_win              (c_mb_win),
+        .raw_bin             (c_raw_bin),
+        .raw_hz              (c_raw_hz),
+        .raw_aexp            (c_raw_aexp),
+        .confirmed           (c_confirmed),
+        .tn_status           (c_tn),
         .tx                 (O_uart_tx)
     );
 

@@ -53,3 +53,8 @@ docs/
 # TD build scratch files
 td_project/stdin_tmp.txt
 td_project/tmp.err
+
+# Local TD session metadata and archived build outputs
+td_project/.lock.f
+td_project/.recent_user_depot.ini
+td_project/build_history/

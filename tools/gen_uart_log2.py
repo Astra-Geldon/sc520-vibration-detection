@@ -1,8 +1,10 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Regenerate uart_log_debug.v with 18 status fields (adds clock / pixel-rate /
-DDR-self-test measurements).  Tables are generated so lengths and indices
-cannot be miscounted by hand."""
+"""Generate the repair-2 raw-spectrum and multi-target UART field table.
+Run from any working directory; paths resolve relative to this script.
+All changing fields are latched once per printed round.
+Edit FIELDS here and regenerate uart_log_debug.v; do not hand-edit RTL.
+"""
 import io
 import os
 
@@ -13,82 +15,57 @@ BANNER = "SC520 MIPI-HDMI UART LOG 115200 8N1\r\n"
 
 # (label, value expression, comment, port declaration or None if internal)
 FIELDS = [
-    ("SEC ", "run_sec",             "运行秒数（每轮 +1）", None),
-    # ("DIV ", "DIV",                 "波特率分频值 = 50MHz/115200 = 434 = 0x1B2", None),
-    # ("PLL ", "{31'd0, pll_s[1]}",   "PLL 锁定", None),
-    # ("DDR ", "{31'd0, ddr_s[1]}",   "DDR 初始化校准完成", None),
-    # ("CAM ", "{31'd0, cam_s[1]}",   "摄像头寄存器配置完成（粘滞标志）", None),
-    # ("I2C ", "{31'd0, i2c_s[1]}",   "摄像头 I2C 错误（1 = 有错）", None),
-    # ("SID ", "{16'd0, sid_s2}",     "摄像头 Sensor ID", None),
-    # ("SIOK", "{31'd0, siok_s[1]}",  "摄像头 ID 校验通过（0xEE4B / 0x9E4B）", None),
-    # ("MIPI", "{28'd0, mipi_code}",  "MIPI 诊断码 0..7", None),
-    # ("HS  ", "{31'd0, hs_s[1]}",    "已收到 MIPI HS 数据（粘滞标志）", None),
-    # ("CSIF", "{31'd0, csif_s[1]}",  "已解析出完整 CSI 帧（粘滞标志）", None),
-    # ("RAW ", "{31'd0, raw_s[1]}",   "已出现 RAW10 流水（粘滞标志）", None),
-    # ("VID ", "{31'd0, vid_s[1]}",   "已读到非零视频数据（粘滞标志）", None),
-    # ("CSIH", "csi_hz",              "S_csi_rx_clk 实测频率(Hz)", "input wire [31:0] csi_hz,             // 实测 S_csi_rx_clk 频率(Hz)"),
-    # ("PIXS", "px_per_sec",          "ISP 有效像素率(px/s)", "input wire [31:0] px_per_sec,         // 实测像素率(px/s)"),
-    # ("FPS ", "fps",                 "每秒帧数", "input wire [31:0] fps,                // 实测帧率"),
-    # ("PXFR", "px_per_frame",        "每帧像素数，应 = 0x000E1000", "input wire [31:0] px_per_frame,       // 实测每帧像素数，应 = 0x000E1000"),
-    # ("DTRD", "ddr_words_read",      "DDR 自检已读回字数，应 = 0x00003840", "input wire [31:0] ddr_words_read,     // DDR 自检读回字数，应 = 0x00003840"),
-    # ("DTER", "ddr_err_cnt",         "DDR 自检比较错误数，必须 = 0", "input wire [31:0] ddr_err_cnt,        // DDR 自检比较错误数，必须 = 0"),
-    # ("VOFP", "tap_px_per_frame",    "抽头每帧输出像素数，应 = 0x00038400", "input wire [31:0] tap_px_per_frame,   // 抽头每帧输出像素数(640x360)，应 = 0x00038400"),
-    # ("VOFL", "tap_lines",           "抽头每帧输出行数，应 = 360", "input wire [31:0] tap_lines,          // 抽头每帧输出行数，应 = 360 = 0x00000168"),
-    # ("VTAP", "tap_ovf",             "抽头异常计数，必须 = 0", "input wire [31:0] tap_ovf,            // 抽头异常计数（溢出/对不齐），必须 = 0"),
-    # ("ITPX", "it_px",               "上一帧差分像素数，应 = 0x00038400", "input wire [31:0] it_px,              // 每帧参与 It 的像素数，应 = 0x00038400"),
-    # ("ITLN", "it_lines",            "上一帧差分行数，应 = 360", "input wire [31:0] it_lines,           // 每帧处理行数，应 = 360 = 0x00000168"),
-    ("VSUM", "vsum", "抽头 Σ灰度（摄像头活着的证据）", "input wire [31:0] vsum, // 抽头每帧 Σ灰度：非 0 说明抽头拿到像素了"),
-#     ("ITPX", "itpx", "B2b 每帧像素数（应为 230400）", "input wire [31:0] itpx, // B2b 每帧 It 像素数，应恒为 230400"),
-#     ("GPIX", "gpx", "高斯每帧输出像素数（应 230400）", "input wire [31:0] gpx, // 高斯每帧输出像素数，应恒为 230400"),
-#     ("GLIN", "gln", "高斯每帧输出行数（应 360）", "input wire [31:0] gln, // 高斯每帧输出行数，应恒为 360"),
-#     ("ITSM", "it_sum",              "每帧 Σ|It|：静止接近 0，一动就涨", "input wire [31:0] it_sum,             // 每帧 Σ|It|：静止场景接近 0，画面一动立刻涨"),
-#     ("ITER", "it_err",              "上一帧差分异常计数，必须 = 0", "input wire [31:0] it_err,             // 上一帧差分异常计数，必须 = 0"),
-    # ("ITNW", "it_line_rdy",         "每帧凑够一行次数，应约 360", "input wire [31:0] it_line_rdy,        // 每帧'凑够一行'次数，正常约 360；=0 说明 csi 侧没数据"),
-    # ("ITST", "it_state",            "状态 0=等行 1=取FIFO 2=读DDR 3=写回 4=等读回", "input wire [31:0] it_state,           // 状态机状态 0=等行 1=取FIFO 2=读DDR 3=写回 4=等读回收齐"),
-    # ("GOFP", "g_px",                "高斯级每帧输出像素数，应 = 0x00038400", "input wire [31:0] g_px,               // 高斯级每帧输出像素数，应 = 0x00038400"),
-    # ("GOFL", "g_lines",             "高斯级每帧输出行数，应 = 360", "input wire [15:0] g_lines,            // 高斯级每帧输出行数，应 = 360 = 0x00000168"),
-#     ("LKEN", "lk_en",               "块(0,0) Σ|It|", "input wire signed [31:0] lk_en,       // 块(0,0) 的 Σ|It|，与 Python 的 energy 相同"),
-#     ("LKPX", "lk_px",               "LK 每帧像素数，应 = 0x00038400", "input wire [31:0] lk_px,              // LK 每帧参与累加的像素数，应 = 0x00038400"),
-#     ("LKER", "lk_err",              "LK 异常计数，必须 = 0", "input wire [31:0] lk_err,             // LK 异常计数，必须 = 0"),
-
-    # ---- 诊断采样：固定像素(行100/列100)，每帧采一次 ----
-    #   用来判定 LKAX/LKAY 不平衡到底是场景还是数据通路问题
-    # ---- 诊断：同列(列100)连续 5 个相邻行的 g，每帧采一次 ----
-    #   一次能验证两件事：行缓存环形选择是否正确、抽头竖直 2x2 是否真做了平均
-    #     单调平滑         -> 正常
-    #     奇偶锯齿(82,86,83) -> 抽头竖直没平均
-    #     跳变(82,83,191,84) -> gmem 环选错行
-    # ("LKR0", "lk_dbg_r0",           "诊断 g[98][100]",  "input wire [7:0] lk_dbg_r0,          // 诊断: g[98][100]"),
-    # ("LKR1", "lk_dbg_r1",           "诊断 g[99][100]",  "input wire [7:0] lk_dbg_r1,          // 诊断: g[99][100]"),
-    # ("LKR2", "lk_dbg_r2",           "诊断 g[100][100]", "input wire [7:0] lk_dbg_r2,          // 诊断: g[100][100]"),
-    # ("LKR3", "lk_dbg_r3",           "诊断 g[101][100]", "input wire [7:0] lk_dbg_r3,          // 诊断: g[101][100]"),
-    # ("LKR4", "lk_dbg_r4",           "诊断 g[102][100]", "input wire [7:0] lk_dbg_r4,          // 诊断: g[102][100]"),
-    # ---- B2c-2a：2x2 求解结果（最大变化块）----
-#     ("LKU ", "lk_u",                "u 的 Q8.8（像素/帧，有符号）", "input wire signed [31:0] lk_u,  // u = 2*nu_hw/det_hw，Q8.8 像素/帧"),
-#     ("LKV ", "lk_v",                "v 的 Q8.8（像素/帧，有符号）", "input wire signed [31:0] lk_v,  // v = 2*nv_hw/det_hw，Q8.8 像素/帧"),
-#     ("LKVA", "lk_va",               "该块通过门限（1=有效）", "input wire lk_va,              // 1 = 该块通过门限，u/v 有效"),
-#     ("LKBL", "lk_bl",               "最大变化块的列 0..7", "input wire [2:0] lk_bl,        // 最大变化块的块列 0..7"),
-#     ("LKBR", "lk_br",               "最大变化块的行 0..5", "input wire [2:0] lk_br,        // 最大变化块的块行 0..5"),
-#     ("LKBE", "lk_be", "最大块 en", "input wire [31:0] lk_be, // 最大变化块的 acc_en（诊断 LKBE 恒定用）"),
-#     ("LKAE", "lk_ae", "块0~3 的 acc_en>>13", "input wire [31:0] lk_ae, // 8 块能量诊断: 块0~3 的 acc_en>>13（8 位一个字节）"),
-#     ("LKAF", "lk_af", "块4~7 的 acc_en>>13", "input wire [31:0] lk_af, // 8 块能量诊断: 块4~7 的 acc_en>>13（8 位一个字节）"),
-#     ("LKXA", "lk_xa", "列300 cur/prev-1/prev/prev+1", "input wire [31:0] lk_xa, // 水平错位诊断: 列300 的 {cur[x],prev[x-1],prev[x],prev[x+1]}"),
-#     ("LKXB", "lk_xb", "列 60 cur/prev-1/prev/prev+1", "input wire [31:0] lk_xb, // 水平错位诊断: 列 60 的 {cur[x],prev[x-1],prev[x],prev[x+1]}"),
-#     ("FXPS", "fxpos", "固定块 {valid,row,col}", "input wire [31:0] fxpos, // 纹理固定块: bit[6]=valid, bit[5:3]=row, bit[2:0]=col（共 32 位）"),
-#     ("FXBX", "fxbx", "固定块 bx", "input wire signed [31:0] fxbx, // 固定块本帧的 bx"),
-#     ("FXBY", "fxby", "固定块 by", "input wire signed [31:0] fxby, // 固定块本帧的 by"),
-#     ("FXEN", "fxen", "固定块 en", "input wire [31:0] fxen, // 固定块本帧的 en"),
-#     ("FXTX", "fxtex", "固定块纹理 axx+ayy", "input wire [31:0] fxtex, // 固定块纹理强度 axx+ayy"),
-#     ("LKIS", "lk_is",               "与 LKBE 同拍锁存的 ITSM", "input wire [31:0] lk_is, // 与 LKBE 同一拍锁存的 ITSM，用于验证 LKBE <= LKIS"),
-    # ("LKDX", "lk_dbg_dix",          "诊断 dIx(行100/列100)", "input wire signed [8:0] lk_dbg_dix,  // 诊断: 行100/列100 处的水平差分 = g[m][p+1]-g[m][p-1]"),
+    ('SEC ', 'run_sec', '运行秒数', None),
+    ('VOFP', 'tap_px_per_frame', '抽头每帧像素数，应为230400', 'input wire [31:0] tap_px_per_frame, // 抽头每帧像素数，应为230400'),
+    ('VOFL', 'tap_lines', '抽头每帧行数，应为360', 'input wire [31:0] tap_lines, // 抽头每帧行数，应为360'),
+    ('ITPX', 'it_px', '上一帧差分像素数，应为230400', 'input wire [31:0] it_px, // 上一帧差分像素数，应为230400'),
+    ('ITLN', 'it_lines', '上一帧差分行数，应为360', 'input wire [31:0] it_lines, // 上一帧差分行数，应为360'),
+    ('VSUM', 'vsum', '抽头每帧灰度和', 'input wire [31:0] vsum, // 抽头每帧灰度和'),
+    ('MBFR', 'mb_frm', '刚完成窗口的帧数，应为64', 'input wire [31:0] mb_frm, // 刚完成窗口的帧数，应为64'),
+    ('ACT ', 'mb_active', '原始峰值raw>>8大于25的块数，突出度筛选前，0到48', 'input wire [31:0] mb_active, // 原始峰值raw>>8大于25的块数，突出度筛选前，0到48'),
+    ('HZ1 ', "{24'd0,mb_obj_hz10[7:0]}", '已确认目标1频率乘10，无效为0', 'input wire [31:0] mb_obj_hz10, // 已确认目标1频率乘10，无效为0'),
+    ('HZ2 ', "{24'd0,mb_obj_hz10[15:8]}", '已确认目标2频率乘10，无效为0', None),
+    ('HZ3 ', "{24'd0,mb_obj_hz10[23:16]}", '已确认目标3频率乘10，无效为0', None),
+    ('HZ4 ', "{24'd0,mb_obj_hz10[31:24]}", '已确认目标4频率乘10，无效为0', None),
+    ('AGCR', 'mb_agc_ref', 'AGC参考对数', 'input wire [31:0] mb_agc_ref, // AGC参考对数'),
+    ('PBLK', 'mb_best_blk', '本窗口全局原始峰值块，块号=row乘8加col', 'input wire [31:0] mb_best_blk, // 本窗口全局原始峰值块，块号=row乘8加col'),
+    ('STK0', 'mb_streak', '四个独立目标槽连续匹配窗口数，每槽3bit', 'input wire [31:0] mb_streak, // 四个独立目标槽连续匹配窗口数，每槽3bit'),
+    ('CLRC', 'mb_clr', '状态清零写次数，应为816即0x330', 'input wire [31:0] mb_clr, // 状态清零写次数，应为816即0x330'),
+    ('PKMG', 'mb_mag', '本窗口全局原始峰值raw>>8，与PBLK对应', 'input wire [31:0] mb_mag, // 本窗口全局原始峰值raw>>8，与PBLK对应'),
+    ('FXBX', 'fx_bx', 'LK诊断固定块bx', 'input wire [31:0] fx_bx, // LK诊断固定块bx'),
+    ('FXEN', 'fx_en', 'LK诊断固定块能量', 'input wire [31:0] fx_en, // LK诊断固定块能量'),
+    ('F04 ', 'b2', '本窗口PBLK的4Hz频点能量raw>>8，bin4', 'input wire [31:0] b2, // 本窗口PBLK的4Hz频点能量raw>>8，bin4'),
+    ('F06 ', 'b4', '本窗口PBLK的6Hz频点能量raw>>8，bin8', 'input wire [31:0] b4, // 本窗口PBLK的6Hz频点能量raw>>8，bin8'),
+    ('F10 ', 'b8', '本窗口PBLK的10Hz频点能量raw>>8，bin16', 'input wire [31:0] b8, // 本窗口PBLK的10Hz频点能量raw>>8，bin16'),
+    ('F08 ', 'b12', '本窗口PBLK的8Hz频点能量raw>>8，bin12', 'input wire [31:0] b12, // 本窗口PBLK的8Hz频点能量raw>>8，bin12'),
+    ('TON1', 'tonal_map_lo', '原始峰值与突出度合格块位图低32位', 'input wire [31:0] tonal_map_lo, // 原始峰值与突出度合格块位图低32位'),
+    ('TON2', 'tonal_map_hi', '原始峰值与突出度合格块位图高16位', 'input wire [31:0] tonal_map_hi, // 原始峰值与突出度合格块位图高16位'),
+    ('OBP1', 'obj_pos', '四个网格框，每字节bit6有效、bit5至3行、bit2至0列', 'input wire [31:0] obj_pos, // 四个网格框，每字节bit6有效、bit5至3行、bit2至0列'),
+    ('FBPN', 'fx_pn', 'PBLK原始峰值raw>>8，保留旧字段名，等于PKMG', 'input wire [31:0] fx_pn, // PBLK原始峰值raw>>8，保留旧字段名，等于PKMG'),
+    ('OBM1', 'obj_pn0', '已确认目标1原始峰值raw>>8，与OBP1同槽位', 'input wire [31:0] obj_pn0, // 已确认目标1原始峰值raw>>8，与OBP1同槽位'),
+    ('OBM2', 'obj_pn1', '已确认目标2原始峰值raw>>8，与OBP1同槽位', 'input wire [31:0] obj_pn1, // 已确认目标2原始峰值raw>>8，与OBP1同槽位'),
+    ('OBM3', 'obj_pn2', '已确认目标3原始峰值raw>>8，与OBP1同槽位', 'input wire [31:0] obj_pn2, // 已确认目标3原始峰值raw>>8，与OBP1同槽位'),
+    ('OBM4', 'obj_pn3', '已确认目标4原始峰值raw>>8，与OBP1同槽位', 'input wire [31:0] obj_pn3, // 已确认目标4原始峰值raw>>8，与OBP1同槽位'),
+    ('CHLK', 'chal_blk', '本窗口最强合格块号，无合格块为63', 'input wire [31:0] chal_blk, // 本窗口最强合格块号，无合格块为63'),
+    ('QACT', 'qact', '原始峰值大于25且突出度通过的块数，确认前，0到48', 'input wire [31:0] qact, // 原始峰值大于25且突出度通过的块数，确认前，0到48'),
+    ('WPRD', 'wprd', '窗口周期，单位为50MHz时钟拍', 'input wire [31:0] wprd, // 窗口周期，单位为50MHz时钟拍'),
+    ('VTAP', 'tap_ovf', '抽头异常计数，应为0', 'input wire [31:0] tap_ovf, // 抽头异常计数，应为0'),
+    ('ITER', 'it_err', '上一帧缓存异常计数，应为0', 'input wire [31:0] it_err, // 上一帧缓存异常计数，应为0'),
+    ('SCNC', 'mb_scan', '刚完成窗口的频点扫描计数', 'input wire [31:0] mb_scan, // 刚完成窗口的频点扫描计数'),
+    ('WINC', 'mb_win', '已完成窗口数，8bit回绕', 'input wire [31:0] mb_win, // 已完成窗口数，8bit回绕'),
+    ('RVER', "32'h0002_0001", '修复2版本标识，应为00020001', None),
+    ('RBIN', 'raw_bin', '本窗口PBLK的原始峰值bin，0到16', 'input wire [31:0] raw_bin, // 本窗口PBLK的原始峰值bin，0到16'),
+    ('RHZ ', 'raw_hz', '本窗口原始峰值Hz10，未合格也报告，峰值0时为0', 'input wire [31:0] raw_hz, // 本窗口原始峰值Hz10，未合格也报告'),
+    ('AEXP', 'raw_aexp', 'PBLK纹理指数，仅诊断，不参与候选门限', 'input wire [31:0] raw_aexp, // PBLK纹理指数，仅诊断'),
+    ('CNFM', 'confirmed', '独立确认的目标数，0到4', 'input wire [31:0] confirmed, // 独立确认的目标数，0到4'),
+    ('TNST', 'tn_status', 'bit0原始最强块合格，bit1存在已确认目标', 'input wire [31:0] tn_status, // bit0原始最强块合格，bit1存在已确认目标'),
 ]
 
 BANNER_LEN = len(BANNER)
 NF = len(FIELDS)
 
-# 13 号及之后的字段是"会变的"（每秒/每帧更新），需要同一瞬间快照；
-# 前面的字段是标志位和常量，变化一次就不再变，不必快照。
-SNAP_FROM = 13
+# SEC直接读取，其余测量值在每轮开头一起快照。
+SNAP_FROM = 1
 NSNAP = sum(1 for i in range(NF) if i >= SNAP_FROM)
 FIELD_LEN = 15
 # ★ 字段号位宽必须由字段数决定。曾经写死 5 位（当时 32 字段），
@@ -173,7 +150,8 @@ TEMPLATE = u'''//===============================================================
 //  串口：115200 8N1；板子 TX(H1) 接 USB-TTL 的 RXD，GND 共地
 //
 //  ---------------------------------------------------------------------
-//  每轮先打 1 行横幅，再打 {nf} 行状态，每行 {flen} 字节，共 {rbytes} 字节//  （115200 下约 {rms:.1f} ms 打完，所以"每秒一轮"绰绰有余）：
+//  每轮先打 1 行横幅，再打 {nf} 行状态，每行 {flen} 字节，共 {rbytes} 字节
+//  （115200 下约 {rms:.1f} ms 打完，所以"每秒一轮"绰绰有余）：
 //
 //      {banner_plain}
 {field_help}
@@ -181,10 +159,11 @@ TEMPLATE = u'''//===============================================================
 //  判读方法：
 //    * 能看到整齐的上面这些行        -> 波特率 / 帧格式 / 引脚 都对 ✓
 //    * SEC 每秒 +1，连续不乱         -> 时钟假设正确 ✓
-//    * DIV = 000001B2（434）         -> 分频值正确（50MHz 下 115200）✓
-//    * PXFR = 000E1000（921600）     -> 视频流是 1280x720，抽头正确 ✓
-//    * CSIH / PIXS                   -> 平均每像素几个 csi 时钟
-//    * DTRD = 00003840 且 DTER = 0   -> DDR 算法区域读写自检通过 ✓
+//    * RVER = 00020001               -> 当前为原始频谱候选修复版本
+//    * VOFP/ITPX=00038400，VOFL/ITLN=00000168 -> 640x360抽头与帧差计数正确
+//    * CLRC/SCNC=00000330，WINC递增   -> 48块乘17频点窗口持续完成
+//    * ACT/QACT/CNFM                 -> 原始能量块数/突出度合格块数/确认目标数
+//    * PBLK/RBIN/RHZ/AEXP/F04/F06/F08/F10 -> 同一窗口、同一原始最强块
 //    * 全是乱码                      -> 十有八九是 CLK_HZ 与真实时钟不符 ✗
 //
 //  ---------------------------------------------------------------------
@@ -199,10 +178,9 @@ TEMPLATE = u'''//===============================================================
 //  ---------------------------------------------------------------------
 //  复位说明：rst_n 接 I_rst_n（板级复位），这样 PLL 还没锁的时候
 //            串口就已经在打印了，便于定位问题。
-//            状态输入分两类，都做了两拍同步：
-//              a) 粘滞标志 / 慢变化电平（PLL/CAM/I2C/HS/...）—— 安全
-//              b) 每秒刷新的测量值（CSIH/PIXS/FPS/PXFR/DTRD/DTER）
-//                 —— 它们本来就只 1 秒变一次，跨域采样同样安全
+//            标志位在本模块中用两拍同步。
+//            多位测量值由顶层通过源域完成toggle复制到本时钟域，
+//            本模块再于每轮开始统一快照，避免字段跨窗口混用。
 //=====================================================================
 module uart_log_debug #(
     parameter integer CLK_HZ = 50_000_000,   // 本模块时钟频率（Hz）
@@ -357,15 +335,9 @@ module uart_log_debug #(
     // ★ 整轮日志的快照（本轮新增，修一个真实的观测问题）
     //
     //   下面的 v 是**组合译码**：每个字段是"发到它那一刻"才去取值。
-    //   而一轮要发 {rms:.1f} ms，一帧只有 16.7 ms —— 于是
-    //     ITSM(字段25) 与 ITSS(字段29) 相隔 4 字段 = 60 字节 = 5.2 ms，
-    //     约 31% 的概率落在相邻两帧上。
-    //   实测出现过 |ITSS| > ITSM（= 1.67e7 > 1.78e5），这违反三角不等式
-    //   |ΣIt| <= Σ|It|，同帧绝不可能 —— 说明两个字段本来就来自不同帧，
-    //   不是算法算错。
-    //
-    //   修法：每秒开轮的那一拍，把所有"会变的"字段（13 号及之后）
-    //         一次性打进快照寄存器，整轮日志都从快照读 -> 同一轮内自洽。
+    //   一轮要发 {rms:.1f} ms，期间顶层窗口快照可能更新。
+    //   每秒开轮的那一拍，把SEC之外的字段一次性打进快照寄存器，
+    //   整轮日志都从快照读，频率、位置、原始频谱和候选计数保持一致。
     //   代价：{nsnap} 个 32bit 寄存器。标志位/常量不必快照。
     //------------------------------------------------------------------
     wire        snap_ld = (st_r == ST_TICK) && tick_1s;   // 开轮那一拍

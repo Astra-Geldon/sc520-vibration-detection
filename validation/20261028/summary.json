@@ -1,0 +1,246 @@
+[
+  {
+    "name": "attachment1_3hz",
+    "source": "validation/20261028/attachment1_3hz.txt",
+    "source_sha256": "57fff443dc1c99d8534c6915ba619258ff655a4aa021ad2aaa333d3ab924869d",
+    "requested_hz10": 30,
+    "parsed_SEC_records": 5,
+    "complete_coherent_rounds": 5,
+    "unique_window_count": 5,
+    "duplicate_window_rounds": 0,
+    "incomplete_rounds": 0,
+    "incoherent_rounds": 0,
+    "duplicate_WIN_conflicts": [],
+    "time_range": [
+      "19:26:12.713",
+      "19:26:16.713"
+    ],
+    "frequency_object_counts_hz10": {
+      "30": 5,
+      "45": 1,
+      "60": 5,
+      "75": 1,
+      "95": 2
+    },
+    "frames_with_any_confirmed": 5,
+    "frames_with_requested_frequency": 5,
+    "longest_consecutive_requested_frequency_windows": 5,
+    "all_expected_RVER": true,
+    "all_source_health_good": true,
+    "ACT_range": [
+      8,
+      12
+    ],
+    "QACT_range": [
+      5,
+      9
+    ],
+    "PKMG_range": [
+      924,
+      5919
+    ],
+    "CNFM_range": [
+      2,
+      3
+    ],
+    "median_fps": 59.52389920825588,
+    "raw_hz_counts": {
+      "30": 4,
+      "20": 1
+    }
+  },
+  {
+    "name": "attachment2_8hz",
+    "source": "validation/20261028/attachment2_8hz.txt",
+    "source_sha256": "e4bfa66062f7cd58f3bb5fe80114602ee746127cc077103df777ba746043f3e6",
+    "requested_hz10": 80,
+    "parsed_SEC_records": 4,
+    "complete_coherent_rounds": 4,
+    "unique_window_count": 4,
+    "duplicate_window_rounds": 0,
+    "incomplete_rounds": 0,
+    "incoherent_rounds": 0,
+    "duplicate_WIN_conflicts": [],
+    "time_range": [
+      "19:29:46.712",
+      "19:29:49.720"
+    ],
+    "frequency_object_counts_hz10": {
+      "70": 1,
+      "75": 1,
+      "80": 6,
+      "90": 1
+    },
+    "frames_with_any_confirmed": 4,
+    "frames_with_requested_frequency": 4,
+    "longest_consecutive_requested_frequency_windows": 4,
+    "all_expected_RVER": true,
+    "all_source_health_good": true,
+    "ACT_range": [
+      21,
+      25
+    ],
+    "QACT_range": [
+      6,
+      10
+    ],
+    "PKMG_range": [
+      19848,
+      20809
+    ],
+    "CNFM_range": [
+      2,
+      3
+    ],
+    "median_fps": 59.52380620231388,
+    "raw_hz_counts": {
+      "80": 4
+    }
+  },
+  {
+    "name": "attachment3_8hz",
+    "source": "validation/20261028/attachment3_8hz.txt",
+    "source_sha256": "679a6bd0511842fd62479585b451cf984b9da753b4c1c15dcf322392215781f7",
+    "requested_hz10": 80,
+    "parsed_SEC_records": 7,
+    "complete_coherent_rounds": 7,
+    "unique_window_count": 5,
+    "duplicate_window_rounds": 2,
+    "incomplete_rounds": 0,
+    "incoherent_rounds": 0,
+    "duplicate_WIN_conflicts": [],
+    "time_range": [
+      "19:31:17.721",
+      "19:31:33.727"
+    ],
+    "frequency_object_counts_hz10": {
+      "70": 1,
+      "75": 1,
+      "80": 8,
+      "90": 1
+    },
+    "frames_with_any_confirmed": 5,
+    "frames_with_requested_frequency": 5,
+    "longest_consecutive_requested_frequency_windows": 3,
+    "all_expected_RVER": true,
+    "all_source_health_good": true,
+    "ACT_range": [
+      30,
+      31
+    ],
+    "QACT_range": [
+      9,
+      15
+    ],
+    "PKMG_range": [
+      21308,
+      25798
+    ],
+    "CNFM_range": [
+      1,
+      3
+    ],
+    "median_fps": 59.52374862711729,
+    "raw_hz_counts": {
+      "80": 5
+    }
+  },
+  {
+    "name": "attachment4_10plus",
+    "source": "validation/20261028/attachment4_10plus.txt",
+    "source_sha256": "d097bc531dd8316e98c7d1d7eee09bc14653e0ca8a67fea36e6a41bbaddcd470",
+    "requested_hz10": null,
+    "parsed_SEC_records": 7,
+    "complete_coherent_rounds": 6,
+    "unique_window_count": 5,
+    "duplicate_window_rounds": 1,
+    "incomplete_rounds": 1,
+    "incoherent_rounds": 0,
+    "duplicate_WIN_conflicts": [],
+    "time_range": [
+      "19:34:50.718",
+      "19:34:55.725"
+    ],
+    "frequency_object_counts_hz10": {
+      "85": 3,
+      "90": 2,
+      "100": 1
+    },
+    "frames_with_any_confirmed": 4,
+    "frames_with_requested_frequency": null,
+    "longest_consecutive_requested_frequency_windows": null,
+    "all_expected_RVER": true,
+    "all_source_health_good": true,
+    "ACT_range": [
+      35,
+      39
+    ],
+    "QACT_range": [
+      5,
+      12
+    ],
+    "PKMG_range": [
+      475,
+      1704
+    ],
+    "CNFM_range": [
+      0,
+      3
+    ],
+    "median_fps": 59.52388924330405,
+    "raw_hz_counts": {
+      "70": 2,
+      "80": 1,
+      "100": 1,
+      "95": 1
+    }
+  },
+  {
+    "name": "attachment5_10hz",
+    "source": "validation/20261028/attachment5_10hz.txt",
+    "source_sha256": "0b5af25232cea35f2a0bca836bad7c7c4ec66cf909c358b4be9578e5dace66fd",
+    "requested_hz10": 100,
+    "parsed_SEC_records": 5,
+    "complete_coherent_rounds": 5,
+    "unique_window_count": 4,
+    "duplicate_window_rounds": 1,
+    "incomplete_rounds": 0,
+    "incoherent_rounds": 0,
+    "duplicate_WIN_conflicts": [],
+    "time_range": [
+      "19:36:59.727",
+      "19:37:03.726"
+    ],
+    "frequency_object_counts_hz10": {
+      "85": 1,
+      "95": 1,
+      "100": 4
+    },
+    "frames_with_any_confirmed": 4,
+    "frames_with_requested_frequency": 3,
+    "longest_consecutive_requested_frequency_windows": 3,
+    "all_expected_RVER": true,
+    "all_source_health_good": true,
+    "ACT_range": [
+      33,
+      34
+    ],
+    "QACT_range": [
+      11,
+      15
+    ],
+    "PKMG_range": [
+      10992,
+      13560
+    ],
+    "CNFM_range": [
+      1,
+      3
+    ],
+    "median_fps": 59.52383775783619,
+    "raw_hz_counts": {
+      "95": 1,
+      "100": 3
+    }
+  }
+]

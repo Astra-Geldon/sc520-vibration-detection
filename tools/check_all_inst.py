@@ -67,6 +67,12 @@ def main():
     extra = [os.path.join(PROJ, "user_source", "hdl_source", "vib_prev_frame_ddr.v"),
              os.path.join(PROJ, "user_source", "hdl_source", "vib_gauss3x3.v"),
              os.path.join(PROJ, "user_source", "hdl_source", "vib_lk_grid.v")]
+    # Included multi-block modules are not separate .al sources. Check their
+    # real interfaces too, rather than silently skipping the newly active chain.
+    extra.extend(os.path.join(PROJ, "user_source", "hdl_source", "vibration", name)
+                 for name in ("vib_lk_grid_multi.v", "vib_eram_dp.v",
+                              "vib_gz_multi.v", "vib_gz_peak.v",
+                              "vib_osd_marker.v", "vib_goertzel.v"))
     for full in extra:
         if os.path.isfile(full):
             files.append(full)
