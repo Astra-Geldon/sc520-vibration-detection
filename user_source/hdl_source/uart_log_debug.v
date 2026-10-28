@@ -1,7 +1,7 @@
 //=====================================================================
 // uart_log_debug.v -- compact 1 Hz board log, 115200 8N1 (2026-10-28).
 //
-// Default output: 33 fields in 7 CRLF-terminated lines, 469 bytes/round.
+// Default output: 31 fields in 7 CRLF-terminated lines, 441 bytes/round.
 // The repeated banner and low-priority fields are disabled. All numbers
 // remain eight hexadecimal digits; HZ1..HZ4 and RHZ remain Hz * 10.
 //
@@ -9,26 +9,28 @@
 //   ACT  xxxxxxxx QACT xxxxxxxx CNFM xxxxxxxx STK0 xxxxxxxx OBP1 xxxxxxxx
 //   HZ1  xxxxxxxx HZ2  xxxxxxxx HZ3  xxxxxxxx HZ4  xxxxxxxx
 //   OBM1 xxxxxxxx OBM2 xxxxxxxx OBM3 xxxxxxxx OBM4 xxxxxxxx
-//   PBLK xxxxxxxx PKMG xxxxxxxx RBIN xxxxxxxx RHZ  xxxxxxxx AEXP xxxxxxxx
-//   F04  xxxxxxxx F06  xxxxxxxx F08  xxxxxxxx F10  xxxxxxxx CMOT xxxxxxxx
-//   MBFR xxxxxxxx CLRC xxxxxxxx SCNC xxxxxxxx WPRD xxxxxxxx AGCR xxxxxxxx
+//   PBLK xxxxxxxx RHZ  xxxxxxxx PKMG xxxxxxxx P2HZ xxxxxxxx P2MG xxxxxxxx
+//   QBLK xxxxxxxx QHZ  xxxxxxxx QMAG xxxxxxxx QSTA xxxxxxxx
+//   MBFR xxxxxxxx CLRC xxxxxxxx SCNC xxxxxxxx WPRD xxxxxxxx
 //
 // ACT/QACT/CNFM: raw / qualified / confirmed counts. OBP1 packs four
 // positions (each byte: bit6 valid, bits5:3 row, bits2:0 column).
-// OBM1..4 are RAW peak >> 8, despite the historical names. PBLK, PKMG,
-// RBIN, RHZ, AEXP and F04/F06/F08/F10 describe the same strongest raw
-// block in one completed window. Raw RHZ does not imply confirmation.
-// RVER=00020006: four-reference experiment disabled; detection matches
-// 00020004. Its source is retained behind VIB_COMMON_MOTION_ON.
-// CMOT stays in the existing layout and is constant zero while disabled.
-// CMOT[31]=veto, [22:16]=coherent-motion frames, [14:8]=all-four-valid
-// frames, [6:0]=unavailable frames, all from the same completed window.
-// ACT/QACT remain the original spectral counts even when vetoed.
+// OBM1..4 are RAW peak >> 8, despite the historical names. PBLK/RHZ/PKMG
+// identify the same strongest raw block in one completed window. P2HZ/P2MG
+// give its strongest positive peak outside RHZ's own and adjacent bins.
+// A zero second frequency means no positive eligible second peak exists.
+// QBLK/QHZ/QMAG identify the strongest QUALIFIED candidate, before slot
+// confirmation. QBLK=63 and QHZ=QMAG=0 mean no qualified candidate.
+// QSTA: bit0 qualified candidate exists; bit1 raw PBLK is qualified;
+// [7:4] exact candidate selected mask; [11:8] exact CONFIRMED mask;
+// [15:12] same-bin nearby representative mask; [19:16] occupied slots;
+// bit20 window veto; all other bits zero. Mask bit0 is slot1.
+// Selected/occupied includes pending slots, so selection is not confirmation.
+// RVER=00020007 adds read-only diagnostics to the disabled-common-motion
+// 00020006 baseline. No thresholds, selection or confirmation rules change.
 // Two matched windows both >=512 confirm; otherwise three qualified
 // matched windows are required. Strength is per slot, not global PKMG.
-// AGCR is the last copied window's AGC reference exponent (minimum18),
-// reported in hexadecimal. It follows current-frame texture, not a
-// permanent maximum. Candidate admission and the 64-frame window are unchanged.
+// Candidate admission and the 64-frame window remain unchanged.
 //
 // Disabled fields are listed beside the snapshot assignments below;
 // their input ports remain compatible with the existing top-level.
@@ -82,7 +84,7 @@ module uart_log_debug #(
     input wire [31:0] obj_pn2, // 已确认目标3原始峰值raw>>8，与OBP1同槽位
     input wire [31:0] obj_pn3, // 已确认目标4原始峰值raw>>8，与OBP1同槽位
     input wire [31:0] chal_blk, // 本窗口最强合格块号，无合格块为63
-    input wire [31:0] qact, // 原始峰值大于25且突出度通过的块数，确认前，0到48
+    input wire [31:0] qact, // 原始峰值大于64且突出度通过的块数，确认前，0到48
     input wire [31:0] wprd, // 窗口周期，单位为50MHz时钟拍
     input wire [31:0] tap_ovf, // 抽头异常计数，应为0
     input wire [31:0] it_err, // 上一帧缓存异常计数，应为0
@@ -94,11 +96,16 @@ module uart_log_debug #(
     input wire [31:0] confirmed, // 独立确认的目标数，0到4
     input wire [31:0] tn_status, // bit0原始最强块合格，bit1存在已确认目标
     input wire [31:0] motion_info, // 四处分散参考的二维共同运动窗口诊断，CMOT
+    input wire [31:0] diag_second_hz, // PBLK非相邻次峰频率乘10，无正能量为0
+    input wire [31:0] diag_second_mag, // 同块非相邻次峰raw能量右移8位
+    input wire [31:0] diag_qual_hz, // 最强合格候选频率乘10，无候选为0
+    input wire [31:0] diag_qual_mag, // 最强合格候选raw能量右移8位
+    input wire [31:0] diag_qual_status, // QSTA，同窗候选入槽/确认/邻近代表掩码
     output wire        tx                   // 串口输出 -> O_uart_tx -> H1
 );
 
 
-    localparam integer NF = 33;
+    localparam integer NF = 31;
     localparam integer FLD_LAST = NF - 1;
 
     reg [31:0] tick;
@@ -109,7 +116,7 @@ module uart_log_debug #(
     end
 
     reg [31:0] run_sec;
-    reg [5:0] fld;
+    reg [4:0] fld;
     reg [3:0] pos;
 
     function [7:0] hx;
@@ -121,44 +128,42 @@ module uart_log_debug #(
     endfunction
 
     function [7:0] lbl;
-        input [5:0] f;
+        input [4:0] f;
         input [1:0] p;
         reg [31:0] s;
         begin
             case (f)
-            6'd0: s = "SEC ";
-            6'd1: s = "WINC";
-            6'd2: s = "RVER";
-            6'd3: s = "VTAP";
-            6'd4: s = "ITER";
-            6'd5: s = "ACT ";
-            6'd6: s = "QACT";
-            6'd7: s = "CNFM";
-            6'd8: s = "STK0";
-            6'd9: s = "OBP1";
-            6'd10: s = "HZ1 ";
-            6'd11: s = "HZ2 ";
-            6'd12: s = "HZ3 ";
-            6'd13: s = "HZ4 ";
-            6'd14: s = "OBM1";
-            6'd15: s = "OBM2";
-            6'd16: s = "OBM3";
-            6'd17: s = "OBM4";
-            6'd18: s = "PBLK";
-            6'd19: s = "PKMG";
-            6'd20: s = "RBIN";
-            6'd21: s = "RHZ ";
-            6'd22: s = "AEXP";
-            6'd23: s = "F04 ";
-            6'd24: s = "F06 ";
-            6'd25: s = "F08 ";
-            6'd26: s = "F10 ";
-            6'd27: s = "CMOT";
-            6'd28: s = "MBFR";
-            6'd29: s = "CLRC";
-            6'd30: s = "SCNC";
-            6'd31: s = "WPRD";
-            6'd32: s = "AGCR";
+            5'd0: s = "SEC ";
+            5'd1: s = "WINC";
+            5'd2: s = "RVER";
+            5'd3: s = "VTAP";
+            5'd4: s = "ITER";
+            5'd5: s = "ACT ";
+            5'd6: s = "QACT";
+            5'd7: s = "CNFM";
+            5'd8: s = "STK0";
+            5'd9: s = "OBP1";
+            5'd10: s = "HZ1 ";
+            5'd11: s = "HZ2 ";
+            5'd12: s = "HZ3 ";
+            5'd13: s = "HZ4 ";
+            5'd14: s = "OBM1";
+            5'd15: s = "OBM2";
+            5'd16: s = "OBM3";
+            5'd17: s = "OBM4";
+            5'd18: s = "PBLK";
+            5'd19: s = "RHZ ";
+            5'd20: s = "PKMG";
+            5'd21: s = "P2HZ";
+            5'd22: s = "P2MG";
+            5'd23: s = "QBLK";
+            5'd24: s = "QHZ ";
+            5'd25: s = "QMAG";
+            5'd26: s = "QSTA";
+            5'd27: s = "MBFR";
+            5'd28: s = "CLRC";
+            5'd29: s = "SCNC";
+            5'd30: s = "WPRD";
             default: s = "????";
             endcase
             case (p)
@@ -171,9 +176,9 @@ module uart_log_debug #(
     endfunction
 
     // Keep each group on one line; no blank line or repeated banner.
-    wire line_end = (fld == 6'd4) || (fld == 6'd9) ||
-                    (fld == 6'd13) || (fld == 6'd17) ||
-                    (fld == 6'd22) || (fld == 6'd27) || (fld == 6'd32);
+    wire line_end = (fld == 5'd4) || (fld == 5'd9) ||
+                    (fld == 5'd13) || (fld == 5'd17) ||
+                    (fld == 5'd22) || (fld == 5'd26) || (fld == 5'd30);
     wire field_done = line_end ? (pos == 4'd14) : (pos == 4'd13);
 
     localparam ST_TICK = 2'd0, ST_LOAD = 2'd1, ST_BUSY = 2'd2;
@@ -189,7 +194,7 @@ module uart_log_debug #(
         if (snap_ld) begin
             snap[ 0] <= run_sec;
             snap[ 1] <= mb_win;
-            snap[ 2] <= 32'h0002_0006;
+            snap[ 2] <= 32'h0002_0007;
             snap[ 3] <= tap_ovf;
             snap[ 4] <= it_err;
             snap[ 5] <= mb_active;
@@ -206,25 +211,25 @@ module uart_log_debug #(
             snap[16] <= obj_pn2;
             snap[17] <= obj_pn3;
             snap[18] <= mb_best_blk;
-            snap[19] <= mb_mag;
-            snap[20] <= raw_bin;
-            snap[21] <= raw_hz;
-            snap[22] <= raw_aexp;
-            snap[23] <= b2;
-            snap[24] <= b4;
-            snap[25] <= b12;
-            snap[26] <= b8;
-            snap[27] <= motion_info;
-            snap[28] <= mb_frm;
-            snap[29] <= mb_clr;
-            snap[30] <= mb_scan;
-            snap[31] <= wprd;
-            snap[32] <= mb_agc_ref;
+            snap[19] <= raw_hz;
+            snap[20] <= mb_mag;
+            snap[21] <= diag_second_hz;
+            snap[22] <= diag_second_mag;
+            snap[23] <= chal_blk;
+            snap[24] <= diag_qual_hz;
+            snap[25] <= diag_qual_mag;
+            snap[26] <= diag_qual_status;
+            snap[27] <= mb_frm;
+            snap[28] <= mb_clr;
+            snap[29] <= mb_scan;
+            snap[30] <= wprd;
             // Disabled low-priority / redundant fields (ports retained):
             // VOFP=tap_px_per_frame; VOFL=tap_lines;
             // ITPX=it_px; ITLN=it_lines; VSUM=vsum;
             // FXBX=fx_bx; FXEN=fx_en; TON1=tonal_map_lo; TON2=tonal_map_hi;
-            // FBPN=fx_pn (duplicates PKMG); CHLK=chal_blk; TNST=tn_status.
+            // FBPN=fx_pn (duplicates PKMG); TNST=tn_status.
+            // F04=b2; F06=b4; F08=b12; F10=b8; RBIN=raw_bin; AEXP=raw_aexp;
+            // AGCR=mb_agc_ref; CMOT=motion_info (disabled0). CHLK is now QBLK.
         end
     end
 

@@ -10,6 +10,9 @@
 // 2026-10-28: change confirmation only. Two matched windows both >=512
 // confirm at the existing speed; all other qualified tracks need three.
 // A single strong window cannot publish or lend strength to another slot.
+// 2026-10-28 RVER00020007: read-only candidate diagnostics. Rescan only
+// the global raw strongest block with the SAME multiplier to find the best
+// non-neighbour bin. No diagnostic value feeds admission, picking or tracking.
 // Included by design_top_wrapper.v; do not also register this file in .al.
 `ifndef VIB_GZ_PEAK_V
 `define VIB_GZ_PEAK_V
@@ -47,7 +50,11 @@ module vib_gz_peak #(
     output reg [5:0] o_dbg_fx_sel, o_dbg_chal_blk,
     output reg [11:0] o_dbg_streak,
     output reg [4:0] o_dbg_aexp,
-    output reg [2:0] o_confirmed
+    output reg [2:0] o_confirmed,
+    output reg [7:0] o_dbg_qual_hz10,
+    output reg [31:0] o_dbg_qual_mag, o_dbg_qual_status,
+    output reg [7:0] o_dbg_second_hz10,
+    output reg [31:0] o_dbg_second_mag
 );
     localparam integer MAG_SH=8;
     localparam [31:0] TONE_MIN=32'd64;
@@ -98,7 +105,9 @@ module vib_gz_peak #(
     localparam [4:0] IDLE=0, RD=1, M1=2, M2=3, M3=4, M4=5,
                      ENERGY=6, WRITE=7, NEXT=8, PASS=9, SUM_RD=10,
                      SUM_WAIT=11, SUM_CHECK=12, PICK=13, COMMIT=14,
-                     EMIT=15, FIN=16;
+                     EMIT=15, FIN=16,
+                     DIAG_INIT=17, DIAG_RD=18, DIAG_M1=19, DIAG_M2=20,
+                     DIAG_M3=21, DIAG_M4=22, DIAG_ENERGY=23, DIAG_NEXT=24;
     reg [4:0] state;
     reg window_veto;
     reg [5:0] blk,scan_blk;
@@ -109,8 +118,13 @@ module vib_gz_peak #(
     reg signed [63:0] cs1,cs12,sq1,energy;
     wire signed [31:0] s1=st_data[63:32], s2=st_data[31:0];
     // Same four-cycle multiplier schedule and one-cycle RAM prefetch as OLD.
-    wire signed [31:0] ma=(state==M1)?s1:(state==M2)?(cs1>>>14):(state==M3)?s1:s2;
-    wire signed [31:0] mb=(state==M1)?{{16{coef[15]}},coef}:(state==M2)?s2:(state==M3)?s1:s2;
+    // Original scan and diagnostic rescan are mutually exclusive users of
+    // this one multiplier and the original energy pipeline registers.
+    wire mul_m1=(state==M1)||(state==DIAG_M1);
+    wire mul_m2=(state==M2)||(state==DIAG_M2);
+    wire mul_m3=(state==M3)||(state==DIAG_M3);
+    wire signed [31:0] ma=mul_m1?s1:mul_m2?(cs1>>>14):mul_m3?s1:s2;
+    wire signed [31:0] mb=mul_m1?{{16{coef[15]}},coef}:mul_m2?s2:mul_m3?s1:s2;
     wire signed [63:0] product=ma*mb;
     wire [58:0] mag=(energy<0)?59'd0:
         (energy>64'sd288230376151711743)?59'd288230376151711743:energy[58:0];
@@ -147,6 +161,13 @@ module vib_gz_peak #(
     reg [5:0] global_blk,qual_best_blk;
     reg [4:0] global_bin;
     reg [31:0] qual_best_mag;
+    reg [4:0] qual_best_bin;
+    // The engine clears s1/s2 only after done. Re-reading one finalized block
+    // avoids a17-bin energy register bank and any additional DSP/ERAM.
+    reg [58:0] second_peak;
+    reg [4:0] second_bin;
+    wire [9:0] diag_base={global_blk,4'b0000}+{4'd0,global_blk}; // block*17
+    reg [3:0] qual_selected_mask,qual_confirmed_mask,qual_near_mask,occupied_mask;
     reg global_qualified;
     reg [31:0] diag0,diag4,diag6,diag8;
     reg [31:0] global0,global4,global6,global8,global10;
@@ -213,7 +234,11 @@ module vib_gz_peak #(
             block_peak<=0; block_bin<=0; block_sum<=0;
             qualified_map<=0; raw_count<=0; qual_count<=0;
             global_peak<=0; global_blk<=0; global_bin<=0; global_qualified<=0;
-            qual_best_mag<=0; qual_best_blk<=63;
+            qual_best_mag<=0; qual_best_blk<=63; qual_best_bin<=0;
+            second_peak<=0; second_bin<=0;
+            qual_selected_mask<=0; qual_confirmed_mask<=0; qual_near_mask<=0; occupied_mask<=0;
+            o_dbg_qual_hz10<=0; o_dbg_qual_mag<=0; o_dbg_qual_status<=0;
+            o_dbg_second_hz10<=0; o_dbg_second_mag<=0;
             diag0<=0; diag4<=0; diag6<=0; diag8<=0;
             global0<=0; global4<=0; global6<=0; global8<=0; global10<=0;
             result_in<=0; result_addr<=0;
@@ -253,7 +278,9 @@ module vib_gz_peak #(
                 scan_count<=0; qualified_map<=0; raw_count<=0; qual_count<=0;
                 block_peak<=0; block_bin<=0; block_sum<=0;
                 global_peak<=0; global_blk<=0; global_bin<=0; global_qualified<=0;
-                qual_best_mag<=0; qual_best_blk<=63;
+                qual_best_mag<=0; qual_best_blk<=63; qual_best_bin<=0;
+                second_peak<=0; second_bin<=0;
+                qual_selected_mask<=0; qual_confirmed_mask<=0; qual_near_mask<=0; occupied_mask<=0;
                 global0<=0; global4<=0; global6<=0; global8<=0; global10<=0;
                 for(j=0;j<4;j=j+1) begin
                     next_blk[j]<=63; next_bin[j]<=0; next_streak[j]<=0; next_mag[j]<=0;
@@ -278,7 +305,9 @@ module vib_gz_peak #(
                     qualified_map[blk]<=qualified;
                     if(qualified) begin
                         qual_count<=qual_count+6'd1;
-                        if(final_pk32>qual_best_mag) begin qual_best_mag<=final_pk32; qual_best_blk<=blk; end
+                        if(final_pk32>qual_best_mag) begin
+                            qual_best_mag<=final_pk32; qual_best_blk<=blk; qual_best_bin<=final_bin;
+                        end
                     end
                     if((blk==0)||(final_peak>global_peak)) begin
                         global_peak<=final_peak; global_blk<=blk; global_bin<=final_bin;
@@ -298,6 +327,31 @@ module vib_gz_peak #(
                 end else if(blk<NB-1) begin
                     blk<=blk+6'd1; bin<=0; base<=base+NBIN; st_addr<=base+NBIN;
                     coef<=coef_of(0); block_peak<=0; block_bin<=0; block_sum<=0; state<=RD;
+                end else state<=DIAG_INIT;
+            end
+            // Read-only rescan of PBLK. These states do not write results,
+            // scan_count, qualified_map, global_peak or any target history.
+            // abs(bin-global_bin)>1 excludes the main peak and its immediate
+            // +/-0.5Hz neighbours. Strict greater-than preserves lower-bin ties.
+            DIAG_INIT: begin
+                bin<=0; st_addr<=diag_base; coef<=coef_of(0);
+                second_peak<=0; second_bin<=0; state<=DIAG_RD;
+            end
+            DIAG_RD: state<=DIAG_M1;
+            DIAG_M1: begin cs1<=product; state<=DIAG_M2; end
+            DIAG_M2: begin cs12<=product; state<=DIAG_M3; end
+            DIAG_M3: begin sq1<=product; state<=DIAG_M4; end
+            DIAG_M4: begin energy<=sq1-cs12+product; state<=DIAG_ENERGY; end
+            DIAG_ENERGY: begin
+                if((bin>=BIN_MIN)&&!bin_near(bin,global_bin)&&(mag>second_peak)) begin
+                    second_peak<=mag; second_bin<=bin;
+                end
+                state<=DIAG_NEXT;
+            end
+            DIAG_NEXT: begin
+                if(bin<NBIN-1) begin
+                    bin<=bin+5'd1; coef<=coef_of(bin+5'd1);
+                    st_addr<=diag_base+{5'd0,bin}+10'd1; state<=DIAG_RD;
                 end else begin slot<=0; match_phase<=1; state<=PASS; end
             end
             PASS: begin
@@ -329,6 +383,18 @@ module vib_gz_peak #(
                     confirmed_count<=0; first_blk<=0; first_hz<=0; state<=COMMIT; end
             end
             COMMIT: begin
+                // Observe exact selection versus same-frequency neighbour
+                // representation, including pending tracks. Never change picks.
+                if(next_streak[slot]!=0) begin
+                    occupied_mask[slot]<=1'b1;
+                    if((qual_best_blk!=63)&&(next_bin[slot]==qual_best_bin)) begin
+                        if(pos_near(next_blk[slot],qual_best_blk)) qual_near_mask[slot]<=1'b1;
+                        if(next_blk[slot]==qual_best_blk) begin
+                            qual_selected_mask[slot]<=1'b1;
+                            if(slot_confirmed) qual_confirmed_mask[slot]<=1'b1;
+                        end
+                    end
+                end
                 // Four slots emit independently; no energy-rank master gate.
                 prev_blk[slot]<=next_blk[slot]; prev_bin[slot]<=next_bin[slot];
                 prev_streak[slot]<=next_streak[slot];
@@ -355,6 +421,16 @@ module vib_gz_peak #(
                 o_fb2<=global4; o_fb4<=global6; o_fb8<=global10; o_fb12<=global8;
                 o_tn<={30'd0,(confirmed_count!=0),global_qualified};
                 o_dbg_chal_blk<=qual_best_blk; o_dbg_streak<=emit_streak;
+                o_dbg_qual_hz10<=(qual_best_blk!=63)?hz_of(qual_best_bin):8'd0;
+                o_dbg_qual_mag<=qual_best_mag;
+                // [0]qualified exists; [1]PBLK qualified; [7:4]selected;
+                // [11:8]confirmed; [15:12]near same-bin representative;
+                // [19:16]occupied slots; [20]window veto. Slot1 is mask bit0.
+                o_dbg_qual_status<={11'd0,window_veto,occupied_mask,qual_near_mask,
+                                   qual_confirmed_mask,qual_selected_mask,2'd0,
+                                   global_qualified,(qual_best_blk!=63)};
+                o_dbg_second_hz10<=(second_peak!=0)?hz_of(second_bin):8'd0;
+                o_dbg_second_mag<=report_mag(second_peak);
                 o_confirmed<=confirmed_count; o_obj_pos<=emit_pos; o_obj_hz10<=emit_hz; o_obj_pn<=emit_mag;
                 o_trk_pos<=(confirmed_count!=0)?{25'd0,1'b1,first_blk}:32'd0;
                 o_bb_x0<=grid_x; o_bb_x1<=grid_x+11'd159;

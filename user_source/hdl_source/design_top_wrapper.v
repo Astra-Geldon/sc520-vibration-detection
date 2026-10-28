@@ -412,6 +412,9 @@ module design_top_wrapper (
     wire [31:0]        S_motion_info;
     wire [4:0]         S_pk_aexp;
     wire [2:0]         S_pk_confirmed;
+    // Read-only same-window candidate diagnostics, RVER00020007.
+    wire [7:0]         S_pk_diag_qual_hz, S_pk_diag_second_hz;
+    wire [31:0]        S_pk_diag_qual_mag, S_pk_diag_qual_status, S_pk_diag_second_mag;
     wire [4:0]         S_legacy_bin;
     wire [7:0]         S_legacy_hz10;
     wire [63:0]        S_legacy_mag;
@@ -1874,7 +1877,12 @@ isp_top u_isp_top (
         .o_dbg_chal_blk ( S_pk_chal_blk ),
         .o_dbg_streak   ( S_pk_streak   ),
         .o_dbg_aexp     ( S_pk_aexp     ),
-        .o_confirmed    ( S_pk_confirmed)
+        .o_confirmed    ( S_pk_confirmed),
+        .o_dbg_qual_hz10 ( S_pk_diag_qual_hz ),
+        .o_dbg_qual_mag  ( S_pk_diag_qual_mag ),
+        .o_dbg_qual_status( S_pk_diag_qual_status ),
+        .o_dbg_second_hz10( S_pk_diag_second_hz ),
+        .o_dbg_second_mag( S_pk_diag_second_mag )
     );
 `else
     // 旧工程单块 Goertzel 对照链：固定使用纹理最强块的 bx，
@@ -1921,6 +1929,11 @@ isp_top u_isp_top (
     assign S_pk_raw_hz    = 32'd0;
     assign S_pk_aexp      = 5'd0;
     assign S_pk_confirmed = 3'd0;
+    assign S_pk_diag_qual_hz = 8'd0;
+    assign S_pk_diag_qual_mag = 32'd0;
+    assign S_pk_diag_qual_status = 32'd0;
+    assign S_pk_diag_second_hz = 8'd0;
+    assign S_pk_diag_second_mag = 32'd0;
     assign S_pk_tonal_map = 48'd0;
     assign S_pk_obj_pn    = 128'd0;
     assign S_pk_fx_pn     = 32'd0;
@@ -2269,6 +2282,8 @@ isp_top u_isp_top (
     reg [31:0]  c_qact;
     reg [31:0]  c_raw_bin, c_raw_hz, c_raw_aexp, c_confirmed, c_tn;
     reg [31:0]  c_motion_info;
+    reg [31:0]  c_diag_qual_hz, c_diag_qual_mag, c_diag_qual_status;
+    reg [31:0]  c_diag_second_hz, c_diag_second_mag;
     //------------------------------------------------------------------
     //  ★ 2026-10-27：窗口周期计数 —— 用来反推<b>真实帧率</b>
     //    fs = 64 帧 / 周期（周期单位 = I_sys_clk 50MHz 的拍数）
@@ -2321,6 +2336,12 @@ isp_top u_isp_top (
             c_confirmed<= {29'd0, S_pk_confirmed};
             c_tn       <= S_pk_tn;
             c_motion_info <= S_motion_info;
+            // Bundle travels with the same done-toggle snapshot as targets.
+            c_diag_qual_hz <= {24'd0, S_pk_diag_qual_hz};
+            c_diag_qual_mag <= S_pk_diag_qual_mag;
+            c_diag_qual_status <= S_pk_diag_qual_status;
+            c_diag_second_hz <= {24'd0, S_pk_diag_second_hz};
+            c_diag_second_mag <= S_pk_diag_second_mag;
             c_mb_streak <= {20'd0, S_pk_streak};
             c_mb_clr <= S_mb_clrcnt;
             c_tonal_map <= S_pk_tonal_map;
@@ -2440,6 +2461,11 @@ isp_top u_isp_top (
         .confirmed           (c_confirmed),
         .tn_status           (c_tn),
         .motion_info         (c_motion_info),
+        .diag_qual_hz        (c_diag_qual_hz),
+        .diag_qual_mag       (c_diag_qual_mag),
+        .diag_qual_status    (c_diag_qual_status),
+        .diag_second_hz      (c_diag_second_hz),
+        .diag_second_mag     (c_diag_second_mag),
         .tx                 (O_uart_tx)
     );
 

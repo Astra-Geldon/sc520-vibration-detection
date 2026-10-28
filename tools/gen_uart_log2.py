@@ -16,7 +16,7 @@ OUT = Path(__file__).resolve().parents[1] / 'user_source/hdl_source/uart_log_deb
 # All values, including SEC, are sampled once when the round starts.
 FIELD_GROUPS = [
     # Round identity and source errors.
-    [('SEC ', 'run_sec'), ('WINC', 'mb_win'), ('RVER', "32'h0002_0006"),
+    [('SEC ', 'run_sec'), ('WINC', 'mb_win'), ('RVER', "32'h0002_0007"),
      ('VTAP', 'tap_ovf'), ('ITER', 'it_err')],
     # Raw, qualified, confirmed counts; consecutive counts; grid positions.
     [('ACT ', 'mb_active'), ('QACT', 'qact'), ('CNFM', 'confirmed'),
@@ -29,15 +29,16 @@ FIELD_GROUPS = [
     # Confirmed slot RAW peak >> 8, retaining their historical names.
     [('OBM1', 'obj_pn0'), ('OBM2', 'obj_pn1'),
      ('OBM3', 'obj_pn2'), ('OBM4', 'obj_pn3')],
-    # Same-window global raw strongest block; not necessarily qualified.
-    [('PBLK', 'mb_best_blk'), ('PKMG', 'mb_mag'), ('RBIN', 'raw_bin'),
-     ('RHZ ', 'raw_hz'), ('AEXP', 'raw_aexp')],
-    # Four spectral reference bins of that same strongest raw block.
-    [('F04 ', 'b2'), ('F06 ', 'b4'), ('F08 ', 'b12'), ('F10 ', 'b8'),
-     ('CMOT', 'motion_info')],
+    # Observer is this window's raw strongest block. Exclude +/-one bin
+    # when finding P2HZ/P2MG; raw RHZ does not imply qualification.
+    [('PBLK', 'mb_best_blk'), ('RHZ ', 'raw_hz'), ('PKMG', 'mb_mag'),
+     ('P2HZ', 'diag_second_hz'), ('P2MG', 'diag_second_mag')],
+    # Strongest qualified candidate and its same-window selection masks.
+    [('QBLK', 'chal_blk'), ('QHZ ', 'diag_qual_hz'),
+     ('QMAG', 'diag_qual_mag'), ('QSTA', 'diag_qual_status')],
     # Window/frame/state health, including all 48 * 17 states.
     [('MBFR', 'mb_frm'), ('CLRC', 'mb_clr'),
-     ('SCNC', 'mb_scan'), ('WPRD', 'wprd'), ('AGCR', 'mb_agc_ref')],
+     ('SCNC', 'mb_scan'), ('WPRD', 'wprd')],
 ]
 FIELDS = [field for group in FIELD_GROUPS for field in group]
 NF = len(FIELDS)
@@ -58,20 +59,22 @@ TEMPLATE = r"""//===============================================================
 //
 // ACT/QACT/CNFM: raw / qualified / confirmed counts. OBP1 packs four
 // positions (each byte: bit6 valid, bits5:3 row, bits2:0 column).
-// OBM1..4 are RAW peak >> 8, despite the historical names. PBLK, PKMG,
-// RBIN, RHZ, AEXP and F04/F06/F08/F10 describe the same strongest raw
-// block in one completed window. Raw RHZ does not imply confirmation.
-// RVER=00020006: four-reference experiment disabled; detection matches
-// 00020004. Its source is retained behind VIB_COMMON_MOTION_ON.
-// CMOT stays in the existing layout and is constant zero while disabled.
-// CMOT[31]=veto, [22:16]=coherent-motion frames, [14:8]=all-four-valid
-// frames, [6:0]=unavailable frames, all from the same completed window.
-// ACT/QACT remain the original spectral counts even when vetoed.
+// OBM1..4 are RAW peak >> 8, despite the historical names. PBLK/RHZ/PKMG
+// identify the same strongest raw block in one completed window. P2HZ/P2MG
+// give its strongest positive peak outside RHZ's own and adjacent bins.
+// A zero second frequency means no positive eligible second peak exists.
+// QBLK/QHZ/QMAG identify the strongest QUALIFIED candidate, before slot
+// confirmation. QBLK=63 and QHZ=QMAG=0 mean no qualified candidate.
+// QSTA: bit0 qualified candidate exists; bit1 raw PBLK is qualified;
+// [7:4] exact candidate selected mask; [11:8] exact CONFIRMED mask;
+// [15:12] same-bin nearby representative mask; [19:16] occupied slots;
+// bit20 window veto; all other bits zero. Mask bit0 is slot1.
+// Selected/occupied includes pending slots, so selection is not confirmation.
+// RVER=00020007 adds read-only diagnostics to the disabled-common-motion
+// 00020006 baseline. No thresholds, selection or confirmation rules change.
 // Two matched windows both >=512 confirm; otherwise three qualified
 // matched windows are required. Strength is per slot, not global PKMG.
-// AGCR is the last copied window's AGC reference exponent (minimum18),
-// reported in hexadecimal. It follows current-frame texture, not a
-// permanent maximum. Candidate admission and the 64-frame window are unchanged.
+// Candidate admission and the 64-frame window remain unchanged.
 //
 // Disabled fields are listed beside the snapshot assignments below;
 // their input ports remain compatible with the existing top-level.
@@ -125,7 +128,7 @@ module uart_log_debug #(
     input wire [31:0] obj_pn2, // 已确认目标3原始峰值raw>>8，与OBP1同槽位
     input wire [31:0] obj_pn3, // 已确认目标4原始峰值raw>>8，与OBP1同槽位
     input wire [31:0] chal_blk, // 本窗口最强合格块号，无合格块为63
-    input wire [31:0] qact, // 原始峰值大于25且突出度通过的块数，确认前，0到48
+    input wire [31:0] qact, // 原始峰值大于64且突出度通过的块数，确认前，0到48
     input wire [31:0] wprd, // 窗口周期，单位为50MHz时钟拍
     input wire [31:0] tap_ovf, // 抽头异常计数，应为0
     input wire [31:0] it_err, // 上一帧缓存异常计数，应为0
@@ -137,6 +140,11 @@ module uart_log_debug #(
     input wire [31:0] confirmed, // 独立确认的目标数，0到4
     input wire [31:0] tn_status, // bit0原始最强块合格，bit1存在已确认目标
     input wire [31:0] motion_info, // 四处分散参考的二维共同运动窗口诊断，CMOT
+    input wire [31:0] diag_second_hz, // PBLK非相邻次峰频率乘10，无正能量为0
+    input wire [31:0] diag_second_mag, // 同块非相邻次峰raw能量右移8位
+    input wire [31:0] diag_qual_hz, // 最强合格候选频率乘10，无候选为0
+    input wire [31:0] diag_qual_mag, // 最强合格候选raw能量右移8位
+    input wire [31:0] diag_qual_status, // QSTA，同窗候选入槽/确认/邻近代表掩码
     output wire        tx                   // 串口输出 -> O_uart_tx -> H1
 );
 
@@ -201,7 +209,9 @@ module uart_log_debug #(
             // VOFP=tap_px_per_frame; VOFL=tap_lines;
             // ITPX=it_px; ITLN=it_lines; VSUM=vsum;
             // FXBX=fx_bx; FXEN=fx_en; TON1=tonal_map_lo; TON2=tonal_map_hi;
-            // FBPN=fx_pn (duplicates PKMG); CHLK=chal_blk; TNST=tn_status.
+            // FBPN=fx_pn (duplicates PKMG); TNST=tn_status.
+            // F04=b2; F06=b4; F08=b12; F10=b8; RBIN=raw_bin; AEXP=raw_aexp;
+            // AGCR=mb_agc_ref; CMOT=motion_info (disabled0). CHLK is now QBLK.
         end
     end
 

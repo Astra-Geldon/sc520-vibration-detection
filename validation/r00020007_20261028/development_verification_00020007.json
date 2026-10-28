@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "revision": "00020007",
+  "baseline": "00020006",
+  "changed_existing_files": [
+    "README.md",
+    "tools/gen_uart_log2.py",
+    "user_source/hdl_source/design_top_wrapper.v",
+    "user_source/hdl_source/uart_log_debug.v",
+    "user_source/hdl_source/vibration/vib_gz_peak.v"
+  ],
+  "added_files": [
+    "CANDIDATE_DIAG_20261028.md"
+  ],
+  "unchanged_monitored_files": 212,
+  "scanner_original_outputs_bit_exact_windows": 1092,
+  "diagnostic_test_groups": 19,
+  "diagnostic_test_windows": 29,
+  "additional_scanner_clocks": 120,
+  "scanner_count_unchanged": 816,
+  "coupled_engine_rows": 1152,
+  "coupled_engine_windows": 3,
+  "accelerated_row_period": 12000,
+  "coupled_scanner_max_clocks": {
+    "baseline": 7127,
+    "diagnostics": 7247
+  },
+  "state_write_overlap_in_schedule_test": false,
+  "serial_pin_decoded_rounds": 3,
+  "uart_fields": 31,
+  "uart_lines": 7,
+  "uart_bytes": 441,
+  "scanner_shared_multiplier_expressions": 1,
+  "scanner_eram_instances": 1,
+  "same_window_CDC_mappings_verified": true,
+  "common_motion_disabled": true,
+  "generator_reproducible": true,
+  "TD_compilation_started": false,
+  "flashing_started": false,
+  "Gitee_push": false,
+  "limitations": "Behavioral RTL tests and static/preprocessor checks only. Physical resource mapping, timing, camera/LK/CDC and board behaviour require user TD and board tests.",
+  "sha256": {
+    "README.md": "7c373b9b2293de7c07db662f922b88318a740fe27a7a57279f54f2abae16681a",
+    "tools/gen_uart_log2.py": "d68c8b04bcf245d6c64c28d312a84d716a9b3e990c2cdff47b7a6554a6e9b945",
+    "user_source/hdl_source/design_top_wrapper.v": "9df5b589c637d022403174807b01e3e4de667a0aaf49d762de6352f1ade2f65d",
+    "user_source/hdl_source/uart_log_debug.v": "87639acfbf9b9b3424acee34d063c5d2e9d5b6886654e9260bb4448d1baacc66",
+    "user_source/hdl_source/vibration/vib_gz_peak.v": "ec2d4286e0988b89ce55fbb14800aa54306ab0b5edc4eed021ad18db3e3d8758",
+    "CANDIDATE_DIAG_20261028.md": "3401c90d6c57bcfd7d3f0944c097cc8b11141befc4fb08259cf7063fe469119b"
+  }
+}
