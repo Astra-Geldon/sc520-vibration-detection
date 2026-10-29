@@ -10,14 +10,20 @@
 // 2026-10-28: change confirmation only. Two matched windows both >=512
 // confirm at the existing speed; all other qualified tracks need three.
 // A single strong window cannot publish or lend strength to another slot.
-// 2026-10-28 RVER00020007: read-only candidate diagnostics. Rescan only
+// 2026-10-29 RVER00020009: widen state addresses to11bits and independently
+// confirm a changed frequency in an already published, continuously matched
+// slot. First changed-bin window is pending; a second identical bin publishes.
+// No stale frequency is held during pending. Original acquisition/selection,
+// thresholds and64-frame configuration remain unchanged.
+// 2026-10-29 RVER0002000A extends active scan to27 bins,2..15Hz.
+// RVER00020007 added read-only candidate diagnostics. Rescan only
 // the global raw strongest block with the SAME multiplier to find the best
 // non-neighbour bin. No diagnostic value feeds admission, picking or tracking.
 // Included by design_top_wrapper.v; do not also register this file in .al.
 `ifndef VIB_GZ_PEAK_V
 `define VIB_GZ_PEAK_V
 module vib_gz_peak #(
-    parameter NBIN=17, parameter NB=48, parameter BIN_MIN=0,
+    parameter NBIN=27, parameter NB=48, parameter BIN_MIN=0,
     parameter integer TONE_RATIO=0,
     parameter integer COMMON_MOTION_ON=0
 )(
@@ -27,7 +33,7 @@ module vib_gz_peak #(
     input wire [39:0] i_axx_exp,
     input wire i_tick,
     input wire [2:0] i_row,
-    output reg [9:0] st_addr,
+    output reg [10:0] st_addr,
     input wire [63:0] st_data,
     output reg busy, done,
     output reg [5:0] o_ntonal, // raw peak>64, before spectral prominence
@@ -71,7 +77,13 @@ module vib_gz_peak #(
             10:coef_of=16'sd24216; 11:coef_of=16'sd23017;
             12:coef_of=16'sd21754; 13:coef_of=16'sd20431;
             14:coef_of=16'sd19050; 15:coef_of=16'sd17616;
-            default:coef_of=16'sd16134;
+            16:coef_of=16'sd16134; 17:coef_of=16'sd14606;
+            18:coef_of=16'sd13038; 19:coef_of=16'sd11433;
+            20:coef_of=16'sd9796;
+            21:coef_of=16'sd8132; 22:coef_of=16'sd6446;
+            23:coef_of=16'sd4741; 24:coef_of=16'sd3023;
+            25:coef_of=16'sd1297; 26:coef_of=-16'sd433;
+            default:coef_of=16'sd0;
             endcase
         end
     endfunction
@@ -112,7 +124,7 @@ module vib_gz_peak #(
     reg window_veto;
     reg [5:0] blk,scan_blk;
     reg [4:0] bin;
-    reg [9:0] base;
+    reg [10:0] base;
     reg [31:0] scan_count;
     reg signed [15:0] coef;
     reg signed [63:0] cs1,cs12,sq1,energy;
@@ -163,13 +175,28 @@ module vib_gz_peak #(
     reg [31:0] qual_best_mag;
     reg [4:0] qual_best_bin;
     // The engine clears s1/s2 only after done. Re-reading one finalized block
-    // avoids a17-bin energy register bank and any additional DSP/ERAM.
+    // avoids a full-bin energy register bank and any additional DSP/ERAM.
     reg [58:0] second_peak;
     reg [4:0] second_bin;
-    wire [9:0] diag_base={global_blk,4'b0000}+{4'd0,global_blk}; // block*17
+    // NBIN is an elaboration-time constant. Unrolled constant shifts/adds
+    // support the reserved larger state space without a new DSP multiplier.
+    function [10:0] block_base;
+        input [5:0] b;
+        integer k;
+        reg [10:0] b_ext;
+        begin
+            b_ext={5'd0,b};
+            block_base=11'd0;
+            for(k=0;k<6;k=k+1)
+                if((NBIN & (1<<k))!=0)
+                    block_base=block_base+(b_ext<<k);
+        end
+    endfunction
+    wire [10:0] diag_base=block_base(global_blk);
     reg [3:0] qual_selected_mask,qual_confirmed_mask,qual_near_mask,occupied_mask;
     reg global_qualified;
-    reg [31:0] diag0,diag4,diag6,diag8;
+    reg [3:0] frequency_pending_mask;
+    reg [31:0] diag0,diag4,diag6,diag8,diag10;
     reg [31:0] global0,global4,global6,global8,global10;
     reg [4:0] aexp[0:47];
 
@@ -192,6 +219,10 @@ module vib_gz_peak #(
     reg [4:0] prev_bin[0:3],next_bin[0:3];
     reg [2:0] prev_streak[0:3],next_streak[0:3];
     reg prev_strong[0:3]; // strength of this slot's previous matched window
+    reg next_matched[0:3]; // selected in the old-slot matching pass
+    reg frequency_valid[0:3];
+    reg [4:0] accepted_bin[0:3],pending_bin[0:3];
+    reg pending_valid[0:3];
     reg [31:0] next_mag[0:3];
     reg match_phase;
     reg [1:0] slot;
@@ -222,6 +253,13 @@ module vib_gz_peak #(
     wire current_strong=(next_mag[slot]>=STRONG_MIN);
     wire slot_confirmed=(next_streak[slot]>=3'd3)||
         ((next_streak[slot]>=3'd2)&&prev_strong[slot]&&current_strong);
+    // The track streak still belongs to the original position/bin matching.
+    // Frequency evidence is independent once a slot has been published.
+    wire matched_frequency=next_matched[slot]&&frequency_valid[slot];
+    wire accepted_frequency=(next_bin[slot]==accepted_bin[slot]);
+    wire repeated_frequency=pending_valid[slot]&&(next_bin[slot]==pending_bin[slot]);
+    wire frequency_ready=!matched_frequency||accepted_frequency||repeated_frequency;
+    wire publish_confirmed=slot_confirmed&&frequency_ready;
     wire [10:0] grid_x={8'd0,first_blk[2:0]}*11'd160;
     wire [10:0] grid_y={8'd0,first_blk[5:3]}*11'd120;
     integer j;
@@ -238,8 +276,8 @@ module vib_gz_peak #(
             second_peak<=0; second_bin<=0;
             qual_selected_mask<=0; qual_confirmed_mask<=0; qual_near_mask<=0; occupied_mask<=0;
             o_dbg_qual_hz10<=0; o_dbg_qual_mag<=0; o_dbg_qual_status<=0;
-            o_dbg_second_hz10<=0; o_dbg_second_mag<=0;
-            diag0<=0; diag4<=0; diag6<=0; diag8<=0;
+            o_dbg_second_hz10<=0; o_dbg_second_mag<=0; frequency_pending_mask<=0;
+            diag0<=0; diag4<=0; diag6<=0; diag8<=0; diag10<=0;
             global0<=0; global4<=0; global6<=0; global8<=0; global10<=0;
             result_in<=0; result_addr<=0;
             slot<=0; match_phase<=1; pick_mag<=0; pick_blk<=63; pick_bin<=0; pick_exact<=0;
@@ -255,7 +293,9 @@ module vib_gz_peak #(
             o_dbg_streak<=0; o_dbg_aexp<=0; o_confirmed<=0;
             for(j=0;j<4;j=j+1) begin
                 prev_blk[j]<=63; prev_bin[j]<=0; prev_streak[j]<=0;
-                prev_strong[j]<=0;
+                prev_strong[j]<=0; next_matched[j]<=0;
+                frequency_valid[j]<=0; accepted_bin[j]<=0;
+                pending_bin[j]<=0; pending_valid[j]<=0;
                 next_blk[j]<=63; next_bin[j]<=0; next_streak[j]<=0; next_mag[j]<=0;
             end
             for(j=0;j<48;j=j+1) aexp[j]<=0;
@@ -282,8 +322,10 @@ module vib_gz_peak #(
                 second_peak<=0; second_bin<=0;
                 qual_selected_mask<=0; qual_confirmed_mask<=0; qual_near_mask<=0; occupied_mask<=0;
                 global0<=0; global4<=0; global6<=0; global8<=0; global10<=0;
+                frequency_pending_mask<=0;
                 for(j=0;j<4;j=j+1) begin
                     next_blk[j]<=63; next_bin[j]<=0; next_streak[j]<=0; next_mag[j]<=0;
+                    next_matched[j]<=0;
                 end
                 state<=RD;
             end
@@ -297,6 +339,7 @@ module vib_gz_peak #(
                 if(bin==4) diag4<=mag32;
                 if(bin==8) diag6<=mag32;
                 if(bin==12) diag8<=mag32;
+                if(bin==16) diag10<=mag32;
                 if(peak_hit) begin block_peak<=mag; block_bin<=bin; end
                 if(bin>=BIN_MIN) block_sum<=(bin==BIN_MIN)?{8'd0,mag32}:final_sum;
                 if(bin==NBIN-1) begin
@@ -313,7 +356,7 @@ module vib_gz_peak #(
                         global_peak<=final_peak; global_blk<=blk; global_bin<=final_bin;
                         global_qualified<=qualified;
                         global0<=diag0; global4<=diag4; global6<=diag6;
-                        global8<=diag8; global10<=mag32;
+                        global8<=diag8; global10<=(bin==16)?mag32:diag10;
                     end
                 end
                 scan_count<=scan_count+32'd1;
@@ -323,7 +366,7 @@ module vib_gz_peak #(
             NEXT: begin
                 if(bin<NBIN-1) begin
                     bin<=bin+5'd1; coef<=coef_of(bin+5'd1);
-                    st_addr<=base+{5'd0,bin}+10'd1; state<=RD;
+                    st_addr<=base+{6'd0,bin}+11'd1; state<=RD;
                 end else if(blk<NB-1) begin
                     blk<=blk+6'd1; bin<=0; base<=base+NBIN; st_addr<=base+NBIN;
                     coef<=coef_of(0); block_peak<=0; block_bin<=0; block_sum<=0; state<=RD;
@@ -351,7 +394,7 @@ module vib_gz_peak #(
             DIAG_NEXT: begin
                 if(bin<NBIN-1) begin
                     bin<=bin+5'd1; coef<=coef_of(bin+5'd1);
-                    st_addr<=diag_base+{5'd0,bin}+10'd1; state<=DIAG_RD;
+                    st_addr<=diag_base+{6'd0,bin}+11'd1; state<=DIAG_RD;
                 end else begin slot<=0; match_phase<=1; state<=PASS; end
             end
             PASS: begin
@@ -374,6 +417,7 @@ module vib_gz_peak #(
             PICK: begin
                 if(pick_blk!=63) begin
                     next_blk[slot]<=pick_blk; next_bin[slot]<=pick_bin; next_mag[slot]<=pick_mag;
+                    next_matched[slot]<=match_phase;
                     next_streak[slot]<=match_phase ?
                         ((prev_streak[slot]==7)?3'd7:prev_streak[slot]+3'd1) :3'd1;
                 end
@@ -391,16 +435,35 @@ module vib_gz_peak #(
                         if(pos_near(next_blk[slot],qual_best_blk)) qual_near_mask[slot]<=1'b1;
                         if(next_blk[slot]==qual_best_blk) begin
                             qual_selected_mask[slot]<=1'b1;
-                            if(slot_confirmed) qual_confirmed_mask[slot]<=1'b1;
+                            if(publish_confirmed) qual_confirmed_mask[slot]<=1'b1;
                         end
                     end
+                end
+                // Frequency anchor/evidence belongs only to this continuously
+                // matched identity. Empty/vetoed tracks and new fills cannot
+                // inherit a prior occupant's accepted frequency or pending bin.
+                if(next_streak[slot]==0) begin
+                    frequency_valid[slot]<=0; pending_valid[slot]<=0;
+                    accepted_bin[slot]<=0; pending_bin[slot]<=0;
+                end else if(!matched_frequency) begin
+                    frequency_valid[slot]<=slot_confirmed;
+                    accepted_bin[slot]<=next_bin[slot];
+                    pending_valid[slot]<=0; pending_bin[slot]<=0;
+                end else if(accepted_frequency) begin
+                    pending_valid[slot]<=0; pending_bin[slot]<=0;
+                end else if(repeated_frequency) begin
+                    accepted_bin[slot]<=next_bin[slot];
+                    pending_valid[slot]<=0; pending_bin[slot]<=0;
+                end else begin
+                    pending_valid[slot]<=1; pending_bin[slot]<=next_bin[slot];
+                    frequency_pending_mask[slot]<=1'b1;
                 end
                 // Four slots emit independently; no energy-rank master gate.
                 prev_blk[slot]<=next_blk[slot]; prev_bin[slot]<=next_bin[slot];
                 prev_streak[slot]<=next_streak[slot];
                 prev_strong[slot]<=(next_streak[slot]!=0)&&current_strong;
                 emit_streak[slot*3+:3]<=next_streak[slot];
-                if(slot_confirmed) begin
+                if(publish_confirmed) begin
                     emit_pos[slot*8+:8]<={1'b0,1'b1,next_blk[slot]};
                     emit_hz[slot*8+:8]<=hz_of(next_bin[slot]);
                     emit_mag[slot*32+:32]<=next_mag[slot];
@@ -425,8 +488,9 @@ module vib_gz_peak #(
                 o_dbg_qual_mag<=qual_best_mag;
                 // [0]qualified exists; [1]PBLK qualified; [7:4]selected;
                 // [11:8]confirmed; [15:12]near same-bin representative;
-                // [19:16]occupied slots; [20]window veto. Slot1 is mask bit0.
-                o_dbg_qual_status<={11'd0,window_veto,occupied_mask,qual_near_mask,
+                // [19:16]occupied; [20]window veto; [24:21]frequency pending.
+                // Each four-bit mask uses slot1 as its lowest bit.
+                o_dbg_qual_status<={7'd0,frequency_pending_mask,window_veto,occupied_mask,qual_near_mask,
                                    qual_confirmed_mask,qual_selected_mask,2'd0,
                                    global_qualified,(qual_best_blk!=63)};
                 o_dbg_second_hz10<=(second_peak!=0)?hz_of(second_bin):8'd0;

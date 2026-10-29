@@ -102,7 +102,7 @@ module vib_osd_marker (
     end
 
     // BCD glyph codes: 0..9 digits, 10 '.', 11 H, 12 z, 15 space.
-    // Explicit 17-point mapping avoids /10, %10 and extra DSPs.
+    // Explicit27-point mapping avoids /10, %10 and extra DSPs.
     function [11:0] hz_digits;
         input [7:0] value;
         begin
@@ -115,7 +115,12 @@ module vib_osd_marker (
             70:hz_digits=12'hF70; 75:hz_digits=12'hF75;
             80:hz_digits=12'hF80; 85:hz_digits=12'hF85;
             90:hz_digits=12'hF90; 95:hz_digits=12'hF95;
-            100:hz_digits=12'h100;
+            100:hz_digits=12'h100; 105:hz_digits=12'h105;
+            110:hz_digits=12'h110; 115:hz_digits=12'h115;
+            120:hz_digits=12'h120;
+            125:hz_digits=12'h125; 130:hz_digits=12'h130;
+            135:hz_digits=12'h135; 140:hz_digits=12'h140;
+            145:hz_digits=12'h145; 150:hz_digits=12'h150;
             default:hz_digits=12'hFFF;
             endcase
         end

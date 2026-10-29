@@ -23,7 +23,7 @@
 // 振动频率识别（17 频点 Goertzel，128 帧窗口）。同样**不要**登记进 .al。
 `include "vibration/vib_goertzel.v"
 
-// Shared 48-block, 17-bin vibration chain. Each module is included once.
+// Shared 48-block, 27-bin vibration chain. Each module is included once.
 // Four-reference consistency experiment retained, disabled for board A/B.
 // Enable this BEFORE the includes only when deliberately retesting it.
 //`define VIB_COMMON_MOTION_ON
@@ -341,7 +341,7 @@ module design_top_wrapper (
     reg  [31:0] S_obj_pos_p2, S_obj_hz_p2;
     (* ASYNC_REG = "TRUE" *) reg [1:0] S_obj_tgl_p;
     reg S_obj_tgl_d;
-    // 阶段 0：48x17 存储自检
+    // 阶段 0：48x17 存储自检（旧对照支路，活动27点链路不使用）
     wire [31:0] S_gzcrc_w, S_gzcrc_r;
     wire        S_gzcrc_ok;
     wire        S_gzstore_busy, S_gzstore_done;
@@ -391,7 +391,7 @@ module design_top_wrapper (
     wire [4:0]         S_mb_bin;
     wire [31:0]        S_mb_rate, S_mb_ticks, S_mb_clrcnt;
     wire [4:0]         S_mb_agc_ref;
-    wire [9:0]         S_pk_addr;
+    wire [10:0]        S_pk_addr;
     wire [63:0]        S_pk_data;
     wire               S_pk_done, S_pk_busy;
     wire               S_pk_trig;
@@ -1724,7 +1724,7 @@ isp_top u_isp_top (
     //          与 Python 对比：axx_hw = 4*axx_py，bx_hw = 2*bx_py，en 相同
     // =================================================================
 `ifdef VIB_STAGE2_LK_ON
-    // Enhanced 8x6 grid snapshots feed the shared 17-bin Goertzel engine.
+    // Enhanced 8x6 grid snapshots feed the shared27-bin,2..15Hz engine.
     // 旧单块 LK 仍由 VIB_ON 控制，两个模块不会同时驱动同一信号。
     (* keep_hierarchy = "yes" *) vib_lk_grid_multi u_vib_lk_grid_multi (
         .clk            ( S_ddr_clk              ),
@@ -1780,7 +1780,7 @@ isp_top u_isp_top (
 `ifdef VIB_STAGE2_GZ_ON
 `ifndef VIB_LEGACY_GZ_ON
     vib_gz_multi #(
-        .NFRM(64), .NBIN(17), .NROW(6), .NCOL(8)
+        .NFRM(64), .NBIN(27), .NROW(6), .NCOL(8)
     ) u_vib_gz_multi (
         .clk        ( S_ddr_clk       ),
         .rst_n      ( S_rst_n         ),
@@ -1803,7 +1803,7 @@ isp_top u_isp_top (
         .pk_b_data  ( S_pk_data       )
     );
 
-    // 17 个频点覆盖 2.0~10.0Hz，步进 0.5Hz。
+    // 27 个频点覆盖 2.0~15.0Hz，步进 0.5Hz，64帧窗口。
     // TONE_RATIO=0 采用旧工程 raw 峰值突出度；四目标按位置/频率独立确认。
     // Four-reference 2D coherence is evaluated before row5 arrives. The
     // window collector binds even frame64 to this exact Goertzel window.
@@ -1827,7 +1827,7 @@ isp_top u_isp_top (
     assign S_motion_veto=1'b0;
     assign S_motion_info=32'd0;
 `endif
-    vib_gz_peak #(.NBIN(17), .NB(48), .BIN_MIN(0), .TONE_RATIO(0),
+    vib_gz_peak #(.NBIN(27), .NB(48), .BIN_MIN(0), .TONE_RATIO(0),
 `ifdef VIB_COMMON_MOTION_ON
                   .COMMON_MOTION_ON(1)
 `else

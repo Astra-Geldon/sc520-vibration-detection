@@ -16,7 +16,7 @@ OUT = Path(__file__).resolve().parents[1] / 'user_source/hdl_source/uart_log_deb
 # All values, including SEC, are sampled once when the round starts.
 FIELD_GROUPS = [
     # Round identity and source errors.
-    [('SEC ', 'run_sec'), ('WINC', 'mb_win'), ('RVER', "32'h0002_0007"),
+    [('SEC ', 'run_sec'), ('WINC', 'mb_win'), ('RVER', "32'h0002_000A"),
      ('VTAP', 'tap_ovf'), ('ITER', 'it_err')],
     # Raw, qualified, confirmed counts; consecutive counts; grid positions.
     [('ACT ', 'mb_active'), ('QACT', 'qact'), ('CNFM', 'confirmed'),
@@ -36,7 +36,7 @@ FIELD_GROUPS = [
     # Strongest qualified candidate and its same-window selection masks.
     [('QBLK', 'chal_blk'), ('QHZ ', 'diag_qual_hz'),
      ('QMAG', 'diag_qual_mag'), ('QSTA', 'diag_qual_status')],
-    # Window/frame/state health, including all 48 * 17 states.
+    # Window/frame/state health, including all48 *27 states.
     [('MBFR', 'mb_frm'), ('CLRC', 'mb_clr'),
      ('SCNC', 'mb_scan'), ('WPRD', 'wprd')],
 ]
@@ -68,12 +68,20 @@ TEMPLATE = r"""//===============================================================
 // QSTA: bit0 qualified candidate exists; bit1 raw PBLK is qualified;
 // [7:4] exact candidate selected mask; [11:8] exact CONFIRMED mask;
 // [15:12] same-bin nearby representative mask; [19:16] occupied slots;
-// bit20 window veto; all other bits zero. Mask bit0 is slot1.
+// bit20 window veto; [24:21] frequency-change pending; other bits zero.
+// In each four-bit mask, bit0 is slot1.
 // Selected/occupied includes pending slots, so selection is not confirmation.
-// RVER=00020007 adds read-only diagnostics to the disabled-common-motion
-// 00020006 baseline. No thresholds, selection or confirmation rules change.
-// Two matched windows both >=512 confirm; otherwise three qualified
-// matched windows are required. Strength is per slot, not global PKMG.
+// RVER=00020009 added independent two-window frequency-change confirmation
+// for published matched targets, and11-bit/2048 state capacity.
+// RVER=0002000A extends the active chain to27 bins,2.0..15.0Hz in
+// 0.5Hz steps;64-frame windows and existing thresholds/confirmation remain.
+// CLRC/SCNC are1296 (0x510); maximum Hz10 is150 (0x96).
+// Read-only diagnostics from00020007 remain; common motion stays disabled.
+// First acquisition: two matched windows both >=512 confirm; otherwise
+// three qualified matched windows. A changed bin in a confirmed matched
+// slot additionally needs two identical new-bin windows. Pending slots
+// publish zero position/frequency/magnitude, without holding stale values.
+// Strength is per slot, not global PKMG; STK0 remains the track streak.
 // Candidate admission and the 64-frame window remain unchanged.
 //
 // Disabled fields are listed beside the snapshot assignments below;
@@ -111,7 +119,7 @@ module uart_log_debug #(
     input wire [31:0] mb_agc_ref, // AGC参考对数
     input wire [31:0] mb_best_blk, // 本窗口全局原始峰值块，块号=row乘8加col
     input wire [31:0] mb_streak, // 四个独立目标槽连续匹配窗口数，每槽3bit
-    input wire [31:0] mb_clr, // 状态清零写次数，应为816即0x330
+    input wire [31:0] mb_clr, // 状态清零写次数，应为1296即0x510
     input wire [31:0] mb_mag, // 本窗口全局原始峰值raw>>8，与PBLK对应
     input wire [31:0] fx_bx, // LK诊断固定块bx
     input wire [31:0] fx_en, // LK诊断固定块能量
@@ -134,7 +142,7 @@ module uart_log_debug #(
     input wire [31:0] it_err, // 上一帧缓存异常计数，应为0
     input wire [31:0] mb_scan, // 刚完成窗口的频点扫描计数
     input wire [31:0] mb_win, // 已完成窗口数，8bit回绕
-    input wire [31:0] raw_bin, // 本窗口PBLK的原始峰值bin，0到16
+    input wire [31:0] raw_bin, // 本窗口PBLK的原始峰值bin，0到26
     input wire [31:0] raw_hz, // 本窗口原始峰值Hz10，未合格也报告
     input wire [31:0] raw_aexp, // PBLK纹理指数，仅诊断
     input wire [31:0] confirmed, // 独立确认的目标数，0到4

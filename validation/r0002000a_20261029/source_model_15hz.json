@@ -1,0 +1,150 @@
+{
+  "range_hz": [
+    2.0,
+    15.0
+  ],
+  "step_hz": 0.5,
+  "bins": 27,
+  "state_words": 1296,
+  "window_frames": 64,
+  "coefficient_formula": "round(32768*cos(2*pi*f/59.5))",
+  "pure_cases": [
+    {
+      "frequency_hz": 2.0,
+      "bin": 0,
+      "hz10": 20
+    },
+    {
+      "frequency_hz": 2.5,
+      "bin": 1,
+      "hz10": 25
+    },
+    {
+      "frequency_hz": 3.0,
+      "bin": 2,
+      "hz10": 30
+    },
+    {
+      "frequency_hz": 3.5,
+      "bin": 3,
+      "hz10": 35
+    },
+    {
+      "frequency_hz": 4.0,
+      "bin": 4,
+      "hz10": 40
+    },
+    {
+      "frequency_hz": 4.5,
+      "bin": 5,
+      "hz10": 45
+    },
+    {
+      "frequency_hz": 5.0,
+      "bin": 6,
+      "hz10": 50
+    },
+    {
+      "frequency_hz": 5.5,
+      "bin": 7,
+      "hz10": 55
+    },
+    {
+      "frequency_hz": 6.0,
+      "bin": 8,
+      "hz10": 60
+    },
+    {
+      "frequency_hz": 6.5,
+      "bin": 9,
+      "hz10": 65
+    },
+    {
+      "frequency_hz": 7.0,
+      "bin": 10,
+      "hz10": 70
+    },
+    {
+      "frequency_hz": 7.5,
+      "bin": 11,
+      "hz10": 75
+    },
+    {
+      "frequency_hz": 8.0,
+      "bin": 12,
+      "hz10": 80
+    },
+    {
+      "frequency_hz": 8.5,
+      "bin": 13,
+      "hz10": 85
+    },
+    {
+      "frequency_hz": 9.0,
+      "bin": 14,
+      "hz10": 90
+    },
+    {
+      "frequency_hz": 9.5,
+      "bin": 15,
+      "hz10": 95
+    },
+    {
+      "frequency_hz": 10.0,
+      "bin": 16,
+      "hz10": 100
+    },
+    {
+      "frequency_hz": 10.5,
+      "bin": 17,
+      "hz10": 105
+    },
+    {
+      "frequency_hz": 11.0,
+      "bin": 18,
+      "hz10": 110
+    },
+    {
+      "frequency_hz": 11.5,
+      "bin": 19,
+      "hz10": 115
+    },
+    {
+      "frequency_hz": 12.0,
+      "bin": 20,
+      "hz10": 120
+    },
+    {
+      "frequency_hz": 12.5,
+      "bin": 21,
+      "hz10": 125
+    },
+    {
+      "frequency_hz": 13.0,
+      "bin": 22,
+      "hz10": 130
+    },
+    {
+      "frequency_hz": 13.5,
+      "bin": 23,
+      "hz10": 135
+    },
+    {
+      "frequency_hz": 14.0,
+      "bin": 24,
+      "hz10": 140
+    },
+    {
+      "frequency_hz": 14.5,
+      "bin": 25,
+      "hz10": 145
+    },
+    {
+      "frequency_hz": 15.0,
+      "bin": 26,
+      "hz10": 150
+    }
+  ],
+  "noisy_cases": 8,
+  "scope": "source checks and fixed-point model; no TD/timing/board result"
+}

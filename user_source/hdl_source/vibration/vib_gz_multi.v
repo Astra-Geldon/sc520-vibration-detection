@@ -1,19 +1,19 @@
-﻿//=============================================================================
+//=============================================================================
 //  vib_gz_multi.v  ——  48 块共享 Goertzel 引擎（含逐块高通）
 //
 //  架构：
 //    vib_lk_grid 每 60 行（一个块行）给出 8 个横向块的 bx 快照
-//    本引擎收到后逐块处理：先做一阶高通，再对 17 个频点递推
+//    本引擎收到后逐块处理：先做一阶高通，再对 27 个频点递推
 //
 //  两个存储阵列（都在 ERAM 里，不占 slice）：
-//    A. 频点状态  816 x 64 = {s1, s2}      地址 = 块号*17 + 频点
+//    A. 频点状态  1296 x 64 = {s1, s2}      地址 = 块号*27 + 频点
 //    B. 块状态     48 x 64 = {hp, x_prev}  地址 = 块号
 //       高通和 Goertzel 一样是每块独立的状态，不是每频点 —— 所以只要 48 份
 //
 //  时域预算（实测）：
-//    每块行：8 块 x (1 次高通 + 17 次递推) = 8 x 18 = 144 次
-//    每次约 4 拍 -> 576 拍；块行间隔 19,200 拍 -> 3%
-//    一帧 6 个块行 = 3,456 拍 / 1,240,000 -> 0.28%
+//    每块行：8 块 x (1 次高通 + 27 次递推) = 8 x 28 = 224 次
+//    27频点下每行216次递推；实际拍数/行间隔由回归和板测核对
+//    复用原乘法器；11位地址、2048深度ERAM，当前使用1296个状态
 //
 //  乘法器复用：整个引擎只有一个 c*s1（16x32，2 个 DSP）
 //              高通里的 63*hp 用移位减（hp<<6 - hp），不占 DSP
@@ -25,7 +25,7 @@
 
 module vib_gz_multi #(
     parameter NFRM = 64,           // 窗口帧数
-    parameter NBIN = 17,           // 2.0..10.0Hz，步进0.5Hz
+    parameter NBIN = 27,           // 2.0..15.0Hz，步进0.5Hz
     parameter NROW = 6,            // 块行数
     parameter NCOL = 8             // 每行块数
 )(
@@ -45,22 +45,22 @@ module vib_gz_multi #(
 
     // ---- 状态阵列 B 口读出（给 vib_gz_peak 峰值扫描器用）----
     //   引擎自己只用 A 口（读写），B 口专门让扫描器只读，两边不打架。
-    input  wire [9:0]    pk_b_addr,
+    input  wire [10:0]    pk_b_addr,
     output wire [63:0]   pk_b_data,
 
     // ---- 诊断 ----
     output reg  [5:0]    o_dbg_blk,    // 当前处理的绝对块号 0..47
     output reg  [4:0]    o_dbg_bin,    // 当前频点
-    output reg  [31:0]   o_dbg_rate,   // 上一帧递推次数（应 = 816）
+    output reg  [31:0]   o_dbg_rate,   // 上一帧递推次数（应 = 1296）
     output reg  [5:0]    o_dbg_rowcnt,  // 本帧已处理块行数 0..5,
     output reg  [31:0]   o_tick_cnt,    // 自由运行的块行结束计数（应约 357/秒）,
     input  wire          i_pk_done,     // 峰值扫描完成：收到后清空状态阵列,
-    output reg  [31:0] o_clr_cnt,    // 上次清空写了多少次（应 = 816）
+    output reg  [31:0] o_clr_cnt,    // 上次清空写了多少次（应 = 1296）
     output wire [4:0]  o_dbg_agc_ref // 当前 AGC 参考对数
 );
 
     localparam integer NB = NROW * NCOL;      // 48
-    localparam integer NADDR = NROW * NCOL * NBIN;   // 48*17 = 816（状态阵列有效深度）
+    localparam integer NADDR = NROW * NCOL * NBIN;   // 48*27 = 1296（状态阵列有效深度）
     localparam [7:0]   LAST_FRM = (NFRM - 1);
     localparam [13:0]  COEF_FRAC = 14'd14;
 
@@ -87,22 +87,33 @@ module vib_gz_multi #(
             5'd13: coef_of = 16'sd20431;   //  8.5
             5'd14: coef_of = 16'sd19050;   //  9.0
             5'd15: coef_of = 16'sd17616;   //  9.5
-            default: coef_of = 16'sd16134; // 10.0
+            5'd16: coef_of = 16'sd16134;   // 10.0
+            5'd17: coef_of = 16'sd14606;   // 10.5
+            5'd18: coef_of = 16'sd13038;   // 11.0
+            5'd19: coef_of = 16'sd11433;   // 11.5
+            5'd20: coef_of = 16'sd9796;    // 12.0
+            5'd21: coef_of = 16'sd8132;    // 12.5
+            5'd22: coef_of = 16'sd6446;    // 13.0
+            5'd23: coef_of = 16'sd4741;    // 13.5
+            5'd24: coef_of = 16'sd3023;    // 14.0
+            5'd25: coef_of = 16'sd1297;    // 14.5
+            5'd26: coef_of = -16'sd433;    // 15.0
+            default: coef_of = 16'sd0;
             endcase
         end
     endfunction
 
     //==================================================================
-    //  A. 频点状态 816 x 64 = {s1, s2}
+    //  A. 频点状态 1296 x 64 = {s1, s2}，物理容量2048字
     //==================================================================
     reg  [63:0] st_din;
-    reg  [9:0]  st_addr;
+    reg  [10:0]  st_addr;
     reg         st_we;
     wire [63:0] st_dout;
 
     vib_eram_dp #(
-        .W_A(64), .AW_A(10), .D_A(1024),
-        .W_B(64), .AW_B(10), .D_B(1024)
+        .W_A(64), .AW_A(11), .D_A(2048),
+        .W_B(64), .AW_B(11), .D_B(2048)
     ) u_state (
         .clk(clk), .rst_n(rst_n),
         .dia(st_din), .addra(st_addr), .wea(st_we), .doa(st_dout),
@@ -143,12 +154,12 @@ module vib_gz_multi #(
                      S_ST_C  = 4'd4,
                      S_NEXT  = 4'd5,
                      S_END   = 4'd6,
-                     S_CLR   = 4'd7,   // 清空 816 个 Goertzel 状态
+                     S_CLR   = 4'd7,   // 清空 1296 个 Goertzel 状态
                      S_CLR2  = 4'd8;   // 多待一拍，让最后一个地址真正写进去
 
     reg  [3:0]  gst;
     reg         clr_req;      // 需要清空状态阵列
-    reg  [9:0]  clr_idx;      // 清空指针 0..815
+    reg  [10:0]  clr_idx;      // 清空指针 0..1007
     reg  [31:0] clr_cnt;      // 本次清空实际写了多少次
     reg  [2:0]  col;
     reg  [4:0]  bin;
@@ -156,7 +167,7 @@ module vib_gz_multi #(
     reg  [5:0]  rowcnt;
     reg  [31:0] rec_cnt;
 
-    reg  [9:0]  blk_base;
+    reg  [10:0]  blk_base;
     reg  signed [31:0] vcur;
     reg  signed [31:0] xcur;
     reg  signed [15:0] ccur;
@@ -210,17 +221,20 @@ module vib_gz_multi #(
                                (s0_w < -33'sd1073741824) ? -32'sd1073741824 :
                                (s0_w >>> 0);   // part-select 无符号，先移位再截断
 
-    // ---- 行号 -> 基地址（行*136），用 case 避免乘法器 ----
-    function [9:0] row_base;
+    // Row stride is an elaboration-time constant:8*27=216 in this
+    // revision; the explicit17-bin comparison configuration remains valid.
+    // 2026-10-29:11-bit address capacity supports the active1296 states.
+    // These parameter expressions introduce no runtime multiplier.
+    function [10:0] row_base;
         input [2:0] r;
         begin
             case (r)
-            3'd0:    row_base = 10'd0;
-            3'd1:    row_base = 10'd136;
-            3'd2:    row_base = 10'd272;
-            3'd3:    row_base = 10'd408;
-            3'd4:    row_base = 10'd544;
-            default: row_base = 10'd680;
+            3'd0:    row_base = 11'd0;
+            3'd1:    row_base = NCOL*NBIN;
+            3'd2:    row_base = 2*NCOL*NBIN;
+            3'd3:    row_base = 3*NCOL*NBIN;
+            3'd4:    row_base = 4*NCOL*NBIN;
+            default: row_base = 5*NCOL*NBIN;
             endcase
         end
     endfunction
@@ -238,11 +252,11 @@ module vib_gz_multi #(
             fcnt      <= 8'd0;
             rowcnt    <= 6'd0;
             rec_cnt   <= 32'd0;
-            blk_base  <= 10'd0;
+            blk_base  <= 11'd0;
             vcur      <= 32'sd0;
             xcur      <= 32'sd0;
             ccur      <= 16'sd0;
-            st_addr   <= 10'd0;
+            st_addr   <= 11'd0;
             st_din    <= 64'd0;
             st_we     <= 1'b0;
             bs_addr   <= 6'd0;
@@ -257,7 +271,7 @@ module vib_gz_multi #(
             o_dbg_rowcnt <= 6'd0;
             o_tick_cnt   <= 32'd0;
             clr_req      <= 1'b0;
-            clr_idx      <= 10'd0;
+            clr_idx      <= 11'd0;
             clr_cnt      <= 32'd0;
             o_clr_cnt    <= 32'd0;
         end else begin
@@ -281,8 +295,8 @@ module vib_gz_multi #(
             S_IDLE: begin
                 o_busy <= 1'b0;
                 if (clr_req) begin
-                    clr_idx <= 10'd0;
-                    st_addr <= 10'd0;
+                    clr_idx <= 11'd0;
+                    st_addr <= 11'd0;
                     st_din  <= 64'd0;
                     gst     <= S_CLR;
                 end else if (snap_vld) begin
@@ -315,14 +329,14 @@ module vib_gz_multi #(
                 st_addr <= blk_base;
                 gst     <= S_ST_RD;
             end
-            // --- 17 个频点递推 ---
+            // --- 27 个频点递推 ---
             // ★ 2026-10-23 修（ERAM 读延迟 = 1 拍）：
             //   "本拍给出的地址，下一拍数据才有效" —— vib_eram_probe.v 里已经实测过。
             //   原来在 S_ST_RD 这一拍才赋值 st_addr，而 RAM 在时钟沿采的是沿前的值，
             //   于是这一拍采到的仍是上一个 bin 的地址，S_ST_C 拿到的是 A(bin-1) 的状态：
             //   每个 bin 都读取自己的状态，不能把频点串成级联链。
             //   现在地址在 S_NEXT 里预取（bin 0 由 S_HP_C 预置），本状态只做等待拍，
-                //   当前 2.0..10.0Hz 共 17 个频点，MBRT 应为 816。
+                //   当前 2.0..15.0Hz 共 27 个频点，MBRT 应为 1296。
             S_ST_RD: begin
                 gst     <= S_ST_C;
             end
@@ -340,7 +354,7 @@ module vib_gz_multi #(
                     ccur    <= coef_of(bin + 5'd1);
                     // ★ 预取下一个 bin 的地址：这一拍 st_addr 仍是当前 bin，所以 S_ST_C 期间
                     //   提交的写入落在当前 bin；行尾才切到 bin+1，正好在 S_ST_RD 呈现给 RAM。
-                    st_addr <= blk_base + {5'd0, bin} + 10'd1;
+                    st_addr <= blk_base + {6'd0, bin} + 11'd1;
                     gst     <= S_ST_RD;
                 end else if (col != (NCOL - 1)) begin
                     col      <= col + 3'd1;
@@ -361,15 +375,15 @@ module vib_gz_multi #(
                 st_we   <= 1'b1;
                 if (clr_idx == (NADDR - 1)) begin
                     clr_req <= 1'b0;
-                    // ★ 不能在这里清 st_we：这一拍 RAM 才刚采到 addr=815，
+                    // ★ 不能在这里清 st_we：这一拍 RAM 才刚采到 addr=1007，
                     //   同一拍把 we 清 0 会让最后一个地址永远写不进去。
                     gst     <= S_CLR2;
                 end else begin
-                    clr_idx <= clr_idx + 10'd1;
+                    clr_idx <= clr_idx + 11'd1;
                 end
             end
             S_CLR2: begin
-                // 本拍 addr 已经是 815、we 还是 1，写真正落盘；下一拍才撤 we
+                // 本拍 addr 已经是 1007、we 还是 1，写真正落盘；下一拍才撤 we
                 st_we     <= 1'b0;
                 o_clr_cnt <= clr_cnt;
                 clr_cnt   <= 32'd0;
@@ -380,7 +394,7 @@ module vib_gz_multi #(
                     agc_ref       <= agc_frame_max;
                     agc_frame_max <= 5'd18;
                     rowcnt       <= 6'd0;
-                    o_dbg_rate   <= rec_cnt;      // 不再额外 +136
+                    o_dbg_rate   <= rec_cnt;      // 已包含本行最后一个频点
                     rec_cnt      <= 32'd0;
                     o_dbg_rowcnt <= 6'd0;
                     if (fcnt == LAST_FRM) begin
