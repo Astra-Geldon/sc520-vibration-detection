@@ -71,7 +71,8 @@ end
 //	Use button to add / sub idelay values. I_button[0]:IncDatDly, [1]DecDatDly, [2]IncI_clkDly, [3]DecI_clkDly
 reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0; 
 // 原厂720p60模式VTS=1000，曝光以半行计，最大值为2*VTS-9=1991。
-// 2026-10-24：曝光 1991 -> 1600（降 20%）。
+// 2026-10-30 阶段1候选：曝光 1991 -> 1600（降约 20%）。
+//   该值只改变传感器曝光寄存器默认值；AWB、shading、视频时序和按键调节逻辑保持原样。
 //   ★ 为什么改曝光而不是改增益
 //     实测把 r_ag_set 从 160 改到 151，亮度 137.3 -> 136.9（几乎没变），
 //     SC520GainTbl 里 151/160 对应 0x3e07 = 0x9C/0xC0（数字 fine gain），
@@ -95,12 +96,12 @@ reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0;
 //           统计样本 95%+ 的帧 白墙G/R=0.986（中性）。
 //   151 约让平均亮度回到 121，此时绝大多数帧统计样本 >95%，白墙回到中性。
 //   同时高光过曝也减轻（用户反馈白色监控和墙面分不开）。
-reg 	[15:0] 	r_ae_set = 1991, r_ag_set = 160; 
+reg 	[15:0] 	r_ae_set = 1600, r_ag_set = 160; 
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_button_0 <= 0; 
 		r_button_1 <= 0; 
-		r_ae_set <= 1991; 
+		r_ae_set <= 1600; 
 		r_ag_set <= 160; 
 	end else begin
 	//	When button pressed, r_button_1 bit is 1. 
