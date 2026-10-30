@@ -17,7 +17,7 @@
 //      KEY1 (D5 / I_key[0]) → 视觉增强彩色画面
 //      KEY2 (A9 / I_key[1]) → 算法循环： 灰度 → 二值化 → 边缘 → 灰度 …
 //      KEY3 (B9 / I_key[2]) → 曝光候选档循环（0/1/2/3）
-//      KEY4 (C7 / I_key[3]) → 释放，无功能
+//      KEY4 (C7 / I_key[3]) → 高光分区：关闭/宽松/标准/严格
 //
 //  模式编码（3 bit，最多 8 种）
 //      0 = 原图
@@ -44,6 +44,7 @@ module img_mode_sel #(
     parameter integer CLK_HZ   = 74250000,  // = S_hdmi_pixel_clk
     parameter integer DB_MS    = 10,        // 去抖时间(ms)
     parameter integer EXP_RST  = 1,         // 上电曝光候选：1=1600
+    parameter integer REGION_RST = 1,       // 上电高光分区：宽松（只标记，不合成）
 
     // 兼容旧例化的保留参数，不再控制 KEY3；扩展算法需修改 KEY2 循环。
     parameter integer EXT_BASE = 4,         // 第一个扩展算法的模式码
@@ -55,6 +56,7 @@ module img_mode_sel #(
     output reg  [2:0] O_mode,       // 见上面"模式编码"
     output reg        O_src_raw,    // 二值化来源：1=原图，0=视觉增强视频
     output reg  [1:0] O_exp_sel,   // 曝光候选：0=1991, 1=1600, 2=1200, 3=900
+    output reg  [1:0] O_region_sel, // KEY4: 0=关闭,1=宽松,2=标准,3=严格
     output reg        O_th_lock,    // 二值阈值锁定请求，img_proc在下一VS提交
     output wire       O_k_step      // 非二值化模式的KEY4单次脉冲，供顶层调校正强度
 );
@@ -70,8 +72,7 @@ module img_mode_sel #(
 
     genvar gi;
     generate
-        // KEY4 释放，只对 KEY1~KEY3 做同步与去抖。
-        for (gi = 0; gi < 3; gi = gi + 1) begin : g_key
+        for (gi = 0; gi < 4; gi = gi + 1) begin : g_key
 
             // ---- 两级同步 ----
             reg [1:0] S_sync;
@@ -115,10 +116,13 @@ module img_mode_sel #(
         end
     endgenerate
 
-    assign S_press[3] = 1'b0;
-
-    // KEY4 已释放：不调整颜色校正，也不切换阈值锁定。
+    // KEY4 only changes the highlight classifier, not shading/threshold lock.
     assign O_k_step = 1'b0;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) O_region_sel <= REGION_RST;
+        else if (S_press[3]) O_region_sel <= O_region_sel + 1'b1;
+    end
 
     //==================================================================
     //  模式锁存：按一下就定住，不需要一直按住
@@ -148,7 +152,7 @@ module img_mode_sel #(
             O_exp_sel <= O_exp_sel + 1'b1;
         end
 
-        // KEY4 释放：O_th_lock 保持复位值 0。
+        // KEY4 classifier selection is handled independently above.
     end
 
 endmodule

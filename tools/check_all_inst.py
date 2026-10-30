@@ -47,7 +47,8 @@ def parse_module(text, name):
         pblock = rest[:j]
         pblock = re.sub(r"\b(input|output|inout)\b", "|", pblock)
         pblock = pblock.replace("(", " ").replace(")", " ")
-        pblock = pblock.replace("wire", " ").replace("reg", " ").replace("signed", " ")
+        # Strip type keywords, not substrings in names such as O_region_sel.
+        pblock = re.sub(r"\b(?:wire|reg|signed)\b", " ", pblock)
         pblock = re.sub(r"\[[^\]]*\]", " ", pblock)
         for chunk in pblock.split("|")[1:]:
             for nm in chunk.split(","):
@@ -66,7 +67,8 @@ def main():
     # 额外文件：用 `include 拉进来的（不在 .al 里，TD 看不到但会被编译）
     extra = [os.path.join(PROJ, "user_source", "hdl_source", "vib_prev_frame_ddr.v"),
              os.path.join(PROJ, "user_source", "hdl_source", "vib_gauss3x3.v"),
-             os.path.join(PROJ, "user_source", "hdl_source", "vib_lk_grid.v")]
+             os.path.join(PROJ, "user_source", "hdl_source", "vib_lk_grid.v"),
+             os.path.join(PROJ, "user_source", "hdl_source", "highlight_region.v")]
     # Included multi-block modules are not separate .al sources. Check their
     # real interfaces too, rather than silently skipping the newly active chain.
     extra.extend(os.path.join(PROJ, "user_source", "hdl_source", "vibration", name)
