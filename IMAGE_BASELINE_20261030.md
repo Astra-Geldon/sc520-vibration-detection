@@ -55,3 +55,10 @@ D:\FPGA\codex\_build\20261029project\stage0-baseline-20261030\opencv_capture\
 2. 当前九宫格存在明显的空间颜色/亮度差异，但必须用静止平场和同一人脸位置实验区分物体内容与镜头 shading；
 3. 当前 `Cr/Cb` 统计高于用户提供的平滑后参考，需要暗场和平场样本确认其中有多少来自场景纹理、采集卡和实际色度噪声；
 4. 阶段 0 尚未修改 RTL，也未改变 bitstream。
+
+## 源码审计结果
+
+- `user_source/hdl_source/uiisp_beta/ae_set.v` 的实际复位值仍为 `r_ae_set=1991`、`r_ag_set=160`。文件注释曾记录“曝光 1991 → 1600”的方案，但当前代码没有采用 1600。
+- `user_source/hdl_source/color_shading.v` 只按 X 方向查 10 列表并插值；Y 方向没有独立增益校正。当前表和缩放档位可以先重新标定，再决定是否需要二维表。
+- `user_source/hdl_source/awb.v` 当前使用亮度加权统计，排除 `R+G+B` 接近饱和的样本和部分肤色样本，R/B 增益限制为 0.5～2.0 倍，并用 `old+(new-old)/64` 做帧间平滑。
+- 这些审计只用于定位，不代表已经修改或验证了新的参数。
