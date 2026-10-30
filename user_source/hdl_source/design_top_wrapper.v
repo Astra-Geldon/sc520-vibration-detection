@@ -1308,7 +1308,7 @@ isp_top u_isp_top (
     osd_overlay #(
         .OSD_EN     ( 1    ),
         .TH_DEBUG_EN( 0    ),
-        .LOGO_EN    ( 0    ),
+        .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),
         .LOGO_W     ( 128  ),
