@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Project Version="3" Minor="2" Path="D:/workplace/anlogic/sc520-vibration-detection-fix-hdmi-tx-valid/td_project">
+<Project Version="3" Minor="2" Path="D:/FPGA/codex/20261029project/td_project">
     <Project_Created_Time></Project_Created_Time>
     <TD_Encoding>UTF-8</TD_Encoding>
     <TD_Version>6.2.168116</TD_Version>
@@ -11,6 +11,22 @@
     </HardWare>
     <Source_Files>
         <Verilog>
+            <File Path="../user_source/ip_source/MCU/MCU.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="0"/>
+                </FileInfo>
+            </File>
+            <File Path="../user_source/ip_source/MCU/MCU_f9f874759a41.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="1"/>
+                </FileInfo>
+            </File>
             <File Path="../user_source/hdl_source/design_top_wrapper.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
@@ -379,6 +395,7 @@
             </File>
             <File Path="../user_source/hdl_source/vib_gauss3x3.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
@@ -396,45 +413,42 @@
             </File>
             <File Path="../user_source/hdl_source/img_proc.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="64"/>
                 </FileInfo>
             </File>
+
             <File Path="../user_source/hdl_source/hdmi_sync_polarity.v">
                 <FileInfo>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="65"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/img_mode_sel.v">
-                <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="66"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/osd_overlay.v">
+            <File Path="../user_source/hdl_source/img_mode_sel.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="67"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/osd_font_rom.v">
+            <File Path="../user_source/hdl_source/osd_overlay.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="68"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/osd_logo_rom.v">
+            <File Path="../user_source/hdl_source/osd_font_rom.v">
                 <FileInfo>
                     <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
@@ -443,7 +457,7 @@
                     <Attr Name="CompileOrder" Val="69"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/awb_simple.v">
+            <File Path="../user_source/hdl_source/osd_logo_rom.v">
                 <FileInfo>
                     <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
@@ -452,20 +466,31 @@
                     <Attr Name="CompileOrder" Val="70"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/color_shading_lut.v">
+            <File Path="../user_source/hdl_source/awb_simple.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="71"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/color_shading.v">
+            <File Path="../user_source/hdl_source/color_shading_lut.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="72"/>
+                </FileInfo>
+            </File>
+            <File Path="../user_source/hdl_source/color_shading.v">
+                <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="73"/>
                 </FileInfo>
             </File>
         </Verilog>
@@ -582,7 +607,6 @@
             </File>
             <File Path="../user_source/ip_source/divider/divider.ipc">
                 <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
@@ -667,3 +691,4 @@
     <Project_Settings>
     </Project_Settings>
 </Project>
+

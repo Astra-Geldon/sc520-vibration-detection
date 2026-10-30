@@ -41,6 +41,12 @@ module MCU
   input                         uart0_rx,
   output                        uart1_tx,
   input                         uart1_rx,
+  input                         i2c_sda_in,
+  output                        i2c_sda_out,
+  output                        i2c_sda_sel,
+  input                         i2c_scl_in,
+  output                        i2c_scl_out,
+  output                        i2c_scl_sel,
   output                        qspi1_clk,
   output                        qspi1_ss,
   input                         qspi1_d0_in,
@@ -86,11 +92,14 @@ module MCU
 
   MCU_f9f874759a41
   #(
-      .MCU_JTAG_SEL("1"),
+      // PAD JTAG is the supported board configuration; the PIB TAP is
+      // intentionally disabled.  The generated wrapper still exposes the
+      // pins so the same source can be inspected in simulation.
+      .MCU_JTAG_SEL("0"),
       .MCU_RESET_VECTOR('h20E00000),
-      .AHB_FREQ("150.0"),
-      .QSPI_FREQ("50.0"),
-      .MCU_DPLL_POST_DIV(4)
+       .AHB_FREQ("50.0"),
+       .QSPI_FREQ("20.0"),
+       .MCU_DPLL_POST_DIV(5)
   )MCU_f9f874759a41_Inst
   (
       .jtag_tck(jtag_tck),
@@ -125,6 +134,12 @@ module MCU
       .uart0_rx(uart0_rx),
       .uart1_tx(uart1_tx),
       .uart1_rx(uart1_rx),
+      .i2c_sda_in(i2c_sda_in),
+      .i2c_sda_out(i2c_sda_out),
+      .i2c_sda_sel(i2c_sda_sel),
+      .i2c_scl_in(i2c_scl_in),
+      .i2c_scl_out(i2c_scl_out),
+      .i2c_scl_sel(i2c_scl_sel),
       .qspi1_clk(qspi1_clk),
       .qspi1_ss(qspi1_ss),
       .qspi1_d0_in(qspi1_d0_in),

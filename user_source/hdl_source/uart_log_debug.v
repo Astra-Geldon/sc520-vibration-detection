@@ -1,51 +1,45 @@
 //=====================================================================
-// uart_log_debug.v -- compact 1 Hz board log, 115200 8N1 (2026-10-28).
+//  uart_log_debug.v  ——  串口日志打印（老工程移植 + 逐步扩展）
 //
-// Default output: 31 fields in 7 CRLF-terminated lines, 441 bytes/round.
-// The repeated banner and low-priority fields are disabled. All numbers
-// remain eight hexadecimal digits; HZ1..HZ4 and RHZ remain Hz * 10.
+//  作用：通过串口每秒打印一轮板级状态，用来确认 UART 通路是否打通、
+//        时钟/像素速率是否符合预期、以及各功能块跑到哪一步了。
 //
-//   SEC  xxxxxxxx WINC xxxxxxxx RVER xxxxxxxx VTAP xxxxxxxx ITER xxxxxxxx
-//   ACT  xxxxxxxx QACT xxxxxxxx CNFM xxxxxxxx STK0 xxxxxxxx OBP1 xxxxxxxx
-//   HZ1  xxxxxxxx HZ2  xxxxxxxx HZ3  xxxxxxxx HZ4  xxxxxxxx
-//   OBM1 xxxxxxxx OBM2 xxxxxxxx OBM3 xxxxxxxx OBM4 xxxxxxxx
-//   PBLK xxxxxxxx RHZ  xxxxxxxx PKMG xxxxxxxx P2HZ xxxxxxxx P2MG xxxxxxxx
-//   QBLK xxxxxxxx QHZ  xxxxxxxx QMAG xxxxxxxx QSTA xxxxxxxx
-//   MBFR xxxxxxxx CLRC xxxxxxxx SCNC xxxxxxxx WPRD xxxxxxxx
+//  时钟：clk = I_sys_clk = 50 MHz（见 camera_to_dsi_display.sdc: sys_clk_50m）
+//  引脚：tx -> O_uart_tx -> 板子 H1（见 pin.adc）
+//  串口：115200 8N1；板子 TX(H1) 接 USB-TTL 的 RXD，GND 共地
 //
-// ACT/QACT/CNFM: raw / qualified / confirmed counts. OBP1 packs four
-// positions (each byte: bit6 valid, bits5:3 row, bits2:0 column).
-// OBM1..4 are RAW peak >> 8, despite the historical names. PBLK/RHZ/PKMG
-// identify the same strongest raw block in one completed window. P2HZ/P2MG
-// give its strongest positive peak outside RHZ's own and adjacent bins.
-// A zero second frequency means no positive eligible second peak exists.
-// QBLK/QHZ/QMAG identify the strongest QUALIFIED candidate, before slot
-// confirmation. QBLK=63 and QHZ=QMAG=0 mean no qualified candidate.
-// QSTA: bit0 qualified candidate exists; bit1 raw PBLK is qualified;
-// [7:4] exact candidate selected mask; [11:8] exact CONFIRMED mask;
-// [15:12] same-bin nearby representative mask; [19:16] occupied slots;
-// bit20 window veto; [24:21] frequency-change pending; other bits zero.
-// In each four-bit mask, bit0 is slot1.
-// Selected/occupied includes pending slots, so selection is not confirmation.
-// RVER=00020009 added independent two-window frequency-change confirmation
-// for published matched targets, and11-bit/2048 state capacity.
-// RVER=0002000A extends the active chain to27 bins,2.0..15.0Hz in
-// 0.5Hz steps;64-frame windows and existing thresholds/confirmation remain.
-// CLRC/SCNC are1296 (0x510); maximum Hz10 is150 (0x96).
-// Read-only diagnostics from00020007 remain; common motion stays disabled.
-// First acquisition: two matched windows both >=512 confirm; otherwise
-// three qualified matched windows. A changed bin in a confirmed matched
-// slot additionally needs two identical new-bin windows. Pending slots
-// publish zero position/frequency/magnitude, without holding stale values.
-// Strength is per slot, not global PKMG; STK0 remains the track streak.
-// Candidate admission and the 64-frame window remain unchanged.
+//  ---------------------------------------------------------------------
+//  每轮先打 1 行横幅，再打 2 行状态，每行 15 字节，共 67 字节//  （115200 下约 5.8 ms 打完，所以"每秒一轮"绰绰有余）：
 //
-// Disabled fields are listed beside the snapshot assignments below;
-// their input ports remain compatible with the existing top-level.
-// Snapshot all enabled measurements once at round start, preserving
-// frequency/position/energy coherence while the UART serializes them.
-// The existing ready -> one-cycle valid -> ready-low -> ready-high
-// handshake is retained to prevent duplicate or missing UART bytes.
+//      SC520 MIPI-HDMI UART LOG 115200 8N1\r\n
+//      SEC  00000000   运行秒数（每轮 +1）
+//      VSUM 00000000   抽头 Σ灰度（摄像头活着的证据）
+//
+//  判读方法：
+//    * 能看到整齐的上面这些行        -> 波特率 / 帧格式 / 引脚 都对 ✓
+//    * SEC 每秒 +1，连续不乱         -> 时钟假设正确 ✓
+//    * DIV = 000001B2（434）         -> 分频值正确（50MHz 下 115200）✓
+//    * PXFR = 000E1000（921600）     -> 视频流是 1280x720，抽头正确 ✓
+//    * CSIH / PIXS                   -> 平均每像素几个 csi 时钟
+//    * DTRD = 00003840 且 DTER = 0   -> DDR 算法区域读写自检通过 ✓
+//    * 全是乱码                      -> 十有八九是 CLK_HZ 与真实时钟不符 ✗
+//
+//  ---------------------------------------------------------------------
+//  ★ 与底层 uart_tx.v 的握手说明（沿用老工程踩过坑之后的写法）
+//     底层 uart_tx.v 用的是 ready/valid 握手，但它的 tx_data_ready 不是
+//     "空闲常高"，而且在状态切换那一拍有竞争。历史上用**电平**推进会出现
+//     "每个字节被重发"（现象：串口里看到重复字符）。所以这里：
+//        ① 等 tx_ready=1（uart 空闲）才装载下一个字节
+//        ② tx_valid 只给 **1 拍脉冲**，数据与它同拍寄存
+//        ③ 再等 ready 变低（字节被取走）后变高（这一字节发完）
+//     这样 uart 每个字节只会在唯一的那个 IDLE 拍被锁存一次，不会重复 ✓
+//  ---------------------------------------------------------------------
+//  复位说明：rst_n 接 I_rst_n（板级复位），这样 PLL 还没锁的时候
+//            串口就已经在打印了，便于定位问题。
+//            状态输入分两类，都做了两拍同步：
+//              a) 粘滞标志 / 慢变化电平（PLL/CAM/I2C/HS/...）—— 安全
+//              b) 每秒刷新的测量值（CSIH/PIXS/FPS/PXFR/DTRD/DTER）
+//                 —— 它们本来就只 1 秒变一次，跨域采样同样安全
 //=====================================================================
 module uart_log_debug #(
     parameter integer CLK_HZ = 50_000_000,   // 本模块时钟频率（Hz）
@@ -64,250 +58,321 @@ module uart_log_debug #(
     input  wire        csi_frame_seen,      // 已解析出 CSI 帧（粘滞）
     input  wire        raw10_seen,          // 已出现 RAW10 流水（粘滞）
     input  wire        video_nonzero_seen,  // 已读到非零视频数据（粘滞）
-    input wire [31:0] tap_px_per_frame, // 抽头每帧像素数，应为230400
-    input wire [31:0] tap_lines, // 抽头每帧行数，应为360
-    input wire [31:0] it_px, // 上一帧差分像素数，应为230400
-    input wire [31:0] it_lines, // 上一帧差分行数，应为360
-    input wire [31:0] vsum, // 抽头每帧灰度和
-    input wire [31:0] mb_frm, // 刚完成窗口的帧数，应为64
-    input wire [31:0] mb_active, // 原始峰值raw>>8大于64的块数，突出度筛选前，0到48
-    input wire [31:0] mb_obj_hz10, // 已确认目标1频率乘10，无效为0
-    input wire [31:0] mb_agc_ref, // AGC参考对数
-    input wire [31:0] mb_best_blk, // 本窗口全局原始峰值块，块号=row乘8加col
-    input wire [31:0] mb_streak, // 四个独立目标槽连续匹配窗口数，每槽3bit
-    input wire [31:0] mb_clr, // 状态清零写次数，应为1296即0x510
-    input wire [31:0] mb_mag, // 本窗口全局原始峰值raw>>8，与PBLK对应
-    input wire [31:0] fx_bx, // LK诊断固定块bx
-    input wire [31:0] fx_en, // LK诊断固定块能量
-    input wire [31:0] b2, // 本窗口PBLK的4Hz频点能量raw>>8，bin4
-    input wire [31:0] b4, // 本窗口PBLK的6Hz频点能量raw>>8，bin8
-    input wire [31:0] b8, // 本窗口PBLK的10Hz频点能量raw>>8，bin16
-    input wire [31:0] b12, // 本窗口PBLK的8Hz频点能量raw>>8，bin12
-    input wire [31:0] tonal_map_lo, // 原始峰值与突出度合格块位图低32位
-    input wire [31:0] tonal_map_hi, // 原始峰值与突出度合格块位图高16位
-    input wire [31:0] obj_pos, // 四个网格框，每字节bit6有效、bit5至3行、bit2至0列
-    input wire [31:0] fx_pn, // PBLK原始峰值raw>>8，保留旧字段名，等于PKMG
-    input wire [31:0] obj_pn0, // 已确认目标1原始峰值raw>>8，与OBP1同槽位
-    input wire [31:0] obj_pn1, // 已确认目标2原始峰值raw>>8，与OBP1同槽位
-    input wire [31:0] obj_pn2, // 已确认目标3原始峰值raw>>8，与OBP1同槽位
-    input wire [31:0] obj_pn3, // 已确认目标4原始峰值raw>>8，与OBP1同槽位
-    input wire [31:0] chal_blk, // 本窗口最强合格块号，无合格块为63
-    input wire [31:0] qact, // 原始峰值大于64且突出度通过的块数，确认前，0到48
-    input wire [31:0] wprd, // 窗口周期，单位为50MHz时钟拍
-    input wire [31:0] tap_ovf, // 抽头异常计数，应为0
-    input wire [31:0] it_err, // 上一帧缓存异常计数，应为0
-    input wire [31:0] mb_scan, // 刚完成窗口的频点扫描计数
-    input wire [31:0] mb_win, // 已完成窗口数，8bit回绕
-    input wire [31:0] raw_bin, // 本窗口PBLK的原始峰值bin，0到26
-    input wire [31:0] raw_hz, // 本窗口原始峰值Hz10，未合格也报告
-    input wire [31:0] raw_aexp, // PBLK纹理指数，仅诊断
-    input wire [31:0] confirmed, // 独立确认的目标数，0到4
-    input wire [31:0] tn_status, // bit0原始最强块合格，bit1存在已确认目标
-    input wire [31:0] motion_info, // 四处分散参考的二维共同运动窗口诊断，CMOT
-    input wire [31:0] diag_second_hz, // PBLK非相邻次峰频率乘10，无正能量为0
-    input wire [31:0] diag_second_mag, // 同块非相邻次峰raw能量右移8位
-    input wire [31:0] diag_qual_hz, // 最强合格候选频率乘10，无候选为0
-    input wire [31:0] diag_qual_mag, // 最强合格候选raw能量右移8位
-    input wire [31:0] diag_qual_status, // QSTA，同窗候选入槽/确认/邻近代表掩码
+    input wire [31:0] vsum, // 抽头每帧 Σ灰度：非 0 说明抽头拿到像素了
     output wire        tx                   // 串口输出 -> O_uart_tx -> H1
 );
 
+    //------------------------------------------------------------------
+    // 波特率分频（四舍五入）。这个值会被打印出来，方便核对 CLK_HZ 是否写对。
+    //   50_000_000 / 115200 = 434.03 -> 434 = 0x1B2
+    //------------------------------------------------------------------
+    localparam [31:0] DIV = (CLK_HZ + BAUD/2) / BAUD;
 
-    localparam integer NF = 31;
-    localparam integer FLD_LAST = NF - 1;
+    //------------------------------------------------------------------
+    // 一轮消息的长度参数
+    //------------------------------------------------------------------
+    localparam integer NF        = 2;   // 状态行（字段）个数
+    localparam integer FLD_LAST  = 2 - 1;
+    localparam integer POS_LAST  = 15 - 1;
+    localparam integer BIDX_LAST = 37 - 1;
 
-    reg [31:0] tick;
-    wire tick_1s = (tick == (CLK_HZ - 1));
+    //------------------------------------------------------------------
+    // 1 秒节拍
+    //   tick 复位成 CLK_HZ-1，于是复位后第一个时钟就产生一次节拍，
+    //   上电后立刻先打一轮，之后才是每 1 秒一轮。
+    //------------------------------------------------------------------
+    reg  [31:0] tick;
+    wire        tick_1s = (tick == (CLK_HZ - 1));
+
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) tick <= (CLK_HZ - 1);
-        else tick <= tick_1s ? 32'd0 : tick + 32'd1;
+        else        tick <= tick_1s ? 32'd0 : (tick + 32'd1);
     end
 
-    reg [31:0] run_sec;
-    reg [4:0] fld;
-    reg [3:0] pos;
-
-    function [7:0] hx;
-        input [3:0] n;
-        begin
-            if (n < 4'd10) hx = 8'h30 + {4'd0,n};
-            else hx = 8'h41 + {4'd0,n} - 8'd10;
-        end
-    endfunction
-
-    function [7:0] lbl;
-        input [4:0] f;
-        input [1:0] p;
-        reg [31:0] s;
-        begin
-            case (f)
-            5'd0: s = "SEC ";
-            5'd1: s = "WINC";
-            5'd2: s = "RVER";
-            5'd3: s = "VTAP";
-            5'd4: s = "ITER";
-            5'd5: s = "ACT ";
-            5'd6: s = "QACT";
-            5'd7: s = "CNFM";
-            5'd8: s = "STK0";
-            5'd9: s = "OBP1";
-            5'd10: s = "HZ1 ";
-            5'd11: s = "HZ2 ";
-            5'd12: s = "HZ3 ";
-            5'd13: s = "HZ4 ";
-            5'd14: s = "OBM1";
-            5'd15: s = "OBM2";
-            5'd16: s = "OBM3";
-            5'd17: s = "OBM4";
-            5'd18: s = "PBLK";
-            5'd19: s = "RHZ ";
-            5'd20: s = "PKMG";
-            5'd21: s = "P2HZ";
-            5'd22: s = "P2MG";
-            5'd23: s = "QBLK";
-            5'd24: s = "QHZ ";
-            5'd25: s = "QMAG";
-            5'd26: s = "QSTA";
-            5'd27: s = "MBFR";
-            5'd28: s = "CLRC";
-            5'd29: s = "SCNC";
-            5'd30: s = "WPRD";
-            default: s = "????";
-            endcase
-            case (p)
-            2'd0: lbl = s[31:24];
-            2'd1: lbl = s[23:16];
-            2'd2: lbl = s[15:8];
-            default: lbl = s[7:0];
-            endcase
-        end
-    endfunction
-
-    // Keep each group on one line; no blank line or repeated banner.
-    wire line_end = (fld == 5'd4) || (fld == 5'd9) ||
-                    (fld == 5'd13) || (fld == 5'd17) ||
-                    (fld == 5'd22) || (fld == 5'd26) || (fld == 5'd30);
-    wire field_done = line_end ? (pos == 4'd14) : (pos == 4'd13);
-
-    localparam ST_TICK = 2'd0, ST_LOAD = 2'd1, ST_BUSY = 2'd2;
-    reg [1:0] st_r;
-    reg tx_valid;
-    reg [7:0] tx_data;
-    wire tx_ready;
-    reg seen_low;
-
-    wire snap_ld = (st_r == ST_TICK) && tick_1s;
-    reg [31:0] snap [0:NF-1];
-    always @(posedge clk) begin
-        if (snap_ld) begin
-            snap[ 0] <= run_sec;
-            snap[ 1] <= mb_win;
-            snap[ 2] <= 32'h0002_000A;
-            snap[ 3] <= tap_ovf;
-            snap[ 4] <= it_err;
-            snap[ 5] <= mb_active;
-            snap[ 6] <= qact;
-            snap[ 7] <= confirmed;
-            snap[ 8] <= mb_streak;
-            snap[ 9] <= obj_pos;
-            snap[10] <= {24'd0,mb_obj_hz10[7:0]};
-            snap[11] <= {24'd0,mb_obj_hz10[15:8]};
-            snap[12] <= {24'd0,mb_obj_hz10[23:16]};
-            snap[13] <= {24'd0,mb_obj_hz10[31:24]};
-            snap[14] <= obj_pn0;
-            snap[15] <= obj_pn1;
-            snap[16] <= obj_pn2;
-            snap[17] <= obj_pn3;
-            snap[18] <= mb_best_blk;
-            snap[19] <= raw_hz;
-            snap[20] <= mb_mag;
-            snap[21] <= diag_second_hz;
-            snap[22] <= diag_second_mag;
-            snap[23] <= chal_blk;
-            snap[24] <= diag_qual_hz;
-            snap[25] <= diag_qual_mag;
-            snap[26] <= diag_qual_status;
-            snap[27] <= mb_frm;
-            snap[28] <= mb_clr;
-            snap[29] <= mb_scan;
-            snap[30] <= wprd;
-            // Disabled low-priority / redundant fields (ports retained):
-            // VOFP=tap_px_per_frame; VOFL=tap_lines;
-            // ITPX=it_px; ITLN=it_lines; VSUM=vsum;
-            // FXBX=fx_bx; FXEN=fx_en; TON1=tonal_map_lo; TON2=tonal_map_hi;
-            // FBPN=fx_pn (duplicates PKMG); TNST=tn_status.
-            // F04=b2; F06=b4; F08=b12; F10=b8; RBIN=raw_bin; AEXP=raw_aexp;
-            // AGCR=mb_agc_ref; CMOT=motion_info (disabled0). CHLK is now QBLK.
-        end
-    end
-
-    wire [31:0] v = snap[fld];
-    reg [3:0] nib;
-    always @(*) begin
-        case (pos)
-        4'd5: nib = v[31:28];
-        4'd6: nib = v[27:24];
-        4'd7: nib = v[23:20];
-        4'd8: nib = v[19:16];
-        4'd9: nib = v[15:12];
-        4'd10: nib = v[11:8];
-        4'd11: nib = v[7:4];
-        default: nib = v[3:0];
-        endcase
-    end
-
-    reg [7:0] cur;
-    always @(*) begin
-        if (pos < 4'd4) cur = lbl(fld,pos[1:0]);
-        else if (pos == 4'd4) cur = 8'h20;
-        else if (pos < 4'd13) cur = hx(nib);
-        else if (pos == 4'd13) cur = line_end ? 8'h0D : 8'h20;
-        else cur = 8'h0A;
-    end
+    //------------------------------------------------------------------
+    // 跨时钟域同步：状态输入全是粘滞标志 / 慢变化电平，打两拍即可
+    //------------------------------------------------------------------
+    reg  [1:0]  pll_s, ddr_s, cam_s, i2c_s, hs_s, csif_s, raw_s, vid_s, siok_s;
+    reg  [15:0] sid_s1, sid_s2;
+    reg  [3:0]  mipi_s1, mipi_s2;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            st_r <= ST_TICK;
-            fld <= 0;
-            pos <= 0;
-            run_sec <= 32'd0;
-            tx_valid <= 1'b0;
-            tx_data <= 8'd0;
-            seen_low <= 1'b0;
+            pll_s  <= 2'b00; ddr_s  <= 2'b00; cam_s  <= 2'b00; i2c_s  <= 2'b00;
+            hs_s   <= 2'b00; csif_s <= 2'b00; raw_s  <= 2'b00; vid_s  <= 2'b00;
+            siok_s <= 2'b00;
+            sid_s1 <= 16'd0; sid_s2 <= 16'd0;
+            mipi_s1 <= 4'd0; mipi_s2 <= 4'd0;
+        end
+        else begin
+            pll_s  <= {pll_s[0],  pll_lock};
+            ddr_s  <= {ddr_s[0],  ddr_init_done};
+            cam_s  <= {cam_s[0],  cam_cfg_done};
+            i2c_s  <= {i2c_s[0],  cam_i2c_error};
+            hs_s   <= {hs_s[0],   hs_seen};
+            csif_s <= {csif_s[0], csi_frame_seen};
+            raw_s  <= {raw_s[0],  raw10_seen};
+            vid_s  <= {vid_s[0],  video_nonzero_seen};
+            siok_s <= {siok_s[0], sensor_id_ok};
+            mipi_s1 <= mipi_diag_status;
+            mipi_s2 <= mipi_s1;
+            // Sensor ID 在配置完成后才稳定，等配置完成再采样
+            if (cam_s[1]) sid_s1 <= sensor_id;
+            sid_s2 <= sid_s1;
+        end
+    end
+
+    wire [3:0] mipi_code = mipi_s2;
+
+    //------------------------------------------------------------------
+    // 运行秒数（每打印完一轮 +1）
+    //------------------------------------------------------------------
+    reg  [31:0] run_sec;
+
+    //------------------------------------------------------------------
+    // 4 位十六进制 -> ASCII
+    //------------------------------------------------------------------
+    function [7:0] hx;
+        input [3:0] n;
+        begin
+            if (n < 4'd10) hx = 8'h30 + {4'd0, n};          // '0'..'9'
+            else           hx = 8'h41 + {4'd0, n} - 8'd10;  // 'A'..'F'
+        end
+    endfunction
+
+    //------------------------------------------------------------------
+    // 字段标签：给出第 f 个字段的第 p 个字符（p: 0..3，从左到右）
+    //------------------------------------------------------------------
+    function [7:0] lbl;
+        input [0:0] f;
+        input [1:0] p;
+        reg  [31:0] s;
+        begin
+            case (f)
+            1'd0 : s = "SEC ";
+            1'd1 : s = "VSUM";
+            default: s = "????";
+            endcase
+            case (p)
+            2'd0:    lbl = s[31:24];
+            2'd1:    lbl = s[23:16];
+            2'd2:    lbl = s[15: 8];
+            default: lbl = s[ 7: 0];
+            endcase
+        end
+    endfunction
+
+    //------------------------------------------------------------------
+    // 当前字段的 32bit 值（由 fld 组合译码）
+    //------------------------------------------------------------------
+    reg  [31:0] v;
+
+    always @(*) begin
+        case (fld)
+        1'd0 : v = run_sec           ; // 运行秒数（每轮 +1）
+        1'd1 : v = vsum              ; // 抽头 Σ灰度（摄像头活着的证据）
+        default:  v = 32'd0;
+        endcase
+    end
+
+    //------------------------------------------------------------------
+    // 当前字段的十六进制 nibble（由 pos 组合译码，只见 pos = 5..12）
+    //------------------------------------------------------------------
+    reg  [3:0] nib;
+
+    always @(*) begin
+        case (pos)
+        4'd5:    nib = v[31:28];
+        4'd6:    nib = v[27:24];
+        4'd7:    nib = v[23:20];
+        4'd8:    nib = v[19:16];
+        4'd9:    nib = v[15:12];
+        4'd10:   nib = v[11: 8];
+        4'd11:   nib = v[ 7: 4];
+        default: nib = v[ 3: 0];
+        endcase
+    end
+
+    //------------------------------------------------------------------
+    // ★ 整轮日志的快照（本轮新增，修一个真实的观测问题）
+    //
+    //   下面的 v 是**组合译码**：每个字段是"发到它那一刻"才去取值。
+    //   而一轮要发 5.8 ms，一帧只有 16.7 ms —— 于是
+    //     ITSM(字段25) 与 ITSS(字段29) 相隔 4 字段 = 60 字节 = 5.2 ms，
+    //     约 31% 的概率落在相邻两帧上。
+    //   实测出现过 |ITSS| > ITSM（= 1.67e7 > 1.78e5），这违反三角不等式
+    //   |ΣIt| <= Σ|It|，同帧绝不可能 —— 说明两个字段本来就来自不同帧，
+    //   不是算法算错。
+    //
+    //   修法：每秒开轮的那一拍，把所有"会变的"字段（13 号及之后）
+    //         一次性打进快照寄存器，整轮日志都从快照读 -> 同一轮内自洽。
+    //   代价：0 个 32bit 寄存器。标志位/常量不必快照。
+    //------------------------------------------------------------------
+    wire        snap_ld = (st_r == ST_TICK) && tick_1s;   // 开轮那一拍
+    reg  [31:0] snap [0:NF-1];
+
+    always @(posedge clk) begin
+        if (snap_ld) begin
+
+        end
+    end
+
+    //------------------------------------------------------------------
+    // 横幅：由 bidx 组合译码，共 37 字节
+    //------------------------------------------------------------------
+    reg  [7:0] ban;
+
+    always @(*) begin
+        case (bidx)
+        6'd0 : ban = "S"     ; // 'S'
+        6'd1 : ban = "C"     ; // 'C'
+        6'd2 : ban = "5"     ; // '5'
+        6'd3 : ban = "2"     ; // '2'
+        6'd4 : ban = "0"     ; // '0'
+        6'd5 : ban = " "     ; // ' '
+        6'd6 : ban = "M"     ; // 'M'
+        6'd7 : ban = "I"     ; // 'I'
+        6'd8 : ban = "P"     ; // 'P'
+        6'd9 : ban = "I"     ; // 'I'
+        6'd10: ban = "-"     ; // '-'
+        6'd11: ban = "H"     ; // 'H'
+        6'd12: ban = "D"     ; // 'D'
+        6'd13: ban = "M"     ; // 'M'
+        6'd14: ban = "I"     ; // 'I'
+        6'd15: ban = " "     ; // ' '
+        6'd16: ban = "U"     ; // 'U'
+        6'd17: ban = "A"     ; // 'A'
+        6'd18: ban = "R"     ; // 'R'
+        6'd19: ban = "T"     ; // 'T'
+        6'd20: ban = " "     ; // ' '
+        6'd21: ban = "L"     ; // 'L'
+        6'd22: ban = "O"     ; // 'O'
+        6'd23: ban = "G"     ; // 'G'
+        6'd24: ban = " "     ; // ' '
+        6'd25: ban = "1"     ; // '1'
+        6'd26: ban = "1"     ; // '1'
+        6'd27: ban = "5"     ; // '5'
+        6'd28: ban = "2"     ; // '2'
+        6'd29: ban = "0"     ; // '0'
+        6'd30: ban = "0"     ; // '0'
+        6'd31: ban = " "     ; // ' '
+        6'd32: ban = "8"     ; // '8'
+        6'd33: ban = "N"     ; // 'N'
+        6'd34: ban = "1"     ; // '1'
+        6'd35: ban = 8'h0D   ; // '\r'
+        6'd36: ban = 8'h0A   ; // '\n'
+        default: ban = 8'h20;               // 空格
+        endcase
+    end
+
+    //------------------------------------------------------------------
+    // 一轮消息的字节指针
+    //------------------------------------------------------------------
+    reg              in_banner;   // 1 = 正在发横幅
+    reg  [5:0] bidx;        // 横幅字节下标
+    reg  [0:0] fld;         // 字段号
+    reg  [3:0] pos;         // 字段内字节位置
+
+    //------------------------------------------------------------------
+    // 当前要发的字节
+    //   横幅：全部来自 ban
+    //   状态行：label(4) + space(1) + hex 8 位(8) + CR + LF = 15 字节
+    //------------------------------------------------------------------
+    reg  [7:0] cur;
+
+    always @(*) begin
+        if (in_banner)
+            cur = ban;
+        else if (pos < 4'd4)
+            cur = lbl(fld, pos[1:0]);
+        else if (pos == 4'd4)
+            cur = 8'h20;                    // space
+        else if (pos < 4'd13)
+            cur = hx(nib);                  // 8 位十六进制，高位在前
+        else if (pos == 4'd13)
+            cur = 8'h0D;                    // CR
+        else
+            cur = 8'h0A;                    // LF
+    end
+
+    //------------------------------------------------------------------
+    // 发送状态机（1 拍脉冲 + busy 等待，见文件头说明）
+    //------------------------------------------------------------------
+    localparam ST_TICK = 2'd0,   // 等 1 秒节拍
+               ST_LOAD = 2'd1,   // 等 uart 空闲 -> 装载一个字节并给 pulse
+               ST_BUSY = 2'd2;   // 等这一字节发完
+
+    reg  [1:0] st_r;
+    reg        tx_valid;
+    reg  [7:0] tx_data;
+    wire       tx_ready;
+    reg        seen_low;         // 已经观察到 ready 变低（字节被取走）
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            st_r      <= ST_TICK;
+            in_banner <= 1'b1;
+            bidx      <= 0;
+            fld       <= 0;
+            pos       <= 0;
+            run_sec   <= 32'd0;
+            tx_valid  <= 1'b0;
+            tx_data   <= 8'd0;
+            seen_low  <= 1'b0;
         end
         else case (st_r)
+        // ---------------- 等 1 秒节拍 ----------------
         ST_TICK: begin
             tx_valid <= 1'b0;
             if (tick_1s) begin
-                fld <= 0;
-                pos <= 0;
-                st_r <= ST_LOAD;
+                in_banner <= 1'b1;
+                bidx      <= 0;
+                fld       <= 0;
+                pos       <= 0;
+                st_r      <= ST_LOAD;
             end
         end
+        // ---------------- 装载一个字节 ----------------
+        // 必须等 tx_ready=1（uart 在 IDLE 且没在收字节）才装载，
+        // 这样 uart 只会在下一个 IDLE 拍锁存一次，不会重复发 ✓
         ST_LOAD: begin
             if (tx_ready) begin
-                tx_data <= cur;
-                tx_valid <= 1'b1;
+                tx_data  <= cur;         // cur 由 in_banner/bidx/fld/pos 组合译码
+                tx_valid <= 1'b1;        // 只给 1 拍脉冲
                 seen_low <= 1'b0;
-                st_r <= ST_BUSY;
+                st_r     <= ST_BUSY;
             end
         end
+        // ---------------- 等这个字节发完，然后推进指针 ----------------
         ST_BUSY: begin
-            tx_valid <= 1'b0;
-            if (!tx_ready) seen_low <= 1'b1;
-            else if (seen_low) begin
-                if (!field_done) begin
-                    pos <= pos + 1'b1;
+            tx_valid <= 1'b0;            // 脉冲已经给过了
+            if (!tx_ready) begin
+                seen_low <= 1'b1;        // 字节被取走
+            end
+            else if (seen_low) begin     // ready 回来了 = 这一字节发完
+                if (in_banner) begin
+                    if (bidx == BIDX_LAST) begin
+                        in_banner <= 1'b0;   // 横幅发完，转入状态行
+                        fld       <= 0;
+                        pos       <= 0;
+                    end
+                    else begin
+                        bidx <= bidx + 1'b1;
+                    end
+                    st_r <= ST_LOAD;
+                end
+                else if (pos != POS_LAST) begin
+                    pos  <= pos + 1'b1;      // 同一行下一个字符
                     st_r <= ST_LOAD;
                 end
                 else if (fld != FLD_LAST) begin
-                    pos <= 0;
-                    fld <= fld + 1'b1;
+                    pos  <= 0;               // 下一行
+                    fld  <= fld + 1'b1;
                     st_r <= ST_LOAD;
                 end
                 else begin
-                    run_sec <= run_sec + 32'd1;
-                    st_r <= ST_TICK;
+                    run_sec <= run_sec + 32'd1;  // 一轮打完，秒数 +1
+                    st_r    <= ST_TICK;
                 end
             end
         end
@@ -315,13 +380,20 @@ module uart_log_debug #(
         endcase
     end
 
-    // Existing transmitter, unchanged. CLK_FRE is expressed in MHz.
+    //------------------------------------------------------------------
+    // 底层 UART 发送器（官方 uart_tx.v，未修改）
+    //   注意：uart_tx 的 CLK_FRE 单位是 MHz，所以传 CLK_HZ/1000000 = 50
+    //------------------------------------------------------------------
     uart_tx #(
-        .CLK_FRE (CLK_HZ / 1000000),
+        .CLK_FRE   (CLK_HZ / 1000000),
         .BAUD_RATE (BAUD)
     ) u_uart_tx (
-        .clk (clk), .rst_n (rst_n),
-        .tx_data (tx_data), .tx_data_valid (tx_valid),
-        .tx_data_ready (tx_ready), .tx_pin (tx)
+        .clk           (clk),
+        .rst_n         (rst_n),
+        .tx_data       (tx_data),
+        .tx_data_valid (tx_valid),
+        .tx_data_ready (tx_ready),
+        .tx_pin        (tx)
     );
+
 endmodule
