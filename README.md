@@ -1,5 +1,5 @@
 # SC520 MIPI → HDMI 振动频率检测系统
-> 当前本地实验分支 `image-h1-local-tone-20261030` 以已认可的 `42b0736 分区算法` 为基底：H1固定，KEY3保留四档真实曝光，KEY4比较补偿关闭/弱/中/强与H1选区；默认曝光1200＋C2。操作、算法及验收状态见 [H1补偿候选说明](H1_LOCAL_TONE_20261030.md)，阶段安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。原分区说明见 [视频分区记录](HIGHLIGHT_REGION_20261030.md)。以下A版发布信息用于追溯稳定基线。
+> 当前本地实验分支 `image-h1-strong-compensation-20261031`：默认原图3（曝光900）＋C2增强补偿，C1保留上一版C3，KEY4切换C0/C1/C2/C3/M；H1高光判据与原视频流水保持。参数和上板状态见 [更强非高光补偿](H1_STRONG_COMPENSATION_20261031.md)，阶段安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)，上一版见 [H1补偿记录](H1_LOCAL_TONE_20261030.md)。以下A版发布信息用于追溯稳定基线。
 
 
 ## 当前交接版本：A-original-reuse + Logo

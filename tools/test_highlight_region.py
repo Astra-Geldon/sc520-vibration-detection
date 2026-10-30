@@ -56,8 +56,8 @@ def main() -> int:
         top = (hdl / "design_top_wrapper.v").read_text(encoding="utf-8")
         uncommented = re.sub(r"/\*.*?\*/|//[^\n]*", "", top, flags=re.S)
         ui_instance = re.search(r"img_mode_sel\s*#\s*\((.*?)\)\s*u_img_mode_sel", uncommented, re.S)
-        if not ui_instance or not re.search(r"\.EXP_RST\s*\(\s*2\s*\)", ui_instance.group(1)):
-            raise RuntimeError("Local-tone top-level UI does not explicitly reset to exposure2 (AE1200)")
+        if not ui_instance or not re.search(r"\.EXP_RST\s*\(\s*3\s*\)", ui_instance.group(1)):
+            raise RuntimeError("Local-tone top-level UI does not explicitly reset to exposure3 (AE900)")
         if not re.search(r"\.I_exp_key_n\s*\(\s*I_key\[2\]\s*\)", uncommented):
             raise RuntimeError("Top-level sensor KEY3 input is disconnected or remapped")
         hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -90,7 +90,7 @@ def main() -> int:
                                      "KEY4 bounce/hold/cycle", "KEY3 hold/cycle",
                                      "KEY1/KEY2 algorithms", "simultaneous KEY3/KEY4",
                                      "AE gated startup: one request AE1991/AG160",
-                                     "top-level local-tone UI exposure2 reset and sensor KEY3 connection",
+                                     "top-level local-tone UI exposure3 reset and sensor KEY3 connection",
                                      "legacy standalone UI/AE retain original0 test configuration"]})
         print(f"Logs and summary: {output}")
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:

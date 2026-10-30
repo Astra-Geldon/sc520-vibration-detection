@@ -819,7 +819,7 @@ module design_top_wrapper (
 	
 
   
-  ae_set #(.EXP_RST(2)) u_ae_set (
+  ae_set #(.EXP_RST(3)) u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
@@ -1230,7 +1230,7 @@ isp_top u_isp_top (
 `ifdef IMG_MODE_KEY
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
-        .EXP_RST    ( 2          ),   // real exposure1200; KEY3 retains all four exposures
+        .EXP_RST    ( 3          ),   // real exposure900; KEY3 retains all four exposures
         .REGION_RST ( 2          ),   // default C2 medium midtone compensation
         .REGION_N   ( 5          ),   // C0/C1/C2/C3/H1 mask
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
@@ -1248,7 +1248,7 @@ isp_top u_isp_top (
     );
 `else
     assign S_img_mode = IMG_MODE[2:0];
-    assign S_exp_sel = 2'd2;
+    assign S_exp_sel = 2'd3;
     assign S_region_sel_req = 3'd2;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
@@ -1341,7 +1341,7 @@ isp_top u_isp_top (
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
             S_tone_stage_sel <= 3'd2;
-            S_tone_stage_exp <= 2'd2;
+            S_tone_stage_exp <= 2'd3;
             S_tone_stage_k <= 2'd2;
             S_tone_stage_threshold <= 8'd0;
             S_tone_stage_raw <= 1'b0;

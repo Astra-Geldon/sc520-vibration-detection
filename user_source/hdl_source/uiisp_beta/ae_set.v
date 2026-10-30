@@ -76,7 +76,7 @@ always @(posedge I_clk or posedge I_rst) begin
 end
 
 // KEY3 是异步物理按键；在 24 MHz 摄像头配置时钟域单独同步、去抖并循环曝光档。
-// OSD 在 HDMI 域对同一个物理按键做自己的去抖；本实验顶层统一设置两边复位档位为原图2（曝光1200）。
+// OSD 在 HDMI 域对同一个物理按键做自己的去抖；顶层通过 EXP_RST 统一设置两边复位档位。
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_exp_key_sync <= 2'b11;

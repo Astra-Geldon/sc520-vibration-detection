@@ -14,6 +14,12 @@ module tb_highlight_tone;
         .O_mask(mask), .O_data(shown)
     );
 
+    wire [23:0] old_max_shown;
+    highlight_tone_previous previous_max (
+        .I_de(de), .I_enable(enable), .I_sel(3'd3), .I_data(rgb),
+        .O_mask(), .O_data(old_max_shown)
+    );
+
     integer pixel_checks = 0, property_checks = 0;
     integer frame_index, x, y, hit, frame_hits;
     integer candidate, gray, r, g, b, ray, level, sample;
@@ -31,15 +37,14 @@ module tb_highlight_tone;
         real scale, result;
         begin
             scale = 0.0;
-            case (choice)
-                1: scale = 1.0 / 512.0;
-                2: scale = 3.0 / 1024.0;
-                3: scale = 1.0 / 256.0;
-            endcase
-            if (peak < 208)
-                result = c * (1.0 + scale * (208 - peak));
-            else
-                result = c;
+            if (peak < 208) begin
+                case (choice)
+                    1: scale = (208-peak)/256.0;
+                    2: scale = (208-peak)/256.0 + (208-peak)*(208-peak)/65536.0;
+                    3: scale = (208-peak)/256.0 + 2.0*(208-peak)*(208-peak)/65536.0;
+                endcase
+            end
+            result = c * (1.0 + scale);
             reference_channel = $rtoi($floor(result + 0.5));
         end
     endfunction
@@ -87,6 +92,9 @@ module tb_highlight_tone;
                        pixel_checks, choice, pixel_de, pixel_enable, value,
                        mask, expected_mask, shown, expected_pixel);
 
+            if (choice == 1 && shown !== old_max_shown)
+                $fatal(1, "New C1 differs from previous C3: RGB=%06x new=%06x old=%06x",value,shown,old_max_shown);
+
             // Independent properties catch common-channel hue or overflow
             // failures even if a future arithmetic reference is edited.
             if (pixel_de && pixel_enable && choice >= 1 && choice <= 3) begin
@@ -120,7 +128,7 @@ module tb_highlight_tone;
     wire [1:0] exposure_choice;
     wire src_raw, th_lock, k_step;
     img_mode_sel #(
-        .MODE_RST(0), .EXP_RST(2), .REGION_RST(2), .REGION_N(5),
+        .MODE_RST(0), .EXP_RST(3), .REGION_RST(2), .REGION_N(5),
         .CLK_HZ(75000000), .DB_MS(10)
     ) ui (
         .I_clk(ui_clk), .I_rst_n(rst_n), .I_key_n(keys),
@@ -132,7 +140,7 @@ module tb_highlight_tone;
     wire [15:0] exposure, gain;
     integer ae_requests = 0;
     integer expected_request_exposure;
-    ae_set #(.EXP_RST(2)) sensor_controls (
+    ae_set #(.EXP_RST(3)) sensor_controls (
         .I_clk(sensor_clk), .I_rst(~rst_n), .I_btn(4'b1111),
         .I_exp_key_n(keys[2]), .I_cam_cfg_done(cam_done),
         .I_ae_cfg_done(ae_done), .O_ae_req(ae_req),
@@ -142,12 +150,12 @@ module tb_highlight_tone;
         #1;
         if (rst_n && ae_req) begin
             case (ae_requests)
-                0: expected_request_exposure = 1200;
-                1: expected_request_exposure = 900;
-                2: expected_request_exposure = 1991;
-                3: expected_request_exposure = 1600;
-                4: expected_request_exposure = 1200;
-                5: expected_request_exposure = 900; // simultaneous KEY3+KEY4
+                0: expected_request_exposure = 900;
+                1: expected_request_exposure = 1991;
+                2: expected_request_exposure = 1600;
+                3: expected_request_exposure = 1200;
+                4: expected_request_exposure = 900;
+                5: expected_request_exposure = 1991; // simultaneous KEY3+KEY4
                 default: $fatal(1, "Unexpected repeated AE request %0d", ae_requests);
             endcase
             if (!cam_done || !ae_done || exposure !== expected_request_exposure || gain !== 160)
@@ -183,56 +191,64 @@ module tb_highlight_tone;
         #1 rst_n = 0;
         #1000 rst_n = 1;
         #2000;
-        check_ui(0, 2, 2);
+        check_ui(0, 3, 2);
         if (ae_requests != 0) $fatal(1, "AE ran with camera/AE configuration incomplete");
         cam_done = 1;
         #2000;
         if (ae_requests != 0) $fatal(1, "AE ignored AE configuration busy state");
         ae_done = 1;
         #2000;
-        if (ae_requests != 1 || exposure !== 1200 || gain !== 160)
-            $fatal(1, "Configured startup did not request AE1200/AG160 exactly once");
+        if (ae_requests != 1 || exposure !== 900 || gain !== 160)
+            $fatal(1, "Configured startup did not request AE900/AG160 exactly once");
 
+`ifdef PIXELS_AND_STARTUP
+        #2000;
+        if (ae_requests != 1) $fatal(1, "AE900 startup repeated without an exposure change");
+        $display("PASS startup: gated real AE900/AG160 once; top/UI reset original3/C2");
+        controls_done = 1;
+        clocks_running = 0;
+`else
         // 2 ms physical bounce is below both real debounce thresholds.
         repeat (3) begin
             keys[3] = 0; #2000000; keys[3] = 1; #2000000;
             keys[2] = 0; #2000000; keys[2] = 1; #2000000;
         end
         #11000000;
-        check_ui(0, 2, 2);
+        check_ui(0, 3, 2);
         if (ae_requests != 1) $fatal(1, "Sensor accepted a short bounce as exposure key");
 
         // Long hold must produce only one candidate transition.
-        press_key(3, 25000000); check_ui(0, 2, 3);
-        press_key(3, 11000000); check_ui(0, 2, 4);
-        press_key(3, 11000000); check_ui(0, 2, 0);
-        press_key(3, 11000000); check_ui(0, 2, 1);
-        press_key(3, 11000000); check_ui(0, 2, 2);
+        press_key(3, 25000000); check_ui(0, 3, 3);
+        press_key(3, 11000000); check_ui(0, 3, 4);
+        press_key(3, 11000000); check_ui(0, 3, 0);
+        press_key(3, 11000000); check_ui(0, 3, 1);
+        press_key(3, 11000000); check_ui(0, 3, 2);
 
-        press_key(2, 25000000); check_ui(0, 3, 2);
-        if (ae_requests != 2 || exposure !== 900) $fatal(1, "KEY3 hold did not select real exposure900 once");
-        press_key(2, 11000000); check_ui(0, 0, 2);
+        press_key(2, 25000000); check_ui(0, 0, 2);
+        if (ae_requests != 2 || exposure !== 1991) $fatal(1, "KEY3 hold did not select real exposure1991 once");
         press_key(2, 11000000); check_ui(0, 1, 2);
         press_key(2, 11000000); check_ui(0, 2, 2);
-        if (ae_requests != 5 || exposure !== 1200) $fatal(1, "KEY3 UI/sensor four-state cycle diverged");
+        press_key(2, 11000000); check_ui(0, 3, 2);
+        if (ae_requests != 5 || exposure !== 900) $fatal(1, "KEY3 UI/sensor four-state cycle diverged");
 
-        press_key(1, 11000000); check_ui(1, 2, 2);
-        press_key(1, 11000000); check_ui(2, 2, 2);
-        press_key(1, 11000000); check_ui(3, 2, 2);
-        press_key(1, 11000000); check_ui(1, 2, 2);
-        press_key(0, 11000000); check_ui(0, 2, 2);
+        press_key(1, 11000000); check_ui(1, 3, 2);
+        press_key(1, 11000000); check_ui(2, 3, 2);
+        press_key(1, 11000000); check_ui(3, 3, 2);
+        press_key(1, 11000000); check_ui(1, 3, 2);
+        press_key(0, 11000000); check_ui(0, 3, 2);
 
         @(negedge ui_clk); keys[3:2] = 2'b00;
         #11000000;
         @(negedge ui_clk); keys[3:2] = 2'b11;
         #11000000;
-        check_ui(0, 3, 3);
-        if (ae_requests != 6 || exposure !== 900)
+        check_ui(0, 0, 3);
+        if (ae_requests != 6 || exposure !== 1991)
             $fatal(1, "Simultaneous KEY3/4 did not maintain independent sensor/UI controls");
         $display("PASS keys: actual75MHz UI / actual24MHz sensor, five-state KEY4, bounce/long hold, KEY1/2 and simultaneous KEY3+KEY4");
-        $display("PASS sensor: busy/config-gated AE1200/AG160 startup once; KEY3 actual sequence1200->900->1991->1600->1200->900");
+        $display("PASS sensor: busy/config-gated AE900/AG160 startup once; KEY3 actual sequence900->1991->1600->1200->900->1991");
         controls_done = 1;
         clocks_running = 0;
+`endif
     end
 
     initial begin : pixel_checks_block

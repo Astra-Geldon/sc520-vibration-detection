@@ -29,11 +29,13 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--iverilog-bin", type=Path,
                         default=Path("D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin"))
+    parser.add_argument("--pixels-and-startup", action="store_true",
+                        help="Verify new pixel curves and real boot request; reuse unchanged physical-key regression")
     parser.add_argument("--timeout", type=int, default=300)
     args = parser.parse_args()
     root = args.root.resolve()
     output = (args.output or root.parent / "_build" / root.name /
-              "h1-local-tone-20261030" / "verification").resolve()
+              "h1-strong-compensation-20261031" / "verification").resolve()
     output.mkdir(parents=True, exist_ok=True)
     summary = {"pass": False, "scope": "RTL tone math/properties/video and physical-key UI/sensor requests",
                "visual_acceptance": "not_tested", "output": str(output)}
@@ -55,19 +57,25 @@ def main() -> int:
         top_path = hdl / "design_top_wrapper.v"
         top = re.sub(r"/\*.*?\*/|//[^\n]*", "", top_path.read_text(encoding="utf-8"), flags=re.S)
         ui = re.search(r"img_mode_sel\s*#\s*\((.*?)\)\s*u_img_mode_sel", top, re.S)
-        for parameter, value in (("EXP_RST", 2), ("REGION_RST", 2), ("REGION_N", 5)):
+        for parameter, value in (("EXP_RST", 3), ("REGION_RST", 2), ("REGION_N", 5)):
             if not ui or not re.search(rf"\.{parameter}\s*\(\s*{value}\s*\)", ui.group(1)):
                 raise RuntimeError(f"Top UI must set {parameter}={value}")
-        if not re.search(r"ae_set\s*#\s*\(\s*\.EXP_RST\s*\(\s*2\s*\)\s*\)\s*u_ae_set", top):
-            raise RuntimeError("Sensor and UI startup exposure selectors must both be2 (AE1200)")
+        if not re.search(r"ae_set\s*#\s*\(\s*\.EXP_RST\s*\(\s*3\s*\)\s*\)\s*u_ae_set", top):
+            raise RuntimeError("Sensor and UI startup exposure selectors must both be3 (AE900)")
         if not re.search(r"\.I_exp_key_n\s*\(\s*I_key\[2\]\s*\)", top):
             raise RuntimeError("Physical sensor KEY3 is disconnected or remapped")
         if not re.search(r"highlight_tone\s+u_highlight_tone\s*\(", top):
             raise RuntimeError("Top-level tone module is missing")
         summary["source_sha256"] = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
                                     for path in sources + [top_path]}
+        previous = subprocess.check_output(["git", "show", "f57bdf3:user_source/hdl_source/highlight_tone.v"], cwd=root)
+        previous_file = output / "highlight_tone_previous.v"
+        previous_file.write_bytes(previous.replace(b"module highlight_tone (", b"module highlight_tone_previous (", 1))
+        sources.append(previous_file)
         compiled = output / "highlight_tone.vvp"
         command = [str(compiler), "-g2012", "-Wall", "-s", "tb_highlight_tone", "-o", str(compiled)]
+        if args.pixels_and_startup:
+            command.append("-DPIXELS_AND_STARTUP")
         command.extend(map(str, sources))
         summary["compile_command"] = command
         build = run_logged(command, output / "compile.log", root, 60)
@@ -78,7 +86,8 @@ def main() -> int:
         if simulated.returncode:
             raise RuntimeError(f"Simulation failed ({simulated.returncode})")
         required = ["PASS colors:", "PASS frame 0:", "PASS frame 1:", "PASS frame 2:",
-                    "PASS tone_pixels:", "PASS keys:", "PASS sensor:", "PASS highlight_tone:"]
+                    "PASS tone_pixels:", "PASS highlight_tone:"]
+        required += (["PASS startup:"] if args.pixels_and_startup else ["PASS keys:", "PASS sensor:"])
         missing = [marker for marker in required if marker not in simulated.stdout]
         if missing:
             raise RuntimeError(f"Simulation did not complete required checks: {missing}")
@@ -90,6 +99,9 @@ def main() -> int:
                         "frames": 3, "regions_per_frame": 3,
                         "ui_clock_hz": 75000000, "sensor_clock_hz": 24000000,
                         "debounce_accelerated": False,
+                        "physical_key_cycle_run": not args.pixels_and_startup,
+                        "reference_old_C3_commit": "f57bdf3",
+                        "new_C1_matches_old_C3": True,
                         "coverage": ["all256 gray codes monotone / neutral",
                                      "color cube, seven chromatic rays, deterministic20000 random RGBs",
                                      "half-code common-gain hue error bound",
@@ -99,9 +111,12 @@ def main() -> int:
                                      "three full720p moving frames, restored background, no trail",
                                      "real UI/sensor clocks and original debounce counters",
                                      "KEY4 five-state, physical bounce/long hold, KEY1/KEY2",
-                                     "KEY3 UI/sensor cycle1200/900/1991/1600/1200",
+                                     "KEY3 UI/sensor cycle900/1991/1600/1200/900",
                                      "simultaneous KEY3+KEY4; AE busy/config gating",
-                                     "top-level default AE1200/C2 and physical KEY3 connection"]})
+                                     "top-level default AE900/C2 and physical KEY3 connection"]})
+        if args.pixels_and_startup:
+            summary["coverage"] = summary["coverage"][:8] + ["real AE900/AG160 gated boot request once", "top-level UI/sensor original3/C2 reset", "C1 bit-exact previous C3"]
+            summary["scope"] = "New tone math/properties/video and real AE900 boot; existing key logic unmodified"
         print(f"Logs and summary: {output}")
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
         summary["error"] = str(error)
