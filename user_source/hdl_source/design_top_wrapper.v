@@ -409,6 +409,7 @@ module design_top_wrapper (
     wire        S_img_th_locked;
     wire[ 7:0]  S_img_threshold;
     wire        S_img_k_step;
+    wire[ 1:0]  S_exp_sel;
 
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -806,6 +807,7 @@ module design_top_wrapper (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
+      .I_exp_sel(S_exp_sel),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
       .O_ae_req(S_ae_req),
@@ -1219,12 +1221,14 @@ isp_top u_isp_top (
         .I_rst_n    ( S_hdmi_rst_n     ),
         .I_key_n    ( I_key            ),   // {KEY4,KEY3,KEY2,KEY1}，按下=0
         .O_mode     ( S_img_mode       ),
+        .O_exp_sel  ( S_exp_sel        ),
         // KEY3已释放；最终二值化固定使用增强图像。
         .O_th_lock  ( S_img_th_lock_req),
         .O_k_step   ( S_img_k_step     )
     );
 `else
     assign S_img_mode = IMG_MODE[2:0];
+    assign S_exp_sel = 2'd1;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
@@ -1328,6 +1332,7 @@ isp_top u_isp_top (
         .I_threshold( S_img_threshold ),
         .I_th_locked( S_img_th_locked ),
         .I_k_sel    ( S_k_sel           ),
+        .I_exp_sel  ( S_exp_sel         ),
         .I_data     ( S_imgp_data      ),
         .O_data     ( S_osd_mix        )
     );

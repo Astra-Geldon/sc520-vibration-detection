@@ -16,7 +16,7 @@
 //  按键分配（2026-10-23 按需求调整）
 //      KEY1 (D5 / I_key[0]) → 视觉增强彩色画面
 //      KEY2 (A9 / I_key[1]) → 算法循环： 灰度 → 二值化 → 边缘 → 灰度 …
-//      KEY3 (B9 / I_key[2]) → 仅二值化模式切换原图 / 视觉增强输入
+//      KEY3 (B9 / I_key[2]) → 曝光候选档循环（0/1/2/3）
 //      KEY4 (C7 / I_key[3]) → 释放，无功能
 //
 //  模式编码（3 bit，最多 8 种）
@@ -30,7 +30,7 @@
 //      1) img_proc.v 里加一个 I_mode 分支（新编码接着往下排）
 //      2) osd_overlay.v 的字模 case 里登记 (起始字形, 字数)
 //      3) tools/gen_osd_assets.py 的 CHARS 里追加汉字，重跑脚本
-//      4) 回到本文件：扩展 KEY2 的循环；KEY3 已用于二值化选源
+//      4) 回到本文件：扩展 KEY2 的循环；KEY3 现在用于曝光候选档
 //
 //  时序
 //      每个按键：两级同步（防亚稳态）→ 10ms 稳定计数去抖 → 去抖电平的下降沿
@@ -43,6 +43,7 @@ module img_mode_sel #(
     parameter integer MODE_RST = 0,         // 上电默认模式
     parameter integer CLK_HZ   = 74250000,  // = S_hdmi_pixel_clk
     parameter integer DB_MS    = 10,        // 去抖时间(ms)
+    parameter integer EXP_RST  = 1,         // 上电曝光候选：1=1600
 
     // 兼容旧例化的保留参数，不再控制 KEY3；扩展算法需修改 KEY2 循环。
     parameter integer EXT_BASE = 4,         // 第一个扩展算法的模式码
@@ -53,6 +54,7 @@ module img_mode_sel #(
     input  wire [3:0] I_key_n,      // {KEY4,KEY3,KEY2,KEY1}，按下=0
     output reg  [2:0] O_mode,       // 见上面"模式编码"
     output reg        O_src_raw,    // 二值化来源：1=原图，0=视觉增强视频
+    output reg  [1:0] O_exp_sel,   // 曝光候选：0=1991, 1=1600, 2=1200, 3=900
     output reg        O_th_lock,    // 二值阈值锁定请求，img_proc在下一VS提交
     output wire       O_k_step      // 非二值化模式的KEY4单次脉冲，供顶层调校正强度
 );
@@ -62,6 +64,7 @@ module img_mode_sel #(
 
     // 显式截断成 3 bit，避免对 integer 参数做 part-select
     localparam [2:0] RST3  = MODE_RST;
+    localparam [1:0] EXP_RST2 = EXP_RST;
 
     wire [3:0] S_press;             // 每个按键的一次"有效按下"脉冲
 
@@ -124,6 +127,7 @@ module img_mode_sel #(
         if (!I_rst_n) begin
             O_mode <= RST3;
             O_src_raw <= 1'b0;
+            O_exp_sel <= EXP_RST2;
             O_th_lock <= 1'b0;
         end
 
@@ -139,9 +143,9 @@ module img_mode_sel #(
             else                     O_mode <= 3'd1;
         end
 
-        // KEY3：仅在二值化中切换来源；灰度、边缘、彩色模式下无效
-        else if (S_press[2] && (O_mode == 3'd2)) begin
-            O_src_raw <= ~O_src_raw;
+        // KEY3：循环曝光候选；最终二值化始终使用增强源，O_src_raw 保留兼容接口
+        else if (S_press[2]) begin
+            O_exp_sel <= O_exp_sel + 1'b1;
         end
 
         // KEY4 释放：O_th_lock 保持复位值 0。

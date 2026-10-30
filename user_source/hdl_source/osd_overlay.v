@@ -55,6 +55,7 @@ module osd_overlay #(
     input  wire [ 2:0] I_mode,      // 当前算法（来自 img_mode_sel，3 bit）
     input  wire        I_src_raw,   // 二值化来源：1=原图，0=视觉增强输入
     input  wire [ 1:0] I_k_sel,     // 兼容保留，KEY4 已释放
+    input  wire [ 1:0] I_exp_sel,   // 曝光候选编号：0=1991,1=1600,2=1200,3=900
     input  wire [ 7:0] I_threshold, // 二值比较器实际使用的阈值
     input  wire        I_th_locked, // 实际已提交的锁定状态
     input  wire [23:0] I_data,      // 来自 img_proc
@@ -107,18 +108,20 @@ module osd_overlay #(
     // 窗口1（左上）：算法名，跟随 KEY1/KEY2 的 I_mode
     reg [3:0] S_base1;
     reg [2:0] S_nchars1;
+    reg [2:0] S_name_len1;
     // 窗口2（左下）：CSC 强度档 k 的数字 0~3
     reg [3:0] S_base2;
     reg [1:0] S_nchars2;
 
     always @(*) begin
         case (I_mode)
-            3'd0:    begin S_base1 = 4'd0; S_nchars1 = 3'd2; end   // 原图（增强彩色）
-            3'd1:    begin S_base1 = 4'd2; S_nchars1 = 3'd2; end   // 灰度
-            3'd2:    begin S_base1 = 4'd4; S_nchars1 = 3'd3; end   // 二值化
-            3'd3:    begin S_base1 = 4'd7; S_nchars1 = 3'd2; end   // 边缘
-            default: begin S_base1 = 4'd0; S_nchars1 = 3'd3; end
+            3'd0:    begin S_base1 = 4'd0; S_name_len1 = 3'd2; end   // 原图（增强彩色）
+            3'd1:    begin S_base1 = 4'd2; S_name_len1 = 3'd2; end   // 灰度
+            3'd2:    begin S_base1 = 4'd4; S_name_len1 = 3'd3; end   // 二值化
+            3'd3:    begin S_base1 = 4'd7; S_name_len1 = 3'd2; end   // 边缘
+            default: begin S_base1 = 4'd0; S_name_len1 = 3'd2; end
         endcase
+        S_nchars1 = S_name_len1 + 3'd1;
         // 字形表 CHARS = "原图灰度二值化边缘0123"，数字 0~3 序号 9~12
         S_base2   = 4'd9 + {2'b0, I_k_sel};
         S_nchars2 = 2'd0;
@@ -173,7 +176,9 @@ module osd_overlay #(
     wire [3:0] S_col1    = (S_x - TEXT_X) & 4'hF;
     wire [3:0] S_row1    = (S_y - TEXT_Y);
     // 算法名只显示实际算法，不再追加 0/1 后缀。
-    wire [3:0] S_glyph1  = S_base1 + S_char_i1;
+    wire [3:0] S_glyph1  = (S_char_i1 < S_name_len1) ?
+                            (S_base1 + S_char_i1) :
+                            (4'd9 + {2'b0, I_exp_sel});
 
     wire [15:0] S_font_row1;
     osd_font_rom u_font1 (

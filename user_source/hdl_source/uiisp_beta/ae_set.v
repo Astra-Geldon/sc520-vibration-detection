@@ -35,6 +35,7 @@ module ae_set
 input wire I_clk,
 input wire I_rst,
 input wire [3:0]I_btn,
+input wire [1:0]I_exp_sel,
 input wire I_ae_cfg_done,
 input wire I_cam_cfg_done,
 output wire O_ae_req,
@@ -47,6 +48,7 @@ reg 	[19:0] 	rc_ae_tick = 0;
 reg 			r_ae_tick = 0; 
 reg 	[4:0] 	rc_ag_tick = 0; 
 reg 			r_ag_tick = 0; 
+	reg [1:0] r_exp_sync1 = 0, r_exp_sync2 = 0, r_exp_sync_d = 0;
 	
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
@@ -67,6 +69,32 @@ always @(posedge I_clk or posedge I_rst) begin
 		r_ag_tick <= (&rc_ag_tick) && r_ae_tick; 
 	end
 end
+
+// KEY3 在 HDMI 像素时钟域产生曝光档位；这里用两级同步，按键变化很慢，
+// 每次档位变化只触发一次新的传感器曝光写入。
+always @(posedge I_clk or posedge I_rst) begin
+	if(I_rst) begin
+		r_exp_sync1 <= 2'd0;
+		r_exp_sync2 <= 2'd0;
+		r_exp_sync_d <= 2'd0;
+	end else begin
+		r_exp_sync1 <= I_exp_sel;
+		r_exp_sync2 <= r_exp_sync1;
+		r_exp_sync_d <= r_exp_sync2;
+	end
+end
+
+function [15:0] f_exp_value;
+	input [1:0] sel;
+	begin
+		case(sel)
+			2'd0: f_exp_value = 16'd1991;
+			2'd1: f_exp_value = 16'd1600;
+			2'd2: f_exp_value = 16'd1200;
+			default: f_exp_value = 16'd900;
+		endcase
+	end
+endfunction
 	
 //	Use button to add / sub idelay values. I_button[0]:IncDatDly, [1]DecDatDly, [2]IncI_clkDly, [3]DecI_clkDly
 reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0; 
@@ -108,7 +136,9 @@ always @(posedge I_clk or posedge I_rst) begin
 		r_button_0 <= ~I_btn; 
 		r_button_1 <= r_button_0; 
 	
-		if(r_button_1[0]) begin
+		if(r_exp_sync2 != r_exp_sync_d) begin
+			r_ae_set <= f_exp_value(r_exp_sync2);
+		end else if(r_button_1[0]) begin
 			r_ae_set <= (r_ae_set > 2) ? r_ae_set - r_ae_tick : r_ae_set; 
 		end else if(r_button_1[1]) begin
 			r_ae_set <= (r_ae_set < 1991) ? r_ae_set + r_ae_tick : r_ae_set; 
