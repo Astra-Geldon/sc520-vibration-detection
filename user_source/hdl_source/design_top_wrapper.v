@@ -31,6 +31,7 @@
 
 // Included here only; do not also add this module as a separate TD Design File.
 `include "highlight_region.v"
+`include "highlight_tone.v"
 
 // =====================================================================
 //  调试开关：注释掉下面这一行即可恢复 HDMI 显示（一行都不用改别的）。
@@ -70,7 +71,7 @@
 //
 //  打开（默认）= 用板载 4 个按键 KEY1~KEY4 选择（按下=低）：
 //        SW3 拨上 → 强制原图    SW2 拨上 → 二值化
-//        KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=高光分区候选
+//        KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=补偿C0/C1/C2/C3/H1选区查看
 //  注释掉      = 回到编译期固定模式（用下面的 IMG_MODE），资源可回到只综合一种
 //
 //  ★ 与队友功能的分隔：本开关只影响两个地方 ——
@@ -413,9 +414,9 @@ module design_top_wrapper (
     wire[ 7:0]  S_img_threshold;
     wire        S_img_k_step;
     wire[ 1:0]  S_exp_sel;
-    wire[ 1:0]  S_region_sel_req;
-    reg [ 1:0]  S_region_sel;
-    wire[ 1:0]  S_region_sel_active;
+    wire[ 2:0]  S_region_sel_req;
+    reg [ 2:0]  S_region_sel;
+    wire[ 2:0]  S_region_sel_active;
     wire[23:0]  S_region_data;
 
     reg         S_dbg_raw_seen;
@@ -810,7 +811,7 @@ module design_top_wrapper (
 	
 
   
-  ae_set u_ae_set (
+  ae_set #(.EXP_RST(2)) u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
@@ -1214,14 +1215,16 @@ isp_top u_isp_top (
     //------------------------------------------------------------------
 //----------------------------------------------------------------------
 //  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
-//      KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=高光分区候选
+//      KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=补偿C0/C1/C2/C3/H1选区查看
 //    独立模块 img_mode_sel.v（内部10ms去抖 + 按下锁存），输出3 bit模式码。
 //    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
 //----------------------------------------------------------------------
 `ifdef IMG_MODE_KEY
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
-        .EXP_RST    ( 0          ),   // 分区以真实原图0（曝光1991）为基准
+        .EXP_RST    ( 2          ),   // real exposure1200; KEY3 retains all four exposures
+        .REGION_RST ( 2          ),   // default C2 medium midtone compensation
+        .REGION_N   ( 5          ),   // C0/C1/C2/C3/H1 mask
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )
     )u_img_mode_sel(
@@ -1237,21 +1240,21 @@ isp_top u_isp_top (
     );
 `else
     assign S_img_mode = IMG_MODE[2:0];
-    assign S_exp_sel = 2'd0;
-    assign S_region_sel_req = 2'd1;
+    assign S_exp_sel = 2'd2;
+    assign S_region_sel_req = 3'd2;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
     // 最终二值化固定增强源；KEY3只改变传感器曝光候选和 OSD 编号。
     assign S_img_src_raw = 1'b0;
 
-    // Latch threshold choice in vertical blanking, so a frame uses one choice.
+    // Latch compensation choice in vertical blanking; H1 thresholds stay fixed.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) S_region_sel <= 2'd1;
+        if (!S_hdmi_rst_n) S_region_sel <= 3'd2;
         else if (S_hdmi_vsync) S_region_sel <= S_region_sel_req;
     end
     // Gray/binary/Sobel remain their original algorithms, including line delays.
-    assign S_region_sel_active = (S_img_mode == 3'd0) ? S_region_sel : 2'd0;
+    assign S_region_sel_active = (S_img_mode == 3'd0) ? S_region_sel : 3'd0;
 
     //------------------------------------------------------------------
     //  简化自适应白平衡（2026-10-24）
@@ -1326,11 +1329,10 @@ isp_top u_isp_top (
     //  OSD 叠加：右上角安路 Logo + 左上角算法名
     //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
     //------------------------------------------------------------------
-    highlight_region u_highlight_region (
+    highlight_tone u_highlight_tone (
         .I_de       ( S_hdmi_de ),
         .I_enable   ( S_img_mode == 3'd0 ),
         .I_sel      ( S_region_sel_active ),
-        .I_source   ( S_csc_data ),
         .I_data     ( S_imgp_data ),
         .O_mask     ( ),
         .O_data     ( S_region_data )

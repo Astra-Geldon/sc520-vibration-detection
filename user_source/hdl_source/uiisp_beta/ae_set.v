@@ -30,7 +30,9 @@
 --�汾��1.0
 *********************************************************************/
 
-module ae_set
+module ae_set #(
+parameter integer EXP_RST = 0 // 0/1/2/3 = 1991/1600/1200/900
+)
 (
 input wire I_clk,
 input wire I_rst,
@@ -51,7 +53,7 @@ reg 			r_ag_tick = 0;
 	reg [1:0] r_exp_key_sync = 2'b11;
 	reg [17:0] r_exp_key_cnt = 0;
 	reg r_exp_key_level = 1'b1, r_exp_key_level_d = 1'b1;
-	reg [1:0] r_exp_sel = 2'd0, r_exp_sel_d = 2'd0;
+	reg [1:0] r_exp_sel = EXP_RST, r_exp_sel_d = EXP_RST;
 	
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
@@ -74,15 +76,15 @@ always @(posedge I_clk or posedge I_rst) begin
 end
 
 // KEY3 是异步物理按键；在 24 MHz 摄像头配置时钟域单独同步、去抖并循环曝光档。
-// OSD 在 HDMI 域对同一个物理按键做自己的去抖；分区版两边从原图0复位。
+// OSD 在 HDMI 域对同一个物理按键做自己的去抖；本实验顶层统一设置两边复位档位为原图2（曝光1200）。
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_exp_key_sync <= 2'b11;
 		r_exp_key_cnt <= 18'd0;
 		r_exp_key_level <= 1'b1;
 		r_exp_key_level_d <= 1'b1;
-		r_exp_sel <= 2'd0;
-		r_exp_sel_d <= 2'd0;
+		r_exp_sel <= EXP_RST;
+		r_exp_sel_d <= EXP_RST;
 	end else begin
 		r_exp_key_sync <= {r_exp_key_sync[0], I_exp_key_n};
 		r_exp_key_level_d <= r_exp_key_level;
@@ -142,13 +144,13 @@ reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0;
 //           统计样本 95%+ 的帧 白墙G/R=0.986（中性）。
 //   151 约让平均亮度回到 121，此时绝大多数帧统计样本 >95%，白墙回到中性。
 //   同时高光过曝也减轻（用户反馈白色监控和墙面分不开）。
-// Region-mask experiment: start at real orig0 exposure; KEY3 keeps 0..3 references.
-reg 	[15:0] 	r_ae_set = 1991, r_ag_set = 160;
+// EXP_RST selects the real sensor exposure; KEY3 keeps all four references.
+reg 	[15:0] 	r_ae_set = f_exp_value(EXP_RST), r_ag_set = 160;
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_button_0 <= 0; 
 		r_button_1 <= 0; 
-		r_ae_set <= 1991;
+		r_ae_set <= f_exp_value(EXP_RST);
 		r_ag_set <= 160; 
 	end else begin
 	//	When button pressed, r_button_1 bit is 1. 

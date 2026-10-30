@@ -68,7 +68,8 @@ def main():
     extra = [os.path.join(PROJ, "user_source", "hdl_source", "vib_prev_frame_ddr.v"),
              os.path.join(PROJ, "user_source", "hdl_source", "vib_gauss3x3.v"),
              os.path.join(PROJ, "user_source", "hdl_source", "vib_lk_grid.v"),
-             os.path.join(PROJ, "user_source", "hdl_source", "highlight_region.v")]
+             os.path.join(PROJ, "user_source", "hdl_source", "highlight_region.v"),
+             os.path.join(PROJ, "user_source", "hdl_source", "highlight_tone.v")]
     # Included multi-block modules are not separate .al sources. Check their
     # real interfaces too, rather than silently skipping the newly active chain.
     extra.extend(os.path.join(PROJ, "user_source", "hdl_source", "vibration", name)

@@ -1,5 +1,5 @@
 # SC520 MIPI → HDMI 振动频率检测系统
-> 当前本地实验分支 `image-highlight-regions-20261030` 只验证实时高光视频分区：KEY3 保留四档真实整帧曝光，KEY4 循环关闭/三档品红选区，屏幕显示 H 编号。它尚未实现原图0/3区域曝光融合。开工前保存点为 `f4ca7a2 曝光参数对比版`；操作与验证状态见 [视频分区说明](HIGHLIGHT_REGION_20261030.md)，实施范围见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。以下 A 版发布信息用于追溯稳定基线。
+> 当前本地实验分支 `image-h1-local-tone-20261030` 以已认可的 `42b0736 分区算法` 为基底：H1固定，KEY3保留四档真实曝光，KEY4比较补偿关闭/弱/中/强与H1选区；默认曝光1200＋C2。操作、算法及验收状态见 [H1补偿候选说明](H1_LOCAL_TONE_20261030.md)，阶段安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。原分区说明见 [视频分区记录](HIGHLIGHT_REGION_20261030.md)。以下A版发布信息用于追溯稳定基线。
 
 
 ## 当前交接版本：A-original-reuse + Logo

@@ -17,7 +17,7 @@
 //      KEY1 (D5 / I_key[0]) → 视觉增强彩色画面
 //      KEY2 (A9 / I_key[1]) → 算法循环： 灰度 → 二值化 → 边缘 → 灰度 …
 //      KEY3 (B9 / I_key[2]) → 曝光候选档循环（0/1/2/3）
-//      KEY4 (C7 / I_key[3]) → 高光分区：关闭/宽松/标准/严格
+//      KEY4 (C7 / I_key[3]) → 本实验：补偿关闭/弱/中/强/H1品红选区
 //
 //  模式编码（3 bit，最多 8 种）
 //      0 = 原图
@@ -44,7 +44,8 @@ module img_mode_sel #(
     parameter integer CLK_HZ   = 74250000,  // = S_hdmi_pixel_clk
     parameter integer DB_MS    = 10,        // 去抖时间(ms)
     parameter integer EXP_RST  = 1,         // 上电曝光候选：1=1600
-    parameter integer REGION_RST = 1,       // 上电高光分区：宽松（只标记，不合成）
+    parameter integer REGION_RST = 1,       // top overrides: C2 on the local-tone branch
+    parameter integer REGION_N = 4,         // 4=legacy classifier UI, 5=local-tone candidates
 
     // 兼容旧例化的保留参数，不再控制 KEY3；扩展算法需修改 KEY2 循环。
     parameter integer EXT_BASE = 4,         // 第一个扩展算法的模式码
@@ -56,7 +57,7 @@ module img_mode_sel #(
     output reg  [2:0] O_mode,       // 见上面"模式编码"
     output reg        O_src_raw,    // 二值化来源：1=原图，0=视觉增强视频
     output reg  [1:0] O_exp_sel,   // 曝光候选：0=1991, 1=1600, 2=1200, 3=900
-    output reg  [1:0] O_region_sel, // KEY4: 0=关闭,1=宽松,2=标准,3=严格
+    output reg  [2:0] O_region_sel, // top uses 0=off,1=weak,2=medium,3=strong,4=H1
     output reg        O_th_lock,    // 二值阈值锁定请求，img_proc在下一VS提交
     output wire       O_k_step      // 非二值化模式的KEY4单次脉冲，供顶层调校正强度
 );
@@ -116,12 +117,15 @@ module img_mode_sel #(
         end
     endgenerate
 
-    // KEY4 only changes the highlight classifier, not shading/threshold lock.
+    // KEY4 changes only the experiment candidate, not shading/threshold lock.
     assign O_k_step = 1'b0;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) O_region_sel <= REGION_RST;
-        else if (S_press[3]) O_region_sel <= O_region_sel + 1'b1;
+        else if (S_press[3]) begin
+            if (O_region_sel >= REGION_N - 1) O_region_sel <= 3'd0;
+            else O_region_sel <= O_region_sel + 1'b1;
+        end
     end
 
     //==================================================================
