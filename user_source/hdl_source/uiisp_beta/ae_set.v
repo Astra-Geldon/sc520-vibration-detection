@@ -35,7 +35,7 @@ module ae_set
 input wire I_clk,
 input wire I_rst,
 input wire [3:0]I_btn,
-input wire [1:0]I_exp_sel,
+input wire I_exp_key_n,
 input wire I_ae_cfg_done,
 input wire I_cam_cfg_done,
 output wire O_ae_req,
@@ -48,7 +48,10 @@ reg 	[19:0] 	rc_ae_tick = 0;
 reg 			r_ae_tick = 0; 
 reg 	[4:0] 	rc_ag_tick = 0; 
 reg 			r_ag_tick = 0; 
-	reg [1:0] r_exp_sync1 = 0, r_exp_sync2 = 0, r_exp_sync_d = 0;
+	reg [1:0] r_exp_key_sync = 2'b11;
+	reg [17:0] r_exp_key_cnt = 0;
+	reg r_exp_key_level = 1'b1, r_exp_key_level_d = 1'b1;
+	reg [1:0] r_exp_sel = 2'd1, r_exp_sel_d = 2'd1;
 	
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
@@ -70,17 +73,32 @@ always @(posedge I_clk or posedge I_rst) begin
 	end
 end
 
-// KEY3 在 HDMI 像素时钟域产生曝光档位；这里用两级同步，按键变化很慢，
-// 每次档位变化只触发一次新的传感器曝光写入。
+// KEY3 是异步物理按键；在 24 MHz 摄像头配置时钟域单独同步、去抖并循环曝光档。
+// OSD 在 HDMI 域对同一个物理按键做自己的去抖，两边均从档位1复位，保持显示和写入一致。
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
-		r_exp_sync1 <= 2'd0;
-		r_exp_sync2 <= 2'd0;
-		r_exp_sync_d <= 2'd0;
+		r_exp_key_sync <= 2'b11;
+		r_exp_key_cnt <= 18'd0;
+		r_exp_key_level <= 1'b1;
+		r_exp_key_level_d <= 1'b1;
+		r_exp_sel <= 2'd1;
+		r_exp_sel_d <= 2'd1;
 	end else begin
-		r_exp_sync1 <= I_exp_sel;
-		r_exp_sync2 <= r_exp_sync1;
-		r_exp_sync_d <= r_exp_sync2;
+		r_exp_key_sync <= {r_exp_key_sync[0], I_exp_key_n};
+		r_exp_key_level_d <= r_exp_key_level;
+		if (r_exp_key_sync[1] != r_exp_key_level) begin
+			if (r_exp_key_cnt == 18'd238095) begin
+				r_exp_key_level <= r_exp_key_sync[1];
+				r_exp_key_cnt <= 18'd0;
+			end else begin
+				r_exp_key_cnt <= r_exp_key_cnt + 1'b1;
+			end
+		end else begin
+			r_exp_key_cnt <= 18'd0;
+		end
+		if (r_exp_key_level_d && !r_exp_key_level)
+			r_exp_sel <= r_exp_sel + 1'b1;
+		r_exp_sel_d <= r_exp_sel;
 	end
 end
 
@@ -136,8 +154,8 @@ always @(posedge I_clk or posedge I_rst) begin
 		r_button_0 <= ~I_btn; 
 		r_button_1 <= r_button_0; 
 	
-		if(r_exp_sync2 != r_exp_sync_d) begin
-			r_ae_set <= f_exp_value(r_exp_sync2);
+		if(r_exp_sel != r_exp_sel_d) begin
+			r_ae_set <= f_exp_value(r_exp_sel);
 		end else if(r_button_1[0]) begin
 			r_ae_set <= (r_ae_set > 2) ? r_ae_set - r_ae_tick : r_ae_set; 
 		end else if(r_button_1[1]) begin

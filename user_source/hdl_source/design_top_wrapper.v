@@ -67,7 +67,7 @@
 //
 //  打开（默认）= 用板载 4 个按键 KEY1~KEY4 选择（按下=低）：
 //        SW3 拨上 → 强制原图    SW2 拨上 → 二值化
-//        KEY1=增强彩色 KEY2=算法循环 KEY3=释放 KEY4=释放
+//        KEY1=增强彩色 KEY2=算法循环 KEY3=曝光候选循环 KEY4=释放
 //  注释掉      = 回到编译期固定模式（用下面的 IMG_MODE），资源可回到只综合一种
 //
 //  ★ 与队友功能的分隔：本开关只影响两个地方 ——
@@ -807,7 +807,7 @@ module design_top_wrapper (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
-      .I_exp_sel(S_exp_sel),
+      .I_exp_key_n(I_key[2]),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
       .O_ae_req(S_ae_req),
@@ -1207,7 +1207,7 @@ isp_top u_isp_top (
     //------------------------------------------------------------------
 //----------------------------------------------------------------------
 //  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
-//      KEY1=增强彩色 KEY2=算法循环 KEY3=释放 KEY4=释放
+//      KEY1=增强彩色 KEY2=算法循环 KEY3=曝光候选循环 KEY4=释放
 //    独立模块 img_mode_sel.v（内部10ms去抖 + 按下锁存），输出3 bit模式码。
 //    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
 //----------------------------------------------------------------------
@@ -1222,7 +1222,7 @@ isp_top u_isp_top (
         .I_key_n    ( I_key            ),   // {KEY4,KEY3,KEY2,KEY1}，按下=0
         .O_mode     ( S_img_mode       ),
         .O_exp_sel  ( S_exp_sel        ),
-        // KEY3已释放；最终二值化固定使用增强图像。
+        // KEY3由 img_mode_sel 输出曝光候选；最终二值化固定使用增强图像。
         .O_th_lock  ( S_img_th_lock_req),
         .O_k_step   ( S_img_k_step     )
     );
@@ -1232,7 +1232,7 @@ isp_top u_isp_top (
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
-    // 最终二值化固定增强源，KEY3不再改变视频或OSD状态。
+    // 最终二值化固定增强源；KEY3只改变传感器曝光候选和 OSD 编号。
     assign S_img_src_raw = 1'b0;
 
     //------------------------------------------------------------------
@@ -1278,7 +1278,7 @@ isp_top u_isp_top (
 
     //------------------------------------------------------------------
     //  基础图像处理：video_out -> awb_simple -> color_shading -> img_proc
-    //    灰度/Sobel固定video_out原图；二值化固定增强图像，KEY3释放
+    //    灰度/Sobel固定video_out原图；二值化固定增强图像，KEY3用于曝光候选
     //    mode=0 始终显示增强后的 S_csc_data，二值化来源选择不影响彩色画面
     //                              -> osd -> hdmi_mixer
     //    彩色/灰度同拍；多数滤波中心晚1行1像素，Sobel保持原有延迟；不改HDMI同步
