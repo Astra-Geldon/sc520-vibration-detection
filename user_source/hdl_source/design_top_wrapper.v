@@ -418,6 +418,14 @@ module design_top_wrapper (
     reg [ 2:0]  S_region_sel;
     wire[ 2:0]  S_region_sel_active;
     wire[23:0]  S_region_data;
+    // Retiming uses the mixer's existing first data register. Pixel/DE/VS
+    // emerge together; candidate/OSD metadata follow that same register.
+    wire [23:0] S_tone_stage_data;
+    wire S_tone_stage_de, S_tone_stage_vs;
+    reg [2:0] S_tone_stage_mode, S_tone_stage_sel;
+    reg [1:0] S_tone_stage_exp, S_tone_stage_k;
+    reg [7:0] S_tone_stage_threshold;
+    reg S_tone_stage_raw, S_tone_stage_locked;
 
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -1329,11 +1337,30 @@ isp_top u_isp_top (
     //  OSD 叠加：右上角安路 Logo + 左上角算法名
     //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
     //------------------------------------------------------------------
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) begin
+            S_tone_stage_mode <= 3'd0;
+            S_tone_stage_sel <= 3'd2;
+            S_tone_stage_exp <= 2'd2;
+            S_tone_stage_k <= 2'd2;
+            S_tone_stage_threshold <= 8'd0;
+            S_tone_stage_raw <= 1'b0;
+            S_tone_stage_locked <= 1'b0;
+        end else begin
+            S_tone_stage_mode <= S_img_mode;
+            S_tone_stage_sel <= S_region_sel_active;
+            S_tone_stage_exp <= S_exp_sel;
+            S_tone_stage_k <= S_k_sel;
+            S_tone_stage_threshold <= S_img_threshold;
+            S_tone_stage_raw <= S_img_src_raw;
+            S_tone_stage_locked <= S_img_th_locked;
+        end
+    end
     highlight_tone u_highlight_tone (
-        .I_de       ( S_hdmi_de ),
-        .I_enable   ( S_img_mode == 3'd0 ),
-        .I_sel      ( S_region_sel_active ),
-        .I_data     ( S_imgp_data ),
+        .I_de       ( S_tone_stage_de ),
+        .I_enable   ( S_tone_stage_mode == 3'd0 ),
+        .I_sel      ( S_tone_stage_sel ),
+        .I_data     ( S_tone_stage_data ),
         .O_mask     ( ),
         .O_data     ( S_region_data )
     );
@@ -1355,15 +1382,15 @@ isp_top u_isp_top (
     )u_osd_overlay(
         .I_clk      ( S_hdmi_pixel_clk ),
         .I_rst_n    ( S_hdmi_rst_n     ),
-        .I_de       ( S_hdmi_de        ),
-        .I_vs       ( S_hdmi_vsync     ),
-        .I_mode     ( S_img_mode       ),
-        .I_src_raw  ( S_img_src_raw    ),
-        .I_threshold( S_img_threshold ),
-        .I_th_locked( S_img_th_locked ),
-        .I_k_sel    ( S_k_sel           ),
-        .I_exp_sel  ( S_exp_sel         ),
-        .I_region_sel ( S_region_sel_active ),
+        .I_de       ( S_tone_stage_de   ),
+        .I_vs       ( S_tone_stage_vs   ),
+        .I_mode     ( S_tone_stage_mode ),
+        .I_src_raw  ( S_tone_stage_raw  ),
+        .I_threshold( S_tone_stage_threshold ),
+        .I_th_locked( S_tone_stage_locked ),
+        .I_k_sel    ( S_tone_stage_k    ),
+        .I_exp_sel  ( S_tone_stage_exp  ),
+        .I_region_sel ( S_tone_stage_sel ),
         .I_data     ( S_region_data    ),
         .O_data     ( S_osd_mix        )
     );
@@ -1380,7 +1407,8 @@ isp_top u_isp_top (
         // full-screen status page is needed.
         // 2026-10-21：彩条诊断已通过（OBS 抓到八色条，证明 HDMI 链路 OK），
         //              改回 0 = 正常显示 img_proc 处理后的摄像头画面。
-        .DEBUG_MODE ( 0    )
+        .DEBUG_MODE ( 0    ),
+        .PIXEL_STAGE_EN ( 1 )
     )u_hdmi_mixer(
         .I_clk           ( S_hdmi_pixel_clk   ),
         .I_rst_n         ( S_hdmi_rst_n       ),
@@ -1391,7 +1419,11 @@ isp_top u_isp_top (
         .I_video_last    ( S_hdmi_last        ),
         .I_debug_status  ( S_hdmi_debug_status),
         .O_video_rd_en   ( S_hdmi_window_rd_en),
-        .I_video_rd_data ( S_osd_mix        ),
+        .I_video_rd_data ( S_imgp_data       ),
+        .O_stage_data    ( S_tone_stage_data ),
+        .O_stage_de      ( S_tone_stage_de   ),
+        .O_stage_vs      ( S_tone_stage_vs   ),
+        .I_stage_result  ( S_osd_mix         ),
         .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
         .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
         .O_hdmi_de       ( S_hdmi_out_de      ),
