@@ -92,3 +92,50 @@ D:\FPGA\codex\_build\20261029project\stage0-baseline-20261030\highlight\summary.
 通过 DirectShow 设备枚举确认当前视频设备顺序：`0: UGREEN 25854`、`1: Integrated Camera`。此前使用索引 1 即电脑内置摄像头，相关采样已在上文作废。使用 `cv2.VideoCapture(0, cv2.CAP_DSHOW)` 打开索引 0，并保存 `D:\FPGA\codex\_build\20261029project\stage0-baseline-20261030\ugreen_verified\frame0.png`；画面可见 FPGA 输出的“原图”OSD 与右上角安路科技 Logo，确认该帧来自 FPGA HDMI/UGREEN 采集链路。
 
 该验证帧对应用户指定的高亮区域，统计为 RGB 均值 `[235.63, 233.44, 231.20]`、Y≥250 占 65.10%。这是单帧验证记录，不能替代暖机后的正式样本。
+
+## UGREEN 正式高亮采样（有效）
+
+设备来源确认后，使用 `cv2.VideoCapture(0, cv2.CAP_DSHOW)`（DirectShow 枚举名称 `UGREEN 25854`）暖机 120 帧，再连续采集 60 帧。原始代表帧和统计文件位于：
+
+```text
+D:\FPGA\codex\_build\20261029project\stage0-baseline-20261030\ugreen_verified\
+```
+
+统计文件为 `summary_ugreen_highlight.json`，代表帧为 `frame_000.png`、`frame_007.png`、`frame_015.png`、`frame_023.png`、`frame_031.png`、`frame_039.png`、`frame_047.png`、`frame_059.png`。设备信息写入统计文件，包含 `device_index=0`、`device_name=UGREEN 25854`、`backend=DSHOW`、分辨率 1280×720。
+
+| 指标 | 60 帧范围 |
+|---|---:|
+| 全画面平均 Y | 234.003～234.033 |
+| Y 的 95/99 分位 | 均为 255 |
+| Y 最大值 | 均为 255 |
+| Y≥250 像素比例 | 65.333%～65.413% |
+| `σ(Cr)` | 6.918～6.956 |
+| `σ(Cb)` | 4.892～4.944 |
+| 平均 R | 235.764～235.820 |
+| 平均 G | 233.599～233.650 |
+| 平均 B | 231.328～231.449 |
+
+这组数据确实来自 FPGA HDMI，且当前高亮构图存在大面积饱和（Y≥250 约 65%），可作为阶段 0 的有效过曝基线。它只用于高亮场景；平场、同一人脸中心/边角和暗部仍需在对应构图下分别采集。
+
+## 正确设备重新采集：UGREEN 25854 DirectShow
+
+为避免设备索引变化，正式暖机采集改用 DirectShow 设备名 `video=UGREEN 25854`。对应 PnP 标识为 `USB\\VID_2B89&PID_5854&MI_00\\6&25F3617F&0&0000`。身份核验帧中可见 FPGA 输出左上角“原图”和右上角安路科技 Logo，确认来源是 FPGA HDMI，而不是电脑自带摄像头。
+
+原始帧和统计文件位于：
+
+```text
+D:\FPGA\codex\_build\20261029project\stage0-ugreen-valid-20261030\
+```
+
+在用户指定的高亮构图下，连续采集 4 秒、60 帧（1280×720）得到：
+
+| 指标 | 结果 |
+|---|---:|
+| 平均 Y | 228.43～228.46 |
+| Y 95/99 分位 | 255 / 255 |
+| Y 最大值 | 255 |
+| Y≥250 比例 | 51.6% |
+| Y≥254 比例 | 36.3% |
+| `σ(Cr/Cb)` | 约 7.25 / 5.55 |
+
+中间帧九宫格中，中心和下中区域 Y 约 254～255，左上约 169，右上约 213，说明当前高亮构图确实存在大面积饱和及明显场内亮度差异。这组数据来自 FPGA HDMI 采集卡，可用于阶段 1 曝光对照。
