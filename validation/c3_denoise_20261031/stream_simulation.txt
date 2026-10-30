@@ -1,0 +1,7 @@
+PASS chroma_stream frame D0: pixels=921600 modified=0 Y8/errors=0
+PASS chroma_stream frame D1: pixels=921600 modified=507700 Y8/errors=0
+PASS chroma_stream frame D2: pixels=921600 modified=688754 Y8/errors=0
+PASS chroma_stream frame D3: pixels=921600 modified=738386 Y8/errors=0
+PASS chroma_stream: 3686400 full720p pixels, 1319664 bypass checks; all HS/VS/DE/meta aligned; latency=1658
+PASS chroma_taps: 459126 exact 3x3 coordinates across frame/line borders
+D:\FPGA\codex\20261029project\tools\tests\tb_chroma_stream.v:109: $finish called at 49516610000 (1ps)

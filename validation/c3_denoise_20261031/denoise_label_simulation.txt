@@ -1,0 +1,2 @@
+PASS denoise_label: 4704 independent 5x7 glyph pixels; C=3 D=0/1/2/3
+D:\FPGA\codex\_build\20261029project\c3-chroma-denoise-20261031\pipeline\tb_denoise_label.v:20: $finish called at 4705000 (1ps)

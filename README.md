@@ -1,5 +1,5 @@
 # SC520 MIPI → HDMI 振动频率检测系统
-> 当前本地实验分支 `image-h1-strong-compensation-20261031`：已烧录，默认原图3（曝光900）＋C2增强补偿，C1保留上一版C3，KEY4切换C0/C1/C2/C3/M（首次进入C3）；H1高光判据与原视频流水保持。新档位画质待实际观察。参数、资源和烧录记录见 [更强非高光补偿](H1_STRONG_COMPENSATION_20261031.md)，阶段安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)，上一版见 [H1补偿记录](H1_LOCAL_TONE_20261030.md)。以下A版发布信息用于追溯稳定基线。
+> 当前本地实验分支 `image-c3-denoise-study-20261031`：以原图3（曝光900）＋C3为亮度基准，加入只处理颜色差异的四档实时降噪，KEY4循环D0原C3/D1弱/D2中/D3强，默认D0，屏幕显示`C=3 D=n`。FPGA已由用户断电，本轮离线验证与完整编译已通过，没有烧录，真实画质待上板确认。方案、参数及结果见 [C3保亮降噪说明](C3_CHROMA_DENOISE_20261031.md)，总安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。此前C3保存点与bit保留，见 [强补偿记录](H1_STRONG_COMPENSATION_20261031.md)。以下A版发布信息用于追溯稳定基线。
 
 
 ## 当前交接版本：A-original-reuse + Logo

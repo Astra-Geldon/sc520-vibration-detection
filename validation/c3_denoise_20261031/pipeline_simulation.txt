@@ -1,0 +1,11 @@
+PASS UI: D0/1/2/3 wrap, bounce, long hold, exposure independence, vertical-blank commit
+PASS measured fixed raster delay: 1659 cycles after original mixer
+PASS pipeline frame0 mode0 D0: 921600 active pixels, DDR count exact
+PASS pipeline frame1 mode0 D1: 128000 active pixels, DDR count exact
+PASS pipeline frame2 mode0 D2: 128000 active pixels, DDR count exact
+PASS pipeline frame3 mode0 D3: 128000 active pixels, DDR count exact
+PASS pipeline frame4 mode1 D3: 61440 active pixels, DDR count exact
+PASS pipeline frame5 mode2 D3: 61440 active pixels, DDR count exact
+PASS pipeline frame6 mode3 D3: 61440 active pixels, DDR count exact
+PASS chroma_pipeline: cycles=2280669 pixels=1489920 noop=1105920 protected=286320 overlay=41598 logo=21694 changed=302034 delay=1659 reads=1489920
+D:\FPGA\codex\_build\20261029project\c3-chroma-denoise-20261031\pipeline\tb_chroma_pipeline.v:380: $finish called at 22824880000 (1ps)

@@ -1,0 +1,2 @@
+PASS chroma_core: 120000 independent Python integer-oracle windows; latency=5 cycles
+D:\FPGA\codex\20261029project\tools\tests\tb_chroma_core.v:39: $finish called at 1200080000 (1ps)

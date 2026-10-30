@@ -1,0 +1,63 @@
+{
+  "source_commit": "1dfa1d78673a75d798ed1ef29bc1af36f2a25820",
+  "branch": "image-c3-denoise-study-20261031",
+  "source_manifest_sha256": "c914f735b99e59d55b671a82f03b1de7bfaded53127208ade1d01932ee8f0700",
+  "scope": "C3 fixed-luma chroma denoise, D0/D1/D2/D3, same-frame 3x3",
+  "default_exposure_request": 900,
+  "default_tone": "C3",
+  "default_denoise": "D0",
+  "resources": {
+    "LUT6": 11021,
+    "Slice": 12202,
+    "registers": 10216,
+    "ERAM20K": 52,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_previous_C3": {
+    "LUT6": 1175,
+    "Slice": 1189,
+    "registers": 736,
+    "ERAM20K": 9,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.14,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "whole_design_timing_signoff": false,
+  "inherited_timing_limit": "Existing external timing budgets and vendor metadata constraints remain",
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "video_latency_added_clocks": 1659,
+  "pixel_clock_hz": 75000000,
+  "video_latency_added_microseconds": 22.12,
+  "standalone_input_sample_to_output_cycle_index_difference": 1658,
+  "preserved_production_input_count": 225,
+  "optional_luma_smoothing_included": false,
+  "new_ddr_frame_traffic": false,
+  "board_programming": "not_run",
+  "board_validation": "not_run",
+  "reason_no_board_access": "User powered off FPGA and explicitly requested compile without programming",
+  "visual_acceptance": "pending_real_HDMI_video",
+  "bit": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\c3-chroma-denoise-20261031\\compile-v1\\camera_to_dsi_display.bit",
+    "sha256": "59486c45b4fb4bf87dd6101b86cafcae63a0b3a44c23377c185a468158349e00"
+  },
+  "evidence": {
+    "source_manifest.json": "c914f735b99e59d55b671a82f03b1de7bfaded53127208ade1d01932ee8f0700",
+    "core_stream_summary.json": "7704a16c249b8165cb1d70e6d38ea3170dbd35e28ef639588a1b9d746dc5c4ad",
+    "pipeline_summary.json": "26abe758d33b40a9d774a29aa60744aabbd159aac2ad16e0787856a58fd99b6c",
+    "core_simulation.txt": "5acc79c50f6ab8860b4e69de22d9dc15dd0257ca1516f28740042287dbdec3aa",
+    "stream_simulation.txt": "93ca438d3a087ae42b2918b9f74fce3e2b51ee7836dfb1973477c1f0991dc234",
+    "pipeline_simulation.txt": "5f6bec8cb3eccd5823d151873532bf07ebb7a7b6b4c169666e2c3360aa18373f",
+    "denoise_label_simulation.txt": "a0e606a299aad2abde3fc84b787fb49d4006b60cd25fa486e1e931347550f539",
+    "preservation.json": "0e90942541123ebde261c66e063126d5205fdaacf6592509d90a69cd57bd0239"
+  }
+}

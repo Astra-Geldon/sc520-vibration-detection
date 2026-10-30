@@ -1,0 +1,29 @@
+{
+  "pass": true,
+  "scope": "RTL core + synchronous-RAM streaming simulation",
+  "board_validation": "not_run",
+  "programming": "not_run",
+  "ram_model": "Explicit NOREG synchronous read; no memory initialization; collision assertion",
+  "core_vectors": 120000,
+  "coverage": {
+    "blank": 3871,
+    "same": 21002,
+    "changed": 19023,
+    "bypass": 75474,
+    "gamut_fallback": 630
+  },
+  "source_sha256": {
+    "user_source\\hdl_source\\chroma_denoise_stream.v": "7058b3fd3b37ce41c8ad36e02f36c8043407d18173372030144efa721d202d0a",
+    "tools\\tests\\tb_chroma_core.v": "1e9d037eb8bbc6b206ffebb0b01a8199d0d5124f7222fc079abc19ceb43dc3b5",
+    "tools\\tests\\tb_chroma_stream.v": "b85e987f0cf0378ac5ba08404c20af47c8ce789148b63403d4d857d68f6eb2a2",
+    "tools\\tests\\chroma_eram_model.v": "b5bf863b59d0d630933c5e1407e436d1c70cf09f1a3d9c3fdf5d1572f41d1448"
+  },
+  "frames": 4,
+  "active_pixels": 3686400,
+  "raster_clocks": 4950000,
+  "sample_latency": 1658,
+  "frame_pixel_count": 921600,
+  "per_pixel_y8_mismatches": 0,
+  "protected_or_D0_rgb_mismatches": 0,
+  "control_meta_mismatches": 0
+}
