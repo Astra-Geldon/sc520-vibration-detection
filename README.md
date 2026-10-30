@@ -2,7 +2,7 @@
 
 ## 当前交接版本：A-original-reuse + Logo
 
-当前 Gitee 交接目标是 `A-original-reuse` 分支，源码提交为 `ee675b6`（2026-10-30）。本版本复用原工程的摄像头 I²C、ISP、DDR、图像处理和 HDMI 链路，只把 MCU 作为被动硬核接入，并启用右上角安路科技 Logo。
+本地源码分支为 `A-original-reuse`，Gitee 交接分支为 `mcu/sc520-r4-team-handoff-20261029-a-logo`，源码提交为 `ee675b6`（2026-10-30）。本版本复用原工程的摄像头 I²C、ISP、DDR、图像处理和 HDMI 链路，只把 MCU 作为被动硬核接入，并启用右上角安路科技 Logo。
 
 - A 版图像链已在板上确认实时更新；B 版自建图像链不属于本次交接。
 - MCU 当前只接入时钟、复位和安全的空闲端口，不接管摄像头 I²C、ISP、DDR、HDMI 或图像模式控制。详见 [MCU 使用与扩展指南](MCU_USAGE.md)。
