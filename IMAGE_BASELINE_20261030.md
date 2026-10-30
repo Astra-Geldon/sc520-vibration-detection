@@ -86,3 +86,9 @@ D:\FPGA\codex\_build\20261029project\stage0-baseline-20261030\highlight\summary.
 - `user_source/hdl_source/color_shading.v` 只按 X 方向查 10 列表并插值；Y 方向没有独立增益校正。当前表和缩放档位可以先重新标定，再决定是否需要二维表。
 - `user_source/hdl_source/awb.v` 当前使用亮度加权统计，排除 `R+G+B` 接近饱和的样本和部分肤色样本，R/B 增益限制为 0.5～2.0 倍，并用 `old+(new-old)/64` 做帧间平滑。
 - 这些审计只用于定位，不代表已经修改或验证了新的参数。
+
+## 设备来源核验（2026-10-30）
+
+通过 DirectShow 设备枚举确认当前视频设备顺序：`0: UGREEN 25854`、`1: Integrated Camera`。此前使用索引 1 即电脑内置摄像头，相关采样已在上文作废。使用 `cv2.VideoCapture(0, cv2.CAP_DSHOW)` 打开索引 0，并保存 `D:\FPGA\codex\_build\20261029project\stage0-baseline-20261030\ugreen_verified\frame0.png`；画面可见 FPGA 输出的“原图”OSD 与右上角安路科技 Logo，确认该帧来自 FPGA HDMI/UGREEN 采集链路。
+
+该验证帧对应用户指定的高亮区域，统计为 RGB 均值 `[235.63, 233.44, 231.20]`、Y≥250 占 65.10%。这是单帧验证记录，不能替代暖机后的正式样本。
