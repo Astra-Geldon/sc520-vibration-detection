@@ -85,5 +85,7 @@
       "all_RGB_ge_250_pct": 15.38773448773449,
       "any_RGB_equal_255_pct": 23.093362193362193
     }
-  ]
+  ],
+  "user_subjective_feedback": "Slight improvement, but highlights are still too bright.",
+  "conclusion": "Partial perceptual benefit; highlight stage remains open. Continue with pre-clamp shared RGB shoulder study."
 }

@@ -33,7 +33,7 @@
   },
   "board_programming": "success",
   "board_programming_finished_utc": "2026-10-31T10:18:52.674038+00:00",
-  "visual_acceptance": "screenshots_received_residual_highlight_white_region_subjective_comparison_pending",
-  "next_action": "User selects original3/C0; compare same scene normal brightness/color and highlight detail. No common shoulder yet.",
+  "visual_acceptance": "user_reports_slight_improvement_but_still_too_bright",
+  "next_action": "Preserve Gamma candidate; implement isolated pre-shading-clamp common RGB shoulder with reference menu and zero added DSP.",
   "visual_feedback": "validation/gamma_tail_20261031/visual_feedback.json"
 }
