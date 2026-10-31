@@ -1,0 +1,55 @@
+{
+  "knots_p_N1_N2": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      16,
+      28,
+      40
+    ],
+    [
+      32,
+      52,
+      72
+    ],
+    [
+      64,
+      100,
+      124
+    ],
+    [
+      96,
+      136,
+      156
+    ],
+    [
+      128,
+      160,
+      176
+    ],
+    [
+      160,
+      176,
+      184
+    ],
+    [
+      192,
+      192,
+      192
+    ],
+    [
+      255,
+      255,
+      255
+    ]
+  ],
+  "highlight_input_peak_threshold": 192,
+  "highlight_gain_Q8": 256,
+  "L1_coefficients_preserved": true,
+  "new_peak_targets_monotone": true,
+  "N1_N2_max_difference_codes": 24,
+  "source_sha256_after": "e63fe667ed7f1d3075a1c665cd18a2cdd4acbb8354dad3b0cf7fe274a90eac43"
+}

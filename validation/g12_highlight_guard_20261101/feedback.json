@@ -1,0 +1,22 @@
+{
+  "feedback": "L1高光提亮太强，N1/N2几乎无效果",
+  "images": {
+    "L0": {
+      "source": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-5a6cd9da-a591-4dc2-9991-7c61f01fb0c5.jpg",
+      "sha256": "15b1f929ac6a8e7b44493cb157f94f318037624e3dfbd66e36eb4b685cbd667b"
+    },
+    "L1": {
+      "source": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-cfa07af5-a46d-47b1-8515-2d93c7e8c5f5.jpg",
+      "sha256": "2207d2e3dda6df756d87e1d10e068ce34c52ffb0ffcad6c1e30b8f9f70fa7ff6"
+    },
+    "old_N1": {
+      "source": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-c51e83e1-02ed-42a4-a6e7-042a466eb3b6.jpg",
+      "sha256": "1278d8c5eaee3b994b55b702e5c634c6b442ad3298d8243616566f5348612b01"
+    },
+    "old_N2": {
+      "source": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-76da71f1-4c21-4765-8543-78fc64601747.jpg",
+      "sha256": "80c688fde86608dac437df236b0bd90f3812903a4f76aed9afe2eb8dadbe2263"
+    }
+  },
+  "alignment": "构图有变，不进行逐像素前后比较"
+}

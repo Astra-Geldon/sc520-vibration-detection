@@ -1,0 +1,12 @@
+{
+  "reference_old_N1_N2_9b2d46d.bit": {
+    "source_commit": "9b2d46d",
+    "sha256": "8d7dcafd51b9a9d79709b407bf8ef703112ba96a77af0182ba336ed264eacced",
+    "bytes": 1789539
+  },
+  "guarded_N1_N2_6dcd758.bit": {
+    "source_commit": "6dcd758d44126c5b90f2d61fb6ba9352a37d3528",
+    "sha256": "d359728c2caad2a07f2469b778d7281459ae78a309bd088bcf28ed90fd1575b3",
+    "bytes": 1789539
+  }
+}

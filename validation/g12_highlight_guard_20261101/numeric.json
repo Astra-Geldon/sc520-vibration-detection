@@ -1,0 +1,229 @@
+{
+  "pass": true,
+  "scope": "Real highlight-guard RTL versus archived L1 and independent input-peak targets; high-peak identity and UI/reset/mode regression",
+  "source_sha256": {
+    "user_source/hdl_source/highlight_tone.v": "e63fe667ed7f1d3075a1c665cd18a2cdd4acbb8354dad3b0cf7fe274a90eac43",
+    "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "db424f788044fb9cc518422e41db5a5c1703c2a8199d168c8f3d7edbbb4e4456",
+    "user_source/hdl_source/design_top_wrapper.v": "8c40fd7712a511fd6e455354608ea74fb7b64440974edab8f2fe61ba961b3fea"
+  },
+  "tests": {
+    "numeric": {
+      "pass": true,
+      "log": "numeric.log"
+    },
+    "controls": {
+      "pass": true,
+      "log": "controls.log"
+    }
+  },
+  "reference_commit": "6882d4116890253400393fe4e5265cea5d76e0e3",
+  "reference_tone_sha256": "e6a87d70e205df35368e4dcfdac0b625541868c089c517230001d6db086928fa",
+  "profile_input_peak_knots": {
+    "N1": [
+      [
+        0,
+        0
+      ],
+      [
+        16,
+        28
+      ],
+      [
+        32,
+        52
+      ],
+      [
+        64,
+        100
+      ],
+      [
+        96,
+        136
+      ],
+      [
+        128,
+        160
+      ],
+      [
+        160,
+        176
+      ],
+      [
+        192,
+        192
+      ],
+      [
+        255,
+        255
+      ]
+    ],
+    "N2": [
+      [
+        0,
+        0
+      ],
+      [
+        16,
+        40
+      ],
+      [
+        32,
+        72
+      ],
+      [
+        64,
+        124
+      ],
+      [
+        96,
+        156
+      ],
+      [
+        128,
+        176
+      ],
+      [
+        160,
+        184
+      ],
+      [
+        192,
+        192
+      ],
+      [
+        255,
+        255
+      ]
+    ]
+  },
+  "visible_peak_deltas_vs_l1": {
+    "N1": {
+      "minimum_code": -38,
+      "maximum_code": 0,
+      "different_peak_count": 253,
+      "absolute_delta_ge10_peak_count": 231,
+      "absolute_delta_ge20_peak_count": 201
+    },
+    "N2": {
+      "minimum_code": -38,
+      "maximum_code": 0,
+      "different_peak_count": 252,
+      "absolute_delta_ge10_peak_count": 140,
+      "absolute_delta_ge20_peak_count": 88
+    }
+  },
+  "representative_peak_targets": [
+    {
+      "input_peak": 0,
+      "L0": 0,
+      "L1": 0,
+      "N1": 0,
+      "N2": 0
+    },
+    {
+      "input_peak": 16,
+      "L0": 16,
+      "L1": 43,
+      "N1": 28,
+      "N2": 40
+    },
+    {
+      "input_peak": 32,
+      "L0": 32,
+      "L1": 77,
+      "N1": 52,
+      "N2": 72
+    },
+    {
+      "input_peak": 64,
+      "L0": 64,
+      "L1": 128,
+      "N1": 100,
+      "N2": 124
+    },
+    {
+      "input_peak": 96,
+      "L0": 96,
+      "L1": 164,
+      "N1": 136,
+      "N2": 156
+    },
+    {
+      "input_peak": 128,
+      "L0": 128,
+      "L1": 192,
+      "N1": 160,
+      "N2": 176
+    },
+    {
+      "input_peak": 160,
+      "L0": 160,
+      "L1": 213,
+      "N1": 176,
+      "N2": 184
+    },
+    {
+      "input_peak": 176,
+      "L0": 176,
+      "L1": 222,
+      "N1": 184,
+      "N2": 188
+    },
+    {
+      "input_peak": 192,
+      "L0": 192,
+      "L1": 230,
+      "N1": 192,
+      "N2": 192
+    },
+    {
+      "input_peak": 208,
+      "L0": 208,
+      "L1": 237,
+      "N1": 208,
+      "N2": 208
+    },
+    {
+      "input_peak": 224,
+      "L0": 224,
+      "L1": 244,
+      "N1": 224,
+      "N2": 224
+    },
+    {
+      "input_peak": 240,
+      "L0": 240,
+      "L1": 250,
+      "N1": 240,
+      "N2": 240
+    },
+    {
+      "input_peak": 255,
+      "L0": 255,
+      "L1": 255,
+      "N1": 255,
+      "N2": 255
+    }
+  ],
+  "rgb_rotation_cases": 394752,
+  "independent_peak_targets": 1024,
+  "highlight_rgb_equivalence_cases": 86208,
+  "bypass_cases": 2048,
+  "l0_identity": true,
+  "l1_archived_coefficients_and_rgb_exact": true,
+  "highlight_ge192_input_identity": true,
+  "monotone_peak_targets": true,
+  "no_new255_mapping_or_overflow": true,
+  "common_rgb_rounding_bound_code": 0.5,
+  "common_rgb_ratio_bound_code": 1,
+  "exhaustive_multiplier_domain_repeated": false,
+  "controls": {
+    "default_nominal_gain": 12,
+    "default_exposure": 900,
+    "default_profile_index": 2,
+    "key4_presses": 8,
+    "image_modes": 4,
+    "key4_does_not_change_sensor": true
+  }
+}
