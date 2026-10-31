@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "method": "JTAG SRAM download",
+  "source_commit": "a7a12be282e9ef2b63dc2f3111d51b3ebe474db3",
+  "branch": "image-highlight-white-protect-20261031",
+  "bit": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-white-protection-20261031\\compile-v1\\camera_to_dsi_display.bit",
+  "sha256": "e650dae0130c9372d8d534fe636616fb5c74bab3b0ae276745162496304ffe0d",
+  "started_utc": "2026-10-31T12:04:57.062555+00:00",
+  "finished_utc": "2026-10-31T12:05:06.643717+00:00",
+  "exit_code": 0,
+  "error": null,
+  "chip": "PH1P35MDG324",
+  "default_exposure": 900,
+  "default_candidate": "C3/P3/W0",
+  "visual_acceptance": "pending_user_observation",
+  "scope": "Selective near-white overflow chroma protection; Flash not written",
+  "log_sha256": "18e738022a682afc5ae3d818774ad5f7580af0b0601e31fb21715de0a85741a5"
+}

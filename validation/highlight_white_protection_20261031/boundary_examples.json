@@ -1,0 +1,83 @@
+{
+  "1": {
+    "maximum_adjacent_channel_step_on_confidence_boundaries": 4,
+    "example": {
+      "before": [
+        239,
+        240,
+        275
+      ],
+      "after": [
+        240,
+        240,
+        275
+      ],
+      "output_before": [
+        200,
+        200,
+        230
+      ],
+      "output_after": [
+        201,
+        201,
+        226
+      ],
+      "axis": 0,
+      "threshold": 240
+    }
+  },
+  "2": {
+    "maximum_adjacent_channel_step_on_confidence_boundaries": 4,
+    "example": {
+      "before": [
+        239,
+        240,
+        275
+      ],
+      "after": [
+        240,
+        240,
+        275
+      ],
+      "output_before": [
+        200,
+        200,
+        230
+      ],
+      "output_after": [
+        201,
+        201,
+        226
+      ],
+      "axis": 0,
+      "threshold": 240
+    }
+  },
+  "3": {
+    "maximum_adjacent_channel_step_on_confidence_boundaries": 8,
+    "example": {
+      "before": [
+        279,
+        247,
+        248
+      ],
+      "after": [
+        279,
+        248,
+        248
+      ],
+      "output_before": [
+        223,
+        206,
+        207
+      ],
+      "output_after": [
+        215,
+        209,
+        209
+      ],
+      "axis": 1,
+      "threshold": 248
+    }
+  }
+}

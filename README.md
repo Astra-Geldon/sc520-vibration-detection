@@ -1,6 +1,6 @@
 # SC520 MIPI → HDMI 振动频率检测系统
 
-> 最新执行分支`image-highlight-white-protect-20261031`：用户同意尝试P档偏品红修正。新增近白高光W0～W3颜色保护，只处理shading削顶新增的色度，保留旧RGB8颜色差；沿用原P曲线和三路乘法器，DSP总数须≤34。上电原图3/C3/P3/W0，KEY4前进到W1/W2/W3。候选正在验证和编译准备，尚未烧录或通过画质验收；见 [颜色保护候选](HIGHLIGHT_WHITE_PROTECTION_20261031.md)。下方P档记录属于上一轮基线。
+> 最新执行分支`image-highlight-white-protect-20261031`：新增近白高光W0～W3颜色保护，只处理shading削顶新增的色度，保留旧RGB8颜色差，沿用原P曲线。生产源码`a7a12be`完整编译通过，LUT6/Slice/FF/ERAM/DSP=10197/11350/9561/43/34，SWNS/HWNS +0.105/+0.020ns。新增820,769组整数对照、旧肩部回归、按键/OSD及46帧实际流水验证均通过，于2026-10-31 **20:05:06**完成JTAG SRAM烧录。默认原图3/C3/P3/W0，短按KEY4一次/两次/三次进入W1/W2/W3；不会自动切换。强档仍须观察分层边界，画质待用户比较；见 [颜色保护候选](HIGHLIGHT_WHITE_PROTECTION_20261031.md)。下方P档记录属于上一轮基线。
 
 > 当前分支`image-highlight-shoulder-20261031`：阶段1.11第二步已上板，用户确认P高光压缩有效，但不接受偏红代价，**画质未通过验收**。已定位P0的削顶RGB8与P档裁剪前RGB9颜色基准不同，显露shading原先被削顶掩盖的R/B增益；详见 [P档偏品红原因与修正方向](HIGHLIGHT_PINK_REVIEW_20261031.md)。本轮仅分析并保存证据，RTL和板上镜像不变。KEY4仍循环`C0/P0～P3 → C3/P0～P3`；实现、bit与按键见 [裁剪前高光压缩](HIGHLIGHT_COMMON_SHOULDER_20261031.md)。
 

@@ -1,0 +1,144 @@
+{
+  "source_commit": "a7a12be282e9ef2b63dc2f3111d51b3ebe474db3",
+  "branch": "image-highlight-white-protect-20261031",
+  "reference_commit": "d2964f7",
+  "production_reference_commit": "fe3fec7",
+  "scope": "Selective near-white shading-overflow chroma removal; original P peak and curves; 11 C/P/W candidates",
+  "default_exposure": 900,
+  "default_candidate": "C3/P3/W0",
+  "default_candidate_index": 7,
+  "resources": {
+    "LUT6": 10197,
+    "Slice": 11350,
+    "FF": 9561,
+    "ERAM20K": 43,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_previous_P": {
+    "LUT6": 185,
+    "Slice": 175,
+    "FF": -4,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.105,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD setup/hold reports; inherited external timing coverage limits remain",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "4644dcb34c6ffb6202b12ed2034887dbe9454c6fabbb2490215cafd83cd13f71",
+  "verification": {
+    "legacy_kernel": {
+      "pass": true,
+      "scope": "All512 peaks x every component0..peak x8 candidates plus20000 random RGB/control cases; exact rational independent oracle",
+      "checks": 1070624,
+      "precomputed_peak_branch_checked": true,
+      "source_sha256": {
+        "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+        "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+        "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f"
+      },
+      "oracle": "Exact rational soft shoulder; legacy C3 analytic formula; original H1 predicate",
+      "simulation_returncode": 0
+    },
+    "white_kernel": {
+      "pass": true,
+      "scope": "All physically selected shading RGB combinations x4 white strengths x8 C/P profiles; generic 9-bit edges and random controls; independent nonnegative integer oracle",
+      "source_sha256": {
+        "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+        "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+        "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+        "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f"
+      },
+      "simulation_returncode": 0,
+      "original_peak_used_after_preparation": true,
+      "checks": 820769,
+      "correction_enabled_checks": 501094,
+      "maximum_preparation_proxy_Y_error": 0.75,
+      "maximum_post_shoulder_proxy_Y_error": 1.25
+    },
+    "menu": {
+      "pass": true,
+      "menu_candidates": 11,
+      "glyph_pixel_checks": 20328,
+      "scope": "four-bit menu reset, bounce rejection, long-held-key single event, wrap, KEY1/2/3 isolation; actual shoulder and legacy OSD glyph pixels, boundaries, enable",
+      "mapping": {
+        "0..3": "C0 P0..3 W0",
+        "4..7": "C3 P0..3 W0",
+        "8": "C3 P3 W1",
+        "9": "C3 P3 W2",
+        "10": "C3 P3 W3"
+      },
+      "production_default_index": 7,
+      "source_sha256": {
+        "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+        "user_source/hdl_source/osd_overlay.v": "8d878f07ec6ac71ae96351e6d2cc11ba01afed05a42ce59c2268322704a480bb",
+        "user_source/hdl_source/design_top_wrapper.v": "5d8345370f7778eeef2da74ea32349388cbd4a0dc4a7f51de9a3acf54510458c"
+      }
+    },
+    "pipeline": {
+      "pass": true,
+      "scope": "Actual white-prepare/wide-peak/metadata/tone/OSD/mixer versus pre-mixer processor; all11 profiles and4 modes",
+      "source_sha256": {
+        "user_source/hdl_source/design_top_wrapper.v": "5d8345370f7778eeef2da74ea32349388cbd4a0dc4a7f51de9a3acf54510458c",
+        "user_source/hdl_source/hdmi_mixer.v": "464fa8edd7ecbfd9bb5758dfee874b412df0a12847f0d02cc58fb90434526fb8",
+        "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+        "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+        "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+        "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+        "user_source/hdl_source/osd_overlay.v": "8d878f07ec6ac71ae96351e6d2cc11ba01afed05a42ce59c2268322704a480bb",
+        "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+        "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+      },
+      "cycles": 7324589,
+      "identical_ddr_reads": 7249920,
+      "full_720p_frames": 2,
+      "extra_mode_candidate_frames": 44,
+      "original_mixer_ref": "42b0736",
+      "production_top_instances_extracted": true,
+      "pixel_latency_unchanged": true
+    }
+  },
+  "board_programming": {
+    "success": true,
+    "method": "JTAG SRAM download",
+    "source_commit": "a7a12be282e9ef2b63dc2f3111d51b3ebe474db3",
+    "branch": "image-highlight-white-protect-20261031",
+    "bit": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-white-protection-20261031\\compile-v1\\camera_to_dsi_display.bit",
+    "sha256": "e650dae0130c9372d8d534fe636616fb5c74bab3b0ae276745162496304ffe0d",
+    "started_utc": "2026-10-31T12:04:57.062555+00:00",
+    "finished_utc": "2026-10-31T12:05:06.643717+00:00",
+    "exit_code": 0,
+    "error": null,
+    "chip": "PH1P35MDG324",
+    "default_exposure": 900,
+    "default_candidate": "C3/P3/W0",
+    "visual_acceptance": "pending_user_observation",
+    "scope": "Selective near-white overflow chroma protection; Flash not written",
+    "log_sha256": "18e738022a682afc5ae3d818774ad5f7580af0b0601e31fb21715de0a85741a5"
+  },
+  "visual_acceptance": "pending_user_observation",
+  "generated_utc": "2026-10-31T12:04:47.245340+00:00",
+  "bit": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-white-protection-20261031\\compile-v1\\camera_to_dsi_display.bit",
+    "sha256": "e650dae0130c9372d8d534fe636616fb5c74bab3b0ae276745162496304ffe0d"
+  },
+  "boundary_risks": {
+    "confidence_mask_is_quantized": true,
+    "maximum_observed_step_W1_W2": 4,
+    "maximum_observed_step_W3": 8,
+    "scope": "Searched physical near-white confidence boundaries; not a formal global bound"
+  }
+}

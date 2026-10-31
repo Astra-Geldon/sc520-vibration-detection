@@ -1,0 +1,16 @@
+{
+  "pass": true,
+  "scope": "All physically selected shading RGB combinations x4 white strengths x8 C/P profiles; generic 9-bit edges and random controls; independent nonnegative integer oracle",
+  "source_sha256": {
+    "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+    "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f"
+  },
+  "simulation_returncode": 0,
+  "original_peak_used_after_preparation": true,
+  "checks": 820769,
+  "correction_enabled_checks": 501094,
+  "maximum_preparation_proxy_Y_error": 0.75,
+  "maximum_post_shoulder_proxy_Y_error": 1.25
+}

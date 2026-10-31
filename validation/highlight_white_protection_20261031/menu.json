@@ -1,0 +1,19 @@
+{
+  "pass": true,
+  "menu_candidates": 11,
+  "glyph_pixel_checks": 20328,
+  "scope": "four-bit menu reset, bounce rejection, long-held-key single event, wrap, KEY1/2/3 isolation; actual shoulder and legacy OSD glyph pixels, boundaries, enable",
+  "mapping": {
+    "0..3": "C0 P0..3 W0",
+    "4..7": "C3 P0..3 W0",
+    "8": "C3 P3 W1",
+    "9": "C3 P3 W2",
+    "10": "C3 P3 W3"
+  },
+  "production_default_index": 7,
+  "source_sha256": {
+    "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source/hdl_source/osd_overlay.v": "8d878f07ec6ac71ae96351e6d2cc11ba01afed05a42ce59c2268322704a480bb",
+    "user_source/hdl_source/design_top_wrapper.v": "5d8345370f7778eeef2da74ea32349388cbd4a0dc4a7f51de9a3acf54510458c"
+  }
+}

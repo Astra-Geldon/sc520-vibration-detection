@@ -137,6 +137,8 @@ initial begin
    strength=w;sel=7;r=rv;g=511;b=248;check;
    r=248;g=rv;b=511;check;
    r=511;g=248;b=rv;check;
+   r=rv;g=rv;b=rv;check;
+   if(prepared!==source)$fatal(1,"neutral RGB9 acquired chroma");
   end
  // Independent deterministic random controls include off, blanking and P0.
  for(n=0;n<20000;n=n+1)begin

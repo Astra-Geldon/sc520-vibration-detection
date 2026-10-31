@@ -1,0 +1,22 @@
+{
+  "pass": true,
+  "scope": "Actual white-prepare/wide-peak/metadata/tone/OSD/mixer versus pre-mixer processor; all11 profiles and4 modes",
+  "source_sha256": {
+    "user_source/hdl_source/design_top_wrapper.v": "5d8345370f7778eeef2da74ea32349388cbd4a0dc4a7f51de9a3acf54510458c",
+    "user_source/hdl_source/hdmi_mixer.v": "464fa8edd7ecbfd9bb5758dfee874b412df0a12847f0d02cc58fb90434526fb8",
+    "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+    "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+    "user_source/hdl_source/osd_overlay.v": "8d878f07ec6ac71ae96351e6d2cc11ba01afed05a42ce59c2268322704a480bb",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "cycles": 7324589,
+  "identical_ddr_reads": 7249920,
+  "full_720p_frames": 2,
+  "extra_mode_candidate_frames": 44,
+  "original_mixer_ref": "42b0736",
+  "production_top_instances_extracted": true,
+  "pixel_latency_unchanged": true
+}

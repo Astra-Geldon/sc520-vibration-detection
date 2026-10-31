@@ -1,0 +1,13 @@
+{
+  "pass": true,
+  "scope": "All512 peaks x every component0..peak x8 candidates plus20000 random RGB/control cases; exact rational independent oracle",
+  "checks": 1070624,
+  "precomputed_peak_branch_checked": true,
+  "source_sha256": {
+    "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f"
+  },
+  "oracle": "Exact rational soft shoulder; legacy C3 analytic formula; original H1 predicate",
+  "simulation_returncode": 0
+}
