@@ -29,7 +29,7 @@ module osd_overlay #(
     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
     parameter integer TH_DEBUG_EN = 0,      // 二值化实际阈值/锁定状态诊断
     parameter integer REGION_DEBUG_EN = 0,  // 彩色画面固定H1及补偿档 H=1 C=0/1/2/3/M
-    parameter integer SHOULDER_DEBUG_EN = 0,// C=0/3 P=0/1/2/3, KEY4 eight candidates
+    parameter integer SHOULDER_DEBUG_EN = 0,// C/P/W: eight references + white protection
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
     // ---- 画面尺寸（与 VTC 一致）----
@@ -58,7 +58,7 @@ module osd_overlay #(
     input  wire        I_src_raw,   // 二值化来源：1=原图，0=视觉增强输入
     input  wire [ 1:0] I_k_sel,     // 兼容保留，KEY4 已释放
     input  wire [ 1:0] I_exp_sel,   // 曝光候选编号：0=1991,1=1600,2=1200,3=900
-    input  wire [ 2:0] I_region_sel,// 补偿：0=关闭，1=弱，2=中，3=强，4=仅查看H1掩码
+    input  wire [ 3:0] I_region_sel,// 0..7=C/P references, 8..10=C3/P3/W1..3
     input  wire [ 7:0] I_threshold, // 二值比较器实际使用的阈值
     input  wire        I_th_locked, // 实际已提交的锁定状态
     input  wire [23:0] I_data,      // 来自 img_proc
@@ -280,7 +280,8 @@ module osd_overlay #(
 
 endmodule
 
-// Seven 6x8 character cells, 2x scale: "H=1 C=0" .. "H=1 C=3", "H=1 C=M".
+// Seven cells in legacy mode: "H=1 C=0" .. "H=1 C=3", "H=1 C=M".
+// Eleven cells in shoulder mode: "C=3 P=3 W=0"; indices8..10 select W1..3.
 // Constant glyphs, shifts and additions only; no pixel register or ROM file.
 module osd_region_line #(
     parameter integer TEXT_X = 24,
@@ -290,7 +291,7 @@ module osd_region_line #(
     input wire [10:0] I_x,
     input wire [9:0] I_y,
     input wire I_enable,
-    input wire [2:0] I_sel,
+    input wire [3:0] I_sel,
     output wire O_box,
     output wire O_white
 );
@@ -307,6 +308,7 @@ module osd_region_line #(
                 4'd6: f_glyph = {5'b01110,5'b10001,5'b10000,5'b10000,5'b10000,5'b10001,5'b01110}; // C
                 4'd7: f_glyph = {5'b10001,5'b11011,5'b10101,5'b10101,5'b10001,5'b10001,5'b10001}; // M
                 4'd8: f_glyph = {5'b11110,5'b10001,5'b10001,5'b11110,5'b10000,5'b10000,5'b10000}; // P
+                4'd9: f_glyph = {5'b10001,5'b10001,5'b10001,5'b10101,5'b10101,5'b10101,5'b01010}; // W
                 default: f_glyph = 35'd0;
             endcase
         end
@@ -314,6 +316,11 @@ module osd_region_line #(
 
     wire [10:0] S_local_x = I_x - TEXT_X;
     wire [9:0] S_local_y = I_y - TEXT_Y;
+    wire S_white_candidate = (I_sel >= 4'd8) && (I_sel <= 4'd10);
+    wire S_c3 = S_white_candidate || I_sel[2];
+    wire [1:0] S_p = S_white_candidate ? 2'd3 : I_sel[1:0];
+    wire [1:0] S_w = S_white_candidate ? (I_sel[1:0] + 2'd1) : 2'd0;
+    localparam integer TEXT_WIDTH = (SHOULDER_MODE != 0) ? 132 : 84;
     reg [3:0] S_glyph_id;
     reg [3:0] S_cell_x;
     always @(*) begin
@@ -326,7 +333,7 @@ module osd_region_line #(
             S_cell_x = S_local_x - 11'd12;
         end
         else if (S_local_x < 11'd36) begin
-            S_glyph_id = (SHOULDER_MODE != 0) ? (I_sel[2] ? 4'd3 : 4'd0) : 4'd1;
+            S_glyph_id = (SHOULDER_MODE != 0) ? (S_c3 ? 4'd3 : 4'd0) : 4'd1;
             S_cell_x = S_local_x - 11'd24;
         end
         else if (S_local_x < 11'd48) begin
@@ -341,11 +348,27 @@ module osd_region_line #(
             S_glyph_id = 4'd5;
             S_cell_x = S_local_x - 11'd60;
         end
-        else begin
-            S_glyph_id = (SHOULDER_MODE != 0) ? {2'b0, I_sel[1:0]} :
-                         (I_sel < 3'd4) ? {1'b0, I_sel} :
-                         (I_sel == 3'd4) ? 4'd7 : 4'd15;
+        else if (S_local_x < 11'd84) begin
+            S_glyph_id = (SHOULDER_MODE != 0) ? {2'b0, S_p} :
+                         (I_sel < 4'd4) ? I_sel :
+                         (I_sel == 4'd4) ? 4'd7 : 4'd15;
             S_cell_x = S_local_x - 11'd72;
+        end
+        else if (S_local_x < 11'd96) begin
+            S_glyph_id = 4'd15; // space
+            S_cell_x = S_local_x - 11'd84;
+        end
+        else if (S_local_x < 11'd108) begin
+            S_glyph_id = 4'd9; // W
+            S_cell_x = S_local_x - 11'd96;
+        end
+        else if (S_local_x < 11'd120) begin
+            S_glyph_id = 4'd5;
+            S_cell_x = S_local_x - 11'd108;
+        end
+        else begin
+            S_glyph_id = {2'b0, S_w};
+            S_cell_x = S_local_x - 11'd120;
         end
     end
     wire [2:0] S_col = S_cell_x[3:1];
@@ -353,9 +376,9 @@ module osd_region_line #(
     wire [34:0] S_bitmap = f_glyph(S_glyph_id);
     wire [5:0] S_row_offset = {1'b0, S_row, 2'b00} + {3'b000, S_row};
     wire [5:0] S_bit_index = 6'd34 - S_row_offset - {3'd0, S_col};
-    wire S_in_text = (I_x >= TEXT_X) && (I_x < TEXT_X + 84) &&
+    wire S_in_text = (I_x >= TEXT_X) && (I_x < TEXT_X + TEXT_WIDTH) &&
                      (I_y >= TEXT_Y) && (I_y < TEXT_Y + 14);
-    assign O_box = I_enable && (I_x >= TEXT_X - 4) && (I_x < TEXT_X + 84 + 4) &&
+    assign O_box = I_enable && (I_x >= TEXT_X - 4) && (I_x < TEXT_X + TEXT_WIDTH + 4) &&
                    (I_y >= TEXT_Y - 4) && (I_y < TEXT_Y + 18);
     assign O_white = I_enable && S_in_text && (S_col < 3'd5) && S_bitmap[S_bit_index];
 endmodule

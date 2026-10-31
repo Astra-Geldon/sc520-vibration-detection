@@ -33,6 +33,7 @@
 `include "highlight_region.v"
 `include "highlight_shoulder_lut.v"
 `include "highlight_tone.v"
+`include "highlight_white_prepare.v"
 
 // =====================================================================
 //  调试开关：注释掉下面这一行即可恢复 HDMI 显示（一行都不用改别的）。
@@ -416,21 +417,26 @@ module design_top_wrapper (
     wire[ 7:0]  S_img_threshold;
     wire        S_img_k_step;
     wire[ 1:0]  S_exp_sel;
-    wire[ 2:0]  S_region_sel_req;
-    reg [ 2:0]  S_region_sel;
-    wire[ 2:0]  S_region_sel_active;
+    wire[ 3:0]  S_region_sel_req;
+    reg [ 3:0]  S_region_sel;
+    wire[ 3:0]  S_region_sel_active;
     wire[23:0]  S_region_data;
     // Retiming uses the mixer's existing first data register. Pixel/DE/VS
     // emerge together; candidate/OSD metadata follow that same register.
     wire [23:0] S_tone_stage_data;
     reg [26:0] S_tone_stage_wide_data;
+    wire [26:0] S_tone_prepared_wide_data;
+    wire [1:0] S_white_sel_active =
+        ((S_region_sel_active >= 4'd8) && (S_region_sel_active <= 4'd10)) ?
+        (S_region_sel_active[1:0] + 2'd1) : 2'd0;
     wire [8:0] S_tone_input_rg_max = (S_csc_wide_data[26:18] > S_csc_wide_data[17:9]) ?
                                     S_csc_wide_data[26:18] : S_csc_wide_data[17:9];
     wire [8:0] S_tone_input_peak = (S_tone_input_rg_max > S_csc_wide_data[8:0]) ?
                                   S_tone_input_rg_max : S_csc_wide_data[8:0];
     reg [8:0] S_tone_stage_peak;
     wire S_tone_stage_de, S_tone_stage_vs;
-    reg [2:0] S_tone_stage_mode, S_tone_stage_sel;
+    reg [2:0] S_tone_stage_mode;
+    reg [3:0] S_tone_stage_sel;
     reg [1:0] S_tone_stage_exp, S_tone_stage_k;
     reg [7:0] S_tone_stage_threshold;
     reg S_tone_stage_raw, S_tone_stage_locked;
@@ -1239,8 +1245,8 @@ isp_top u_isp_top (
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
         .EXP_RST    ( 3          ),   // real exposure900; KEY3 retains all four exposures
-        .REGION_RST ( 0          ),   // reference: C0/P0; KEY4 selects C0/C3 x P0..3
-        .REGION_N   ( 8          ),
+        .REGION_RST ( 7          ),   // reference: C3/P3/W0; KEY4 enters W1/W2/W3
+        .REGION_N   ( 11         ),
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )
     )u_img_mode_sel(
@@ -1257,7 +1263,7 @@ isp_top u_isp_top (
 `else
     assign S_img_mode = IMG_MODE[2:0];
     assign S_exp_sel = 2'd3;
-    assign S_region_sel_req = 3'd0;
+    assign S_region_sel_req = 4'd7;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
@@ -1266,11 +1272,11 @@ isp_top u_isp_top (
 
     // Latch compensation choice in vertical blanking; H1 thresholds stay fixed.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) S_region_sel <= 3'd0;
+        if (!S_hdmi_rst_n) S_region_sel <= 4'd7;
         else if (S_hdmi_vsync) S_region_sel <= S_region_sel_req;
     end
     // Gray/binary/Sobel remain their original algorithms, including line delays.
-    assign S_region_sel_active = (S_img_mode == 3'd0) ? S_region_sel : 3'd0;
+    assign S_region_sel_active = (S_img_mode == 3'd0) ? S_region_sel : 4'd0;
 
     //------------------------------------------------------------------
     //  简化自适应白平衡（2026-10-24）
@@ -1348,13 +1354,21 @@ isp_top u_isp_top (
     //  OSD 叠加：右上角安路 Logo + 左上角算法名
     //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
     //------------------------------------------------------------------
+    // White protection shares the original first-data edge. The original
+    // wide peak (above) must remain the shoulder lookup index after correction.
+    highlight_white_prepare u_highlight_white_prepare (
+        .I_enable    ( S_hdmi_de && (S_img_mode == 3'd0) ),
+        .I_white_sel ( S_white_sel_active ),
+        .I_wide_data ( S_csc_wide_data ),
+        .O_wide_data ( S_tone_prepared_wide_data )
+    );
     // Balance the existing first-data edge: shading/max before it, LUT/multiply
     // after it. Wide peak equals clipped peak below208; both legacy gains are
     // unity above208, so P0 reference is also exact. Non-colour bypass is intact.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
-            S_tone_stage_sel <= 3'd0;
+            S_tone_stage_sel <= 4'd7;
             S_tone_stage_wide_data <= 27'd0;
             S_tone_stage_peak <= 9'd0;
             S_tone_stage_exp <= 2'd3;
@@ -1367,7 +1381,7 @@ isp_top u_isp_top (
             S_tone_stage_sel <= S_region_sel_active;
             // Same edge as mixer.S_video_data_1d: colour mode is a pure
             // img_proc passthrough. No extra pixel/sync or DDR read delay.
-            S_tone_stage_wide_data <= S_csc_wide_data;
+            S_tone_stage_wide_data <= S_tone_prepared_wide_data;
             S_tone_stage_peak <= S_tone_input_peak;
             S_tone_stage_exp <= S_exp_sel;
             S_tone_stage_k <= S_k_sel;
@@ -1379,7 +1393,7 @@ isp_top u_isp_top (
     highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) u_highlight_tone (
         .I_de       ( S_tone_stage_de ),
         .I_enable   ( S_tone_stage_mode == 3'd0 ),
-        .I_sel      ( S_tone_stage_sel ),
+        .I_sel      ( (S_tone_stage_sel >= 4'd8) ? 3'd7 : S_tone_stage_sel[2:0] ),
         .I_data     ( S_tone_stage_data ),
         .I_wide_data( S_tone_stage_wide_data ),
         .I_peak     ( S_tone_stage_peak ),

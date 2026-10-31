@@ -1,5 +1,7 @@
 # SC520 MIPI → HDMI 振动频率检测系统
 
+> 最新执行分支`image-highlight-white-protect-20261031`：用户同意尝试P档偏品红修正。新增近白高光W0～W3颜色保护，只处理shading削顶新增的色度，保留旧RGB8颜色差；沿用原P曲线和三路乘法器，DSP总数须≤34。上电原图3/C3/P3/W0，KEY4前进到W1/W2/W3。候选正在验证和编译准备，尚未烧录或通过画质验收；见 [颜色保护候选](HIGHLIGHT_WHITE_PROTECTION_20261031.md)。下方P档记录属于上一轮基线。
+
 > 当前分支`image-highlight-shoulder-20261031`：阶段1.11第二步已上板，用户确认P高光压缩有效，但不接受偏红代价，**画质未通过验收**。已定位P0的削顶RGB8与P档裁剪前RGB9颜色基准不同，显露shading原先被削顶掩盖的R/B增益；详见 [P档偏品红原因与修正方向](HIGHLIGHT_PINK_REVIEW_20261031.md)。本轮仅分析并保存证据，RTL和板上镜像不变。KEY4仍循环`C0/P0～P3 → C3/P0～P3`；实现、bit与按键见 [裁剪前高光压缩](HIGHLIGHT_COMMON_SHOULDER_20261031.md)。
 
 > 当前镜像布局资源：10012 LUT6、11175 Slice、9565 FF、43 ERAM、34 DSP；相对 [Gamma参考](GAMMA_TAIL_CANDIDATE_20261031.md)增加179/213/107/0/0。SWNS/HWNS +0.161/+0.020ns，报告中setup/hold通过。功能验证与画质验收分别记录；后续优先研究保留P压光亮度的限定高光色度保护，DSP总数仍须≤34。[高光余量研究](HIGHLIGHT_HEADROOM_REVIEW_20261031.md)中的更早AWB/传感器裁剪仍是能力限制。
