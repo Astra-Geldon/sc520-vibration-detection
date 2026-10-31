@@ -76,4 +76,4 @@
 - [EMVA1288 3.1a](https://www.emva.org/wp-content/uploads/EMVA1288-3.1a.pdf)，页6～7：传感器噪声、饱和和数字裁剪的物理区别。
 - [Raspberry Pi PiSP规格](https://datasheets.raspberrypi.com/camera/raspberry-pi-image-signal-processor-specification.pdf)，§7.5.25：亮度基底、细节与颜色分离。它在更高精度Bayer域做映射；本板后端已是RGB8，不能照搬其动态范围或资源结果。
 
-本轮结论是“找到明确的高光层次损失点，提出分步候选”，不是已解决或已上板。当前板上程序保持。
+以上为研究时的结论。后续已按用户“开工”授权完成 [Gamma单项候选](GAMMA_TAIL_CANDIDATE_20261031.md) 编译上板，用户反馈“稍有改善，但仍过亮”；现进入 [裁剪前共同RGB高光压缩](HIGHLIGHT_COMMON_SHOULDER_20261031.md)，具体实现、资源/时序和上板状态以该候选说明为准，不据研究结论宣称画质完成。

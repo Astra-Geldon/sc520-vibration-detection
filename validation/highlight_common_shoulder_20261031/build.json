@@ -1,0 +1,62 @@
+{
+  "source_commit": "fe3fec774e4adb870f54bf18152af1f120c77f00",
+  "reference_commit": "f241f0c",
+  "scope": "Pre-shading-clip RGB9 common shoulder, sharing three C3 multipliers; Gamma tail retained; no D/E1 changes",
+  "default_exposure": 900,
+  "default_C": 0,
+  "default_P": 0,
+  "resources": {
+    "LUT6": 10012,
+    "Slice": 11175,
+    "FF": 9565,
+    "ERAM20K": 43,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_gamma_tail": {
+    "LUT6": 179,
+    "Slice": 213,
+    "FF": 107,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.161,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD setup/hold reports; inherited external timing coverage limits remain",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "5ab948508580e3d7288f005b2f64911fdd1714c54f670af437fd29dd7cf6de29",
+  "kernel_verification": {
+    "pass": true,
+    "scope": "All512 peaks x every component0..peak x8 candidates plus20000 random RGB/control cases; exact rational independent oracle",
+    "checks": 1070624,
+    "source_sha256": {
+      "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+      "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+      "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f"
+    },
+    "oracle": "Exact rational soft shoulder; legacy C3 analytic formula; original H1 predicate",
+    "simulation_returncode": 0,
+    "precomputed_peak_branch_checked": true,
+    "note": "Both internal and supplied-wide-peak RTL results checked against the independent oracle for every case; P0 uses clipped RGB8 data."
+  },
+  "pipeline_verification": "pending",
+  "board_programming": "not_run",
+  "visual_acceptance": "pending",
+  "generated_utc": "2026-10-31T11:14:08.606017+00:00",
+  "bit": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\compile-v3\\camera_to_dsi_display.bit",
+    "sha256": "b985aabd936b2d8cf5fd6ce3cbdd875a0b37b3038108275aecf0d4ab6d55786f"
+  }
+}

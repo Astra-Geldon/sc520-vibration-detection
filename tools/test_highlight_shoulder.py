@@ -100,6 +100,6 @@ run=subprocess.run([str(compiler.with_name('vvp.exe')),str(out/'kernel.vvp')],cw
 (out/'simulation.log').write_text(run.stdout+run.stderr,encoding='utf-8')
 print(run.stdout)
 passed=run.returncode==0 and 'PASS shoulder_kernel checks=1070624' in run.stdout
-summary={'pass':passed,'scope':'All512 peaks x every component0..peak x8 candidates plus20000 random RGB/control cases; exact rational independent oracle','checks':1070624,'source_sha256':{p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in files},'oracle':'Exact rational soft shoulder; legacy C3 analytic formula; original H1 predicate','simulation_returncode':run.returncode}
+summary={'pass':passed,'scope':'All512 peaks x every component0..peak x8 candidates plus20000 random RGB/control cases; exact rational independent oracle','checks':1070624,'precomputed_peak_branch_checked':True,'source_sha256':{p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in files},'oracle':'Exact rational soft shoulder; legacy C3 analytic formula; original H1 predicate','simulation_returncode':run.returncode}
 (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
 assert passed,run.stdout+run.stderr

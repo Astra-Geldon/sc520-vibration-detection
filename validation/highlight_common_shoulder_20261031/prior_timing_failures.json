@@ -1,0 +1,52 @@
+[
+  {
+    "source_commit": "c543d2a66fee3ad20037465029b72ac88203bb50",
+    "resources": {
+      "LUT6": 10079,
+      "Slice": 11110,
+      "FF": 9487,
+      "ERAM20K": 43,
+      "DSP": 34,
+      "PLL": 3,
+      "MCU": 1
+    },
+    "timing": {
+      "SWNS_ns": -1.149,
+      "STNS_ns": -21.435,
+      "HWNS_ns": 0.02,
+      "HTNS_ns": 0.0
+    },
+    "reported_setup_hold_pass": false,
+    "DSP_limit_pass": true,
+    "bit": {
+      "path": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\compile-v1\\camera_to_dsi_display.bit",
+      "sha256": "21eb7796476f5ea53136c0b20ad2c9bc39cf08b9bdc304e631513fbc78f01c05"
+    },
+    "board_programming": "not_run"
+  },
+  {
+    "source_commit": "606670f2657e47e0c76747c36ac162f0f9e6e26b",
+    "resources": {
+      "LUT6": 10121,
+      "Slice": 11214,
+      "FF": 9496,
+      "ERAM20K": 43,
+      "DSP": 34,
+      "PLL": 3,
+      "MCU": 1
+    },
+    "timing": {
+      "SWNS_ns": -2.286,
+      "STNS_ns": -33.44,
+      "HWNS_ns": 0.02,
+      "HTNS_ns": 0.0
+    },
+    "reported_setup_hold_pass": false,
+    "DSP_limit_pass": true,
+    "bit": {
+      "path": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\compile-v2\\camera_to_dsi_display.bit",
+      "sha256": "79e8327f8b219889da3f4f877aa8589021245df93bd357b634f9b15471b89161"
+    },
+    "board_programming": "not_run"
+  }
+]

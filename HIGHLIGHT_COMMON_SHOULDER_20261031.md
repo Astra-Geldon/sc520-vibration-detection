@@ -60,7 +60,7 @@ p > 208 ：T = min(255, 208 + s*(p-208)/(s+p-208))
 
 第二轮尝试把完整增益计算移到现有mixer第一级寄存之前，仍因shading乘法与查表串联而未达时序（SWNS−2.286ns），也未烧录。正在改为更均衡的切分：寄存前只计算宽RGB最大通道，随像素保存9位峰值；寄存后查表、三路乘法、舍入和OSD。数值曲线不变，不增加总像素延迟、DSP或缓存，也不放宽时序约束；两段路径均须重新完整编译。
 
-P0参考仍等价：峰值≤208时宽RGB与旧裁剪RGB一致；峰值>208时旧C0/C3系数均为1，采用宽峰值不会改变原映射。非彩色仍直接返回旧24位路径。独立核对需要同时验证内部峰值与预计算峰值两个参数分支。完整流水验证与上板尚在进行。
+P0参考仍等价：峰值≤208时宽RGB与旧裁剪RGB一致；峰值>208时旧C0/C3系数均为1，采用宽峰值不会改变原映射。非彩色仍直接返回旧24位路径。内部峰值与预计算峰值两个参数分支均已在1,070,624组独立对照中通过。
 
 资源约束为DSP总数≤34；LUT6/Slice/FF/ERAM和setup/hold必须以最终布局报告公开，不能仅按RTL乘法数量承诺资源。Gamma参考资源为9833 LUT6、10962 Slice、9458 FF、43 ERAM、34 DSP。
 
@@ -68,4 +68,24 @@ P0参考仍等价：峰值≤208时宽RGB与旧裁剪RGB一致；峰值>208时�
 
 `D:/FPGA/codex/_build/20261029project/highlight-common-shoulder-20261031/`
 
-阶段摘要归档到`validation/highlight_common_shoulder_20261031/`。不写Flash，不推送云端。当前板上仍为Gamma尾段单项镜像，后续编译与验证通过后才烧录本候选。
+## 最终编译候选
+
+第三轮采用峰值边界，源码`fe3fec7 平衡高光峰值与乘法路径，保留原参考画面`。260份冻结输入的构建前后SHA一致，完整A→B→C成功，12处HDMI计数器补丁保留。前两轮未达时序的bit不用于上板。
+
+| 资源 | Gamma参考 | 当前候选 | 增量 |
+|---|---:|---:|---:|
+| LUT6 | 9833 | 10012 | +179 |
+| Slice | 10962 | 11175 | +213 |
+| FF | 9458 | 9565 | +107 |
+| ERAM20K | 43 | 43 | 0 |
+| DSP | 34 | 34 | 0 |
+| PLL | 3 | 3 | 0 |
+| MCU | 1 | 1 | 0 |
+
+SWNS为+0.161ns、HWNS为+0.020ns，STNS/HTNS均为0。DSP≤34与报告中的setup/hold要求通过；继承的外部时序覆盖限制保留，`whole_design_timing_signoff=false`。
+
+bit：`D:/FPGA/codex/_build/20261029project/highlight-common-shoulder-20261031/compile-v3/camera_to_dsi_display.bit`
+
+SHA256：`B985AABD936B2D8CF5FD6CE3CBDD875A0B37B3038108275AECF0D4AB6D55786F`。
+
+阶段摘要归档到`validation/highlight_common_shoulder_20261031/`。不写Flash，不推送云端。完整流水回归仍在进行，当前板上仍为Gamma尾段单项镜像，验证通过后才烧录本候选；编译成功不表示画质验收通过。
