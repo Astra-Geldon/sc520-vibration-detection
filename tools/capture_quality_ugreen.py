@@ -56,7 +56,7 @@ def main():
         raise RuntimeError('Specified source bit SHA256 mismatch; video device has not been opened.')
     output = args.output or BASE/(args.scene+'-'+datetime.now().strftime('%Y%m%d-%H%M%S'))
     output.mkdir(parents=True,exist_ok=False)
-    report = {'scope':'Processed HDMI RGB/MJPEG sequence, not RAW or an internal bit-exact tap',
+    report = {'scope':'Processed HDMI UVC video decoded to RGB; actual delivered FourCC recorded separately, not RAW or an internal bit-exact tap',
               'device':identity(camera),'requested_size':[1280,720],'requested_fps':30,
               'requested_fourcc':'MJPG','warmup_frames':args.warmup,
               'state_claim':{'exposure':args.exposure,'C':args.tone,'scene':args.scene,'note':args.state_note},

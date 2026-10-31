@@ -1,0 +1,1152 @@
+{
+  "scope": "Real900 requested/C0 static mixed scene capture and paired offline response, not new hardware filter acceptance",
+  "baseline_source_commit": "c42f4cf",
+  "DSP_limit": 34,
+  "production_RTL_changed": false,
+  "new_TD_build": false,
+  "programming_this_stage": false,
+  "capture_path": "D:\\FPGA\\codex\\_build\\20261029project\\quality-real900-research-20261031\\flat-20261031-173935",
+  "capture_summary_SHA256": "e9c34ca09f13c22016bd4038657c232eb51d0c3f087d09aa50b81695c369c700",
+  "capture_facts": {
+    "scope": "Processed HDMI RGB/MJPEG sequence, not RAW or an internal bit-exact tap",
+    "device": {
+      "name": "UGREEN 25854",
+      "path": "\\\\?\\usb#vid_2b89&pid_5854&mi_00#6&25f3617f&0&0000#{65e8773d-8f56-11d0-a3b9-00a0c9223196}\\global",
+      "index": 0,
+      "backend": "DirectShow"
+    },
+    "requested_size": [
+      1280,
+      720
+    ],
+    "requested_fps": 30,
+    "requested_fourcc": "MJPG",
+    "warmup_frames": 150,
+    "state_claim": {
+      "exposure": 900,
+      "C": 0,
+      "scene": "flat",
+      "note": "User confirmed exposure3/C0, paper fixed and preview closed; programming record capture-reference/burn/programming.json"
+    },
+    "state_source": "User/OSD confirmation; no sensor I2C readback or programmed-bit readback",
+    "source_bit_file": "D:\\FPGA\\codex\\_build\\20261029project\\h1-strong-compensation-20261031\\gain-table\\camera_to_dsi_display.bit",
+    "source_bit_SHA256": "972e5c7ad5da1d1828de3da01ef5153cf2497f672baeb6cc80640b0eae39a130",
+    "started_utc": "2026-10-31T09:39:35.769478+00:00",
+    "complete": true,
+    "human_review_of_contact_sheet_required": true,
+    "reported_fps": 30.00003000003,
+    "reported_fourcc": "YUY2",
+    "host_read_intervals_ms": {
+      "mean": 43.72268907563025,
+      "minimum": 31.0,
+      "maximum": 47.0
+    },
+    "host_read_span_seconds": 5.203,
+    "PNG_encoding_after_acquisition": true,
+    "unique_decoded_frames": 120,
+    "finished_utc": "2026-10-31T09:39:52.423792+00:00",
+    "timestamp_limit": "Read times are host timestamps, not independent sensor timestamps."
+  },
+  "all120_PNG_and_decoded_pixel_hashes_verified": true,
+  "visual_review": {
+    "device_and_OSD_visual_review": "Passed: FPGA original3/C0 text and Anlogic Logo visible in contact sheet.",
+    "actual_scene_classification": "Static mixed cabinet/door/bright wall; unsuitable for full-frame flat-field calibration",
+    "full_field_LSC_calibration_allowed": false,
+    "capture_format_note": "Backend reported YUY2 despite MJPG request; data kept as delivered",
+    "capture_read_speed_note": "120 distinct host-read frames in5.203s; no sensor frame IDs or guarantee of consecutive30fps frames",
+    "ROI_selection": "Fixed unsaturated cabinet/door and protected bright wall; coordinates and all paired60 outputs in analysis summary"
+  },
+  "analysis": {
+    "scope": "Paired offline C3/candidate response on verified saved C0 HDMI video.\n\nNo live device access, RTL edit, TD build or programming. Camera state is\nconfirmed by the capture record/user/visual review, not sensor readback.\n",
+    "capture_path": "D:\\FPGA\\codex\\_build\\20261029project\\quality-real900-research-20261031\\flat-20261031-173935",
+    "capture_summary_SHA256": "e9c34ca09f13c22016bd4038657c232eb51d0c3f087d09aa50b81695c369c700",
+    "source_state_claim": {
+      "exposure": 900,
+      "C": 0,
+      "scene": "flat",
+      "note": "User confirmed exposure3/C0, paper fixed and preview closed; programming record capture-reference/burn/programming.json"
+    },
+    "actual_capture_fourcc": "YUY2",
+    "original_saved_frames": 120,
+    "paired_selected_frames": 60,
+    "selected_frame_stride": 2,
+    "axes": [
+      "Y8_OpenCV",
+      "Cr8_OpenCV",
+      "Cb8_OpenCV",
+      "R",
+      "G",
+      "B"
+    ],
+    "candidate_profiles": "Synthetic profile2/4/8 gate choices, not measured sensor sigma",
+    "data_limits": "Processed HDMI RGB; capture conversion/range and time variation included. No RAW SNR or matched clean ground truth. Current E1 fast AWB differs from source measurement image.",
+    "temporal_sampling_limits": "Read times are host timestamps, not independent sensor timestamps.",
+    "source_SHA256": {
+      "frame_000.png": "642412099aeac69d1cc0b085e536413c8882ae3f5fd44f069d113d85fb9c6b0d",
+      "frame_002.png": "e190b6d3342050ca1d81efc829bffb8e8e06b5e1f977d931d09aa3f00553d998",
+      "frame_004.png": "2cdd835e7b8a39f348f334b37aa987183c096da26cd4c9256b6fc87450e429e2",
+      "frame_006.png": "6393d0c2babe6a9498b869e0f3b637f04dd1b712702f6db9ff7fa0f2d7ed333e",
+      "frame_008.png": "54247091da1e99025c1d05d9157c0726f8d0cc7f6d13939c51085c645e25f212",
+      "frame_010.png": "333cd4306bde87d5d575f30ef44fce76356c87a8f58ea1da708a825005ff0c07",
+      "frame_012.png": "5367c90905c9e09eab9bd588b515f86ba19489b98ef33188099125f5d724e03b",
+      "frame_014.png": "193e3fe19da679a4c14c332487b2281c37eb6944b78aa90fc93f3dd59f3e8d2e",
+      "frame_016.png": "6975c4f9f21d9056573ffa9b568eea06e86603bc0440740f75398e66331174a2",
+      "frame_018.png": "d39dd3f0fef44b6977c83c8bda0e9205d9237b68564958fe7837a62f55c2a786",
+      "frame_020.png": "86b5a01a9412759cb847ab371c39c23845baaeebbae2eb11638134e95818f9f9",
+      "frame_022.png": "e1f27c91770b7828ee639d12bd2ea1128e154cfa3bb6dd3f355241cc2e16bd5b",
+      "frame_024.png": "6a02267c52cf9338cf42450ff1871726ba3bc6707ae20eecf27523d2e7d74ce2",
+      "frame_026.png": "6881f990986291e1a1fb02c15b7a776c9ec2ad8ef1ab3ab9334e37d3b609d106",
+      "frame_028.png": "1f651ebb369ed04642d0cd23a54d0aa73d9c4aa3f1f23ca8cc5fcd12438b9ab1",
+      "frame_030.png": "9662ba2dd59773d2df864b8803b1cefd08fe4ec0d39af32979fc5e36c38631d2",
+      "frame_032.png": "e5d940c363019712357cdeacee0ef4d4623345e7c8a4e7cf606de9d548108181",
+      "frame_034.png": "aba57c77d3a6a98bf6460d8dce08f8eb6d13b51137f810c424a142fab8c697fd",
+      "frame_036.png": "cf1090c76cf447159c00aff8d0b71f7f950c521a68ad47164eff49c53ed754fc",
+      "frame_038.png": "f114c7d9658df903ba1acb183652c772fec40b9afc031f0dc1f5a27bb4e4fa56",
+      "frame_040.png": "fe423b9eec91baea9525000c8e0c69a2bd1193e1b60c3b265269f5806598354d",
+      "frame_042.png": "30ba35af2269d47cbfe4c145c6b3072360e6681956a24574adf808fbf2ac4e41",
+      "frame_044.png": "6e6aba30d1dd32276693fb3eb6b634e01d3c114c4ce186ecf9825d16c0607bec",
+      "frame_046.png": "003133f61976a489618c32805e23aadf3d5ceb72439a45be552dd88a4113d1b1",
+      "frame_048.png": "00031af1ee36a23e9923bddce8e815ba223bc24b163ac57c47ec5f08183f2aa6",
+      "frame_050.png": "f092414f2a98ad3986bbe9faea6008ad4d3e9b49cac94ec4a2628526faa24174",
+      "frame_052.png": "72471aaf90aaf33d1c7722ce202cc23733f767c4600c30d7ac2d830dee0454d7",
+      "frame_054.png": "ac8fa0f9bed2e570b66116303f8ed1f2578aa75a4f703d8cb66aa074ad5e48be",
+      "frame_056.png": "ef4006ad20cb4a999ca1d269877eda2750e11397a11e726b867c9ae55eb4ab4a",
+      "frame_058.png": "c2ae396a3131cb76400fa08f84c1353a93ea819dcca742a217c9c3fb2fd47c6a",
+      "frame_060.png": "f85bb48f405a1d999a2953db26ce822583195aa2ca082fbe4eec66c58a205554",
+      "frame_062.png": "f937717926b8149d578503f8e3506646f10c6ade65c42ba41a341eb18f20c426",
+      "frame_064.png": "fd5d07cf7d88d71064d1b84cb66d94f5b38e5662c3c8be388754df257f2d6fee",
+      "frame_066.png": "6dbb7cb14910e3d8ef188d283a7a6ce173bf2a449310a9b57f32a195663da98b",
+      "frame_068.png": "2ca40c5220c8b684b4b359468c16fa2dff95170b0ab68f36d657ef61e31e46b6",
+      "frame_070.png": "3e362ba057419a078443141371b00f21e0f9307417cc4af7a8226c4f45d907d6",
+      "frame_072.png": "aced6662b7cf952b241a21696d4a9ac31420a4f685ce0feb9a3320d068c49775",
+      "frame_074.png": "50c850c43035d8ccb1a4befc94f9476019de3b515c44806091d3339913730b8d",
+      "frame_076.png": "4ad61abff1ec1485029272f803ccecd3112817925859b923ae5fcf00390c0603",
+      "frame_078.png": "68ff956bb89327f1ac576e6c1f80a63d9f380d76dac337b5c4fc26487c4e7218",
+      "frame_080.png": "171c9175e7427f334d9553cf78d49e90d13de5841534ef1f981bba746c52c34f",
+      "frame_082.png": "1e7df824b0d21d2fd7a80f284871ccc05eac734b7e346aed49e29aa26e695868",
+      "frame_084.png": "f0f1dcfa5454a953db1c84f45911628d16d2eb688220fbdc2d9e3f15b212c7a1",
+      "frame_086.png": "1e4e76357262e343b91c82afe5148a139f82af8f979928d69a1723406a2d4929",
+      "frame_088.png": "46a3757f447e20b7bb66e22022e629140aafb160bf06f20aee8a09b8e4f3d4e4",
+      "frame_090.png": "8405b730d718466945f3683177209ad87d61e45b356265992fa2d86c16aa6df4",
+      "frame_092.png": "62d1992096e3c9a4358dc24c9e0b7b710db879e1b6049684f1c81e709f01eba0",
+      "frame_094.png": "cfd484d79ef5851bdd20abbc2a02240bccea78070eaa91931dfdad42a0e62983",
+      "frame_096.png": "9b1283f02fa12426283a71a4acebfe34ff2765a97def434a309264795fea0015",
+      "frame_098.png": "18982ecf6376218c2e7e83faee1416cf098a9e5693f23fce57f843a49c8ba841",
+      "frame_100.png": "426e0ccaa1f2863de07656d8c89570f4fa931cd3c4b529e02a110dd3d7f171c5",
+      "frame_102.png": "01d168244c61e5b1a224fec1e8c09bc754e40b7dc08a428ac7b3f9b2f3df90a2",
+      "frame_104.png": "9cedaa0a7d6b2b00295ce5dfa345000aba9c994b12b90b811f73e97a47291c4d",
+      "frame_106.png": "47bee1924fe8b56850c28f5e752fadc1df7d8adc97b1f8c5f55d8d38ad5f8afe",
+      "frame_108.png": "510c90c37c25a38dcde732faf7e184bb6edf320281654f4f9d0a9d0a5209c25e",
+      "frame_110.png": "901bb1e7e7536c945cb5762b2f20623d97d37af013f3c601d799a870945de701",
+      "frame_112.png": "303e041d2755eab64c07edacda09049357a1ea000ed57ca5be5bcac6b2feb0a9",
+      "frame_114.png": "5155dd7c81bf6f5d16ad4a71f7b17c24f0d4f21662ed57d74e960fc6daa01e53",
+      "frame_116.png": "68c45d33200b211f9b5ecde3bac553ac3bd720f8ffb6e51ce7c78493ed615001",
+      "frame_118.png": "f6ec62af947c79a1ba62ef7a6995477e84286f503343f4afd0bce93e1468538a"
+    },
+    "rois": {
+      "cabinet_gray": {
+        "coordinates_xyxy": [
+          70,
+          350,
+          220,
+          620
+        ],
+        "source_protected_fraction": 2.05761316872428e-06,
+        "candidates": {
+          "C0": {
+            "mean_YCrCbRGB": [
+              115.52324650205729,
+              130.3736576131668,
+              128.3499465020573,
+              118.84809341563749,
+              113.75078477366229,
+              116.12222839506069
+            ],
+            "temporal_RMS_sigma": [
+              5.818485934154028,
+              3.092727237127427,
+              3.789631528451553,
+              6.395970689550486,
+              6.989115297576098,
+              7.968631991441471
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.806253841116078,
+              3.091997526886065,
+              3.7891149410889002,
+              6.380189433244375,
+              6.980307959885063,
+              7.96062176977076
+            ],
+            "mean_image_spatial_sigma": [
+              17.9751691721523,
+              2.8730683070608722,
+              2.6212178417327827,
+              21.664883358236164,
+              16.963138890242192,
+              13.784110281343946
+            ],
+            "Y_frame_mean_peak_to_peak": 1.4109876543209907,
+            "clipped_channel_values": 0,
+            "mean_R_over_G": 1.0448111953875103,
+            "mean_B_over_G": 1.0208477121816524,
+            "centered_temporal_neighbor_correlation": {
+              "V1": [
+                0.4610793254164661,
+                0.5146116839033562,
+                0.5791921559092854
+              ],
+              "V2": [
+                0.07603281390520579,
+                0.10839128469105465,
+                0.1307102018500479
+              ],
+              "V4": [
+                0.0010859994158484378,
+                0.0020715970998837615,
+                -0.002578915000214394
+              ],
+              "V8": [
+                0.00254993845503017,
+                0.001667403632104301,
+                -0.0020768015766043416
+              ],
+              "H1": [
+                0.17185836694859,
+                0.6876875466140935,
+                0.682978811381534
+              ],
+              "H2": [
+                -0.029093201037226166,
+                0.37061938947748657,
+                0.3613434639445611
+              ],
+              "H4": [
+                0.005065565647490352,
+                0.0656602720152976,
+                0.05275035624392692
+              ],
+              "H8": [
+                0.0020866495340314856,
+                0.005040526560873484,
+                0.008298915074801815
+              ]
+            },
+            "mean_Y_delta_percent_vs_C3": -35.24229426605394,
+            "mean_CrCb_delta_codes_vs_C3": [
+              -0.8743024691386267,
+              -0.49438971193333714
+            ]
+          },
+          "C3": {
+            "mean_YCrCbRGB": [
+              178.3930502057609,
+              131.24796008230544,
+              128.84433621399063,
+              182.94442839506166,
+              175.78403621399175,
+              179.9276641975299
+            ],
+            "temporal_RMS_sigma": [
+              6.19165735368006,
+              4.70901090458695,
+              5.721334229211661,
+              6.557262711420264,
+              9.251486655066266,
+              8.733772977949194
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              6.188109032012795,
+              4.707893471340955,
+              5.720508609187763,
+              6.549846084100539,
+              9.249371647368514,
+              8.731638182793919
+            ],
+            "mean_image_spatial_sigma": [
+              6.924433855873404,
+              3.9022590659975136,
+              3.768012201821818,
+              11.554981257382172,
+              6.328804104960334,
+              2.6179534752592675
+            ],
+            "Y_frame_mean_peak_to_peak": 0.8837777777777944,
+            "clipped_channel_values": 0,
+            "mean_R_over_G": 1.0407340298657903,
+            "mean_B_over_G": 1.0235722655639439,
+            "centered_temporal_neighbor_correlation": {
+              "V1": [
+                0.41472130806467633,
+                0.5103616892165377,
+                0.5793587706385857
+              ],
+              "V2": [
+                0.06596056551228972,
+                0.10483686155855254,
+                0.1308184705218771
+              ],
+              "V4": [
+                0.0020817493613151704,
+                0.002089838471866249,
+                -0.002574861879878693
+              ],
+              "V8": [
+                -0.0002833481400593576,
+                0.002300356480026034,
+                -0.0020666951230235145
+              ],
+              "H1": [
+                0.540567509480554,
+                0.6822415572876326,
+                0.6808679427425908
+              ],
+              "H2": [
+                0.21993386531650175,
+                0.36685145526660984,
+                0.362098703548604
+              ],
+              "H4": [
+                0.032069434591018776,
+                0.0647939638534762,
+                0.052818882525131214
+              ],
+              "H8": [
+                0.005602309377765475,
+                0.005237333767399714,
+                0.008889434436458147
+              ]
+            },
+            "mean_Y_delta_percent_vs_C3": 0.0,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.0,
+              0.0
+            ]
+          },
+          "P2": {
+            "mean_YCrCbRGB": [
+              178.66400946502023,
+              131.25891152263335,
+              128.87895637859995,
+              183.22222469135795,
+              176.04176502057587,
+              180.21441069958942
+            ],
+            "temporal_RMS_sigma": [
+              6.001812171408419,
+              4.358343432276704,
+              5.389734503065203,
+              6.075318900430356,
+              8.9337329860821,
+              8.104105621273966
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.998107311307515,
+              4.357160832373986,
+              5.388845855471706,
+              6.06730326485348,
+              8.931512151754854,
+              8.101823142970064
+            ],
+            "mean_image_spatial_sigma": [
+              6.754420808869174,
+              3.8099740630574477,
+              3.6997982638831863,
+              11.446455193729252,
+              5.983890575281152,
+              2.5056816671436763
+            ],
+            "Y_frame_mean_peak_to_peak": 0.8913827160494066,
+            "clipped_channel_values": 0,
+            "mean_R_over_G": 1.040788387175866,
+            "mean_B_over_G": 1.0237025894311265,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 0,
+              "protected_pixels": 5,
+              "input_pixels": 2480640,
+              "prefilter_changed_pixels": 2043514
+            },
+            "mean_Y_delta_percent_vs_C3": 0.1518889098800713,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.010951440327914952,
+              0.034620164609322046
+            ]
+          },
+          "P4": {
+            "mean_YCrCbRGB": [
+              179.0372090534991,
+              131.26628189300507,
+              128.90348641975248,
+              183.61123086419775,
+              176.39864115226345,
+              180.63153991769533
+            ],
+            "temporal_RMS_sigma": [
+              5.255732239969238,
+              3.6990454129798813,
+              4.606842694232379,
+              5.193442292658952,
+              7.730082414622001,
+              6.961705422296427
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.251376528820762,
+              3.69764212266801,
+              4.605790782316729,
+              5.183843711838771,
+              7.727442970217678,
+              6.958966811882752
+            ],
+            "mean_image_spatial_sigma": [
+              6.457765125094828,
+              3.7183943514518787,
+              3.5835136501507368,
+              11.316954192153634,
+              5.368261169962142,
+              2.315600579314004
+            ],
+            "Y_frame_mean_peak_to_peak": 0.9224444444444373,
+            "clipped_channel_values": 0,
+            "mean_R_over_G": 1.0408880117489598,
+            "mean_B_over_G": 1.023996209595391,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 0,
+              "protected_pixels": 5,
+              "input_pixels": 2480640,
+              "prefilter_changed_pixels": 2436036
+            },
+            "mean_Y_delta_percent_vs_C3": 0.3610896539945063,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.018321810699632124,
+              0.0591502057618527
+            ]
+          },
+          "P8": {
+            "mean_YCrCbRGB": [
+              179.21970946502017,
+              131.25969506172808,
+              128.90302674897077,
+              183.7861786008223,
+              176.58458600823056,
+              180.81305226337676
+            ],
+            "temporal_RMS_sigma": [
+              4.532636347402529,
+              3.407186967472943,
+              4.239287206934398,
+              4.748326874268798,
+              6.755397131365078,
+              6.383872095107579
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              4.52748066321087,
+              3.4056661187835564,
+              4.238136849419063,
+              4.737735249074566,
+              6.752301746171514,
+              6.380841577096914
+            ],
+            "mean_image_spatial_sigma": [
+              6.282891700590649,
+              3.6932253912284874,
+              3.5596921898182465,
+              11.247954387917938,
+              5.0429157614725,
+              2.196964791589791
+            ],
+            "Y_frame_mean_peak_to_peak": 0.944518518518521,
+            "clipped_channel_values": 0,
+            "mean_R_over_G": 1.0407826795950132,
+            "mean_B_over_G": 1.0239458400686745,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 0,
+              "protected_pixels": 5,
+              "input_pixels": 2480640,
+              "prefilter_changed_pixels": 2470664
+            },
+            "mean_Y_delta_percent_vs_C3": 0.46339207626406864,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.011734979422641345,
+              0.05869053498014409
+            ]
+          }
+        }
+      },
+      "door_middle": {
+        "coordinates_xyxy": [
+          380,
+          260,
+          570,
+          640
+        ],
+        "source_protected_fraction": 0.03367313019390582,
+        "candidates": {
+          "C0": {
+            "mean_YCrCbRGB": [
+              136.88433610341704,
+              144.23981440443,
+              116.3392398430277,
+              159.6609358264076,
+              129.30065720221492,
+              116.22286542012857
+            ],
+            "temporal_RMS_sigma": [
+              6.085443265018264,
+              3.9466359415553103,
+              4.306065963539219,
+              7.38379026084914,
+              7.62290404631646,
+              8.639742851328561
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              6.076892345251336,
+              3.9462231021039607,
+              4.305408530711285,
+              7.373967890440341,
+              7.616292156718541,
+              8.636715139539591
+            ],
+            "mean_image_spatial_sigma": [
+              19.802601692448693,
+              3.2673842032387257,
+              4.322061007701562,
+              23.552404723463003,
+              19.436197697873357,
+              12.870239019639378
+            ],
+            "Y_frame_mean_peak_to_peak": 1.236814404432124,
+            "clipped_channel_values": 38,
+            "mean_R_over_G": 1.2348037456353518,
+            "mean_B_over_G": 0.8988574995281438,
+            "centered_temporal_neighbor_correlation": {
+              "V1": [
+                0.4695467729765766,
+                0.5373733243361235,
+                0.5864531345019856
+              ],
+              "V2": [
+                0.08072167299029497,
+                0.11388102887802555,
+                0.13455968814169045
+              ],
+              "V4": [
+                -0.00030793650416286757,
+                0.00015820923181798945,
+                -0.000634859369426749
+              ],
+              "V8": [
+                -0.0006594485274157304,
+                -0.0007548040090033611,
+                -0.0018204663586196108
+              ],
+              "H1": [
+                0.19055711813146683,
+                0.693491847947129,
+                0.6856970102406154
+              ],
+              "H2": [
+                -0.026289710310966927,
+                0.38372508632081737,
+                0.36824914057238844
+              ],
+              "H4": [
+                0.005209280730018057,
+                0.06855273262123827,
+                0.05407023100270594
+              ],
+              "H8": [
+                0.0030930607405186784,
+                0.004582129141641655,
+                0.007362286738075549
+              ]
+            },
+            "mean_Y_delta_percent_vs_C3": -20.313115518677016,
+            "mean_CrCb_delta_codes_vs_C3": [
+              -3.9838317174538247,
+              2.555292474606645
+            ]
+          },
+          "C3": {
+            "mean_YCrCbRGB": [
+              171.77774861495558,
+              148.22364612188383,
+              113.78394736842105,
+              200.08884695290982,
+              162.24484233610147,
+              146.57795706371192
+            ],
+            "temporal_RMS_sigma": [
+              5.925891087823892,
+              4.64430268183546,
+              5.38980665400561,
+              2.354936789757494,
+              9.508957999253132,
+              10.48473568215616
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.925088246169685,
+              4.644033184277753,
+              5.38929597591719,
+              2.3530825909227913,
+              9.508075554950524,
+              10.484130265048522
+            ],
+            "mean_image_spatial_sigma": [
+              6.201429951418403,
+              2.87798954498835,
+              4.132450029229011,
+              7.849057939620576,
+              7.109112618895687,
+              5.324390391918583
+            ],
+            "Y_frame_mean_peak_to_peak": 0.4040166204985951,
+            "clipped_channel_values": 38,
+            "mean_R_over_G": 1.2332524354667118,
+            "mean_B_over_G": 0.9034367746499177,
+            "centered_temporal_neighbor_correlation": {
+              "V1": [
+                0.4730255815803313,
+                0.5150053981437374,
+                0.5868434824722387
+              ],
+              "V2": [
+                0.08604270058527266,
+                0.1042143553002435,
+                0.13525292152900342
+              ],
+              "V4": [
+                4.442537799808787e-05,
+                0.00022649068234827953,
+                -0.00040963305672539084
+              ],
+              "V8": [
+                -0.0003046902894922241,
+                -0.0003652632025213838,
+                -0.0016991271842022326
+              ],
+              "H1": [
+                0.6028346137237471,
+                0.682947180832483,
+                0.6763607160065436
+              ],
+              "H2": [
+                0.295481455911721,
+                0.3706492556395133,
+                0.3668720041673972
+              ],
+              "H4": [
+                0.05034273785538536,
+                0.06464753949799691,
+                0.055530018970907064
+              ],
+              "H8": [
+                0.0042869777177071645,
+                0.004532734624652188,
+                0.00810099101433012
+              ]
+            },
+            "mean_Y_delta_percent_vs_C3": 0.0,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.0,
+              0.0
+            ]
+          },
+          "P2": {
+            "mean_YCrCbRGB": [
+              171.78425761772846,
+              148.23398153277844,
+              113.7918453370267,
+              200.11189496768068,
+              162.246834949214,
+              146.5848806555867
+            ],
+            "temporal_RMS_sigma": [
+              5.610337715570453,
+              4.358365283312441,
+              5.082342675917257,
+              2.252745387623847,
+              9.014686154405632,
+              9.730512277572982
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.6094973449563135,
+              4.358079067542055,
+              5.08179863281165,
+              2.2508329991909677,
+              9.013754646319937,
+              9.72985938731369
+            ],
+            "mean_image_spatial_sigma": [
+              6.167293376089124,
+              2.864379789572841,
+              4.124228835506184,
+              7.808540498717745,
+              7.07327214768319,
+              5.287118900177311
+            ],
+            "Y_frame_mean_peak_to_peak": 0.40263157894736423,
+            "clipped_channel_values": 38,
+            "mean_R_over_G": 1.2333793446899541,
+            "mean_B_over_G": 0.903468352411745,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 1,
+              "protected_pixels": 150187,
+              "input_pixels": 4400640,
+              "prefilter_changed_pixels": 3580206
+            },
+            "mean_Y_delta_percent_vs_C3": 0.0037892001876649317,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.010335410894612096,
+              0.007897968605647065
+            ]
+          },
+          "P4": {
+            "mean_YCrCbRGB": [
+              171.78618951985132,
+              148.25703162511383,
+              113.79636334256729,
+              200.1453425669446,
+              162.23274607571497,
+              146.5899129732227
+            ],
+            "temporal_RMS_sigma": [
+              4.765887039049479,
+              3.6816924399867315,
+              4.30126287927223,
+              2.0520650651242778,
+              7.582433477428569,
+              8.318991505769699
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              4.764909672483934,
+              3.681359929135101,
+              4.300618439454897,
+              2.049992849855988,
+              7.581341431230326,
+              8.318226825843096
+            ],
+            "mean_image_spatial_sigma": [
+              6.1119087963128464,
+              2.8320429816490402,
+              4.099398691391901,
+              7.753475353847229,
+              7.000634682006497,
+              5.226150329173999
+            ],
+            "Y_frame_mean_peak_to_peak": 0.3984626038781016,
+            "clipped_channel_values": 38,
+            "mean_R_over_G": 1.2336926262317942,
+            "mean_B_over_G": 0.9035778319674644,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 3,
+              "protected_pixels": 150187,
+              "input_pixels": 4400640,
+              "prefilter_changed_pixels": 4197963
+            },
+            "mean_Y_delta_percent_vs_C3": 0.004913852325927337,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.033385503229993674,
+              0.012415974146236408
+            ]
+          },
+          "P8": {
+            "mean_YCrCbRGB": [
+              171.80856948291773,
+              148.25696975992594,
+              113.79382940904914,
+              200.16767474607465,
+              162.25584626038736,
+              146.60740050785114
+            ],
+            "temporal_RMS_sigma": [
+              4.266854420916556,
+              3.390231696909607,
+              3.990189143226149,
+              1.9214269601774656,
+              6.814470395895142,
+              7.778070224818692
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              4.265764372554117,
+              3.3898617984381176,
+              3.9894958560551705,
+              1.919218222379099,
+              6.813257564282586,
+              7.777252673532691
+            ],
+            "mean_image_spatial_sigma": [
+              6.0625032876103315,
+              2.816821032230653,
+              4.086052327560206,
+              7.696962720068277,
+              6.9482633572799894,
+              5.205574402731405
+            ],
+            "Y_frame_mean_peak_to_peak": 0.39390581717452733,
+            "clipped_channel_values": 38,
+            "mean_R_over_G": 1.233654622372414,
+            "mean_B_over_G": 0.9035569681265988,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 6,
+              "protected_pixels": 150187,
+              "input_pixels": 4400640,
+              "prefilter_changed_pixels": 4232689
+            },
+            "mean_Y_delta_percent_vs_C3": 0.017942293580319735,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.033323638042105586,
+              0.009882040628085065
+            ]
+          }
+        }
+      },
+      "bright_wall": {
+        "coordinates_xyxy": [
+          760,
+          160,
+          1100,
+          640
+        ],
+        "source_protected_fraction": 0.9995717933006536,
+        "candidates": {
+          "C0": {
+            "mean_YCrCbRGB": [
+              241.4990132761428,
+              131.04359078840488,
+              116.6792234477117,
+              245.76371537989988,
+              243.1398510008188,
+              221.48822988153452
+            ],
+            "temporal_RMS_sigma": [
+              5.2589508399168645,
+              2.9911147265614564,
+              4.6927480108629975,
+              5.5402169223462385,
+              6.534470866396126,
+              9.520565023511748
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.257819775070093,
+              2.991017763224757,
+              4.692577730154367,
+              5.539249282587968,
+              6.533452472195871,
+              9.51965636099977
+            ],
+            "mean_image_spatial_sigma": [
+              11.374309088193636,
+              2.5665396107120957,
+              5.792802285880258,
+              9.95999301207945,
+              11.805283383430213,
+              17.549552020518348
+            ],
+            "Y_frame_mean_peak_to_peak": 0.4176776960784423,
+            "clipped_channel_values": 10189385,
+            "mean_R_over_G": 1.0107915850416156,
+            "mean_B_over_G": 0.9109499284869951,
+            "centered_temporal_neighbor_correlation": {
+              "V1": [
+                0.4699034438753253,
+                0.503839508522237,
+                0.6005265365189915
+              ],
+              "V2": [
+                0.08336217768304427,
+                0.10624084992201366,
+                0.14161909177442134
+              ],
+              "V4": [
+                0.0016560527470516188,
+                0.0005394995668218425,
+                0.0005698258617611965
+              ],
+              "V8": [
+                0.0005227843687458603,
+                -0.00022868857950452298,
+                -0.00012132532529060738
+              ],
+              "H1": [
+                0.1980489281116695,
+                0.6325626362685692,
+                0.6453717209983396
+              ],
+              "H2": [
+                -0.015618924841602625,
+                0.34275865009163453,
+                0.34573248927819583
+              ],
+              "H4": [
+                0.006648289969946086,
+                0.06145402790439976,
+                0.05100647004894111
+              ],
+              "H8": [
+                0.0023995557857925632,
+                0.004121311956527157,
+                0.0035708322965157754
+              ]
+            },
+            "mean_Y_delta_percent_vs_C3": -0.0004743379738325615,
+            "mean_CrCb_delta_codes_vs_C3": [
+              -2.124183006912972e-05,
+              4.677287608956249e-05
+            ]
+          },
+          "C3": {
+            "mean_YCrCbRGB": [
+              241.50015880310286,
+              131.04361203023495,
+              116.67917667483562,
+              245.76489082924564,
+              243.1409941789216,
+              221.48929370915005
+            ],
+            "temporal_RMS_sigma": [
+              5.254243141185308,
+              2.991129418802385,
+              4.692749295566077,
+              5.53552093628454,
+              6.530522043167337,
+              9.518979595197678
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.253112802399914,
+              2.991032466566835,
+              4.6925790196247865,
+              5.534554164455285,
+              6.529504406137465,
+              9.518071824490711
+            ],
+            "mean_image_spatial_sigma": [
+              11.372028469857426,
+              2.566563118138697,
+              5.792805970860744,
+              9.957682234930033,
+              11.8029276917822,
+              17.5482335562843
+            ],
+            "Y_frame_mean_peak_to_peak": 0.41710171568627175,
+            "clipped_channel_values": 10189385,
+            "mean_R_over_G": 1.0107916670291854,
+            "mean_B_over_G": 0.910950020818626,
+            "centered_temporal_neighbor_correlation": {
+              "V1": [
+                0.47009206955687005,
+                0.5038228389517972,
+                0.6005304225003902
+              ],
+              "V2": [
+                0.08337694840780296,
+                0.1062330668684057,
+                0.14161838268054874
+              ],
+              "V4": [
+                0.001651244499316688,
+                0.0005386132339846531,
+                0.0005686177603733308
+              ],
+              "V8": [
+                0.0005180470701008714,
+                -0.00022838207376855418,
+                -0.00012088128418269942
+              ],
+              "H1": [
+                0.19820949564142748,
+                0.6325591240721964,
+                0.6453672828977074
+              ],
+              "H2": [
+                -0.015426816917972045,
+                0.3427514201181159,
+                0.34573230706620206
+              ],
+              "H4": [
+                0.006653029573906433,
+                0.061452297925937954,
+                0.05100776397251616
+              ],
+              "H8": [
+                0.0024186867867793784,
+                0.004121457564765259,
+                0.0035694173872078696
+              ]
+            },
+            "mean_Y_delta_percent_vs_C3": 0.0,
+            "mean_CrCb_delta_codes_vs_C3": [
+              0.0,
+              0.0
+            ]
+          },
+          "P2": {
+            "mean_YCrCbRGB": [
+              241.50016176470436,
+              131.04361264298012,
+              116.67917779820172,
+              245.76489348447424,
+              243.1409975490197,
+              221.48929677287555
+            ],
+            "temporal_RMS_sigma": [
+              5.254236391603577,
+              2.991127704161579,
+              4.692748283627291,
+              5.535511782503635,
+              6.530516857584102,
+              9.518974141673302
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.2531060510144645,
+              2.991030755556449,
+              4.692578007343062,
+              5.534545005637922,
+              6.529499210803689,
+              9.518066361093275
+            ],
+            "mean_image_spatial_sigma": [
+              11.372020957569955,
+              2.5665630036087586,
+              5.792805913635778,
+              9.957676184134668,
+              11.80291822533156,
+              17.548228406909193
+            ],
+            "Y_frame_mean_peak_to_peak": 0.41710171568627175,
+            "clipped_channel_values": 10189385,
+            "mean_R_over_G": 1.0107916639394618,
+            "mean_B_over_G": 0.9109500207928573,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 0,
+              "protected_pixels": 9886324,
+              "input_pixels": 9890640,
+              "prefilter_changed_pixels": 125
+            },
+            "mean_Y_delta_percent_vs_C3": 1.2263352111574477e-06,
+            "mean_CrCb_delta_codes_vs_C3": [
+              6.127451683823892e-07,
+              1.1233661041387677e-06
+            ]
+          },
+          "P4": {
+            "mean_YCrCbRGB": [
+              241.50016666666554,
+              131.04361192811098,
+              116.67917830882274,
+              245.7648977736899,
+              243.14100357434666,
+              221.48930187908476
+            ],
+            "temporal_RMS_sigma": [
+              5.254219263041215,
+              2.9911209650870827,
+              4.692743212126891,
+              5.535496473323146,
+              6.530494365471704,
+              9.51895910996119
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.253088949703587,
+              2.9910240226088893,
+              4.692572931396464,
+              5.534529717003857,
+              6.529476740312575,
+              9.518051330126951
+            ],
+            "mean_image_spatial_sigma": [
+              11.372007510088768,
+              2.5665580257224136,
+              5.792805512783765,
+              9.957666562698043,
+              11.802899099117445,
+              17.548219254287634
+            ],
+            "Y_frame_mean_peak_to_peak": 0.4170772058823502,
+            "clipped_channel_values": 10189385,
+            "mean_R_over_G": 1.010791656531684,
+            "mean_B_over_G": 0.910950019219439,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 0,
+              "protected_pixels": 9886324,
+              "input_pixels": 9890640,
+              "prefilter_changed_pixels": 330
+            },
+            "mean_Y_delta_percent_vs_C3": 3.256131475559698e-06,
+            "mean_CrCb_delta_codes_vs_C3": [
+              -1.021239768306259e-07,
+              1.6339871251602744e-06
+            ]
+          },
+          "P8": {
+            "mean_YCrCbRGB": [
+              241.50017422385505,
+              131.0436092728824,
+              116.67917810457419,
+              245.76490257352654,
+              243.14101235702597,
+              221.48930831290818
+            ],
+            "temporal_RMS_sigma": [
+              5.254175937682331,
+              2.9910977747541256,
+              4.692734921478013,
+              5.535479921605827,
+              6.530428926540112,
+              9.518937716665384
+            ],
+            "global_mean_removed_temporal_RMS_sigma": [
+              5.253045629591227,
+              2.9910008392110248,
+              4.692564633825743,
+              5.534513163254167,
+              6.5294113443977,
+              9.518029942367509
+            ],
+            "mean_image_spatial_sigma": [
+              11.371986252657715,
+              2.566547800935883,
+              5.792804489833564,
+              9.957655248023284,
+              11.8028697214208,
+              17.54820830463952
+            ],
+            "Y_frame_mean_peak_to_peak": 0.41704656862745537,
+            "clipped_channel_values": 10189385,
+            "mean_R_over_G": 1.010791639761077,
+            "mean_B_over_G": 0.9109500127756126,
+            "candidate_diagnostics_including_1px_context": {
+              "legal_fallback_pixels": 0,
+              "shoulder_fallback_pixels": 1,
+              "protected_pixels": 9886324,
+              "input_pixels": 9890640,
+              "prefilter_changed_pixels": 507
+            },
+            "mean_Y_delta_percent_vs_C3": 6.385400430630739e-06,
+            "mean_CrCb_delta_codes_vs_C3": [
+              -2.757352547178016e-06,
+              1.4297385746431246e-06
+            ]
+          }
+        }
+      }
+    }
+  },
+  "source_SHA256": {
+    "tools\\analyze_real_quality_sequence.py": "7b34c17d9ec255ffad6da33eff92f6d1ab7477e02ce45aaaf892459b0cb7dfa3",
+    "tools\\capture_quality_ugreen.py": "5f18139438647a166134e4f02c18e252c50e0e928be8be10e350ecf4f2561f6c",
+    "tools\\study_shared_window_refinement.py": "c67e9295f950b1290360ba1b6fe13f42d240924408c6f4a2bbfa7f60ef568436",
+    "tools\\study_zero_dsp_candidates.py": "1a1f3bcbf2667e6d8da067b75c1f644a8f59172398ebfcc0bb36720c58ec4ca4"
+  },
+  "pending_manual": "Keep scene/lighting/exposure3 fixed. Press KEY4 three times from C0 to C3, confirm OSD, close preview. Await paired hardware C3 capture; no dependent action before reply.",
+  "capture_tool_commit_at_acquisition": "c42f4cf",
+  "capture_tool_committed_blob_SHA256_at_acquisition": "7ea5564a70c6a07b73bab8af17b197bef5ae8d1ae60524243f43363631cfcf8c",
+  "capture_tool_followup_change": "Scope wording generalized after acquisition because backend reported YUY2. Acquisition settings and code path unchanged."
+}
