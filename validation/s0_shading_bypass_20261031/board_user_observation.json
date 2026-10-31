@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-31",
+  "user_observation": "Closing color_shading made perceived image quality worse; retain enabled version.",
+  "images": [
+    {
+      "label": "shading_on_old_exp0_C0",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-fbea51d2-12f2-416a-b3e1-761e325d3c53.jpg",
+      "archived": "D:\\FPGA\\codex\\_build\\20261029project\\s0-shading-bypass-20261031\\user-feedback-20261031\\shading_on_old_exp0_C0.jpg",
+      "sha256": "593413daa4392beb58ded5a31eb2fe79fa615912073ff8a68123402167d8c76b",
+      "osd": "original 0 / H1 / C0"
+    },
+    {
+      "label": "shading_on_old_exp3_C3",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-5bcfa395-0749-411b-b26a-c632d1ec2736.jpg",
+      "archived": "D:\\FPGA\\codex\\_build\\20261029project\\s0-shading-bypass-20261031\\user-feedback-20261031\\shading_on_old_exp3_C3.jpg",
+      "sha256": "6209f43bed8b97640c98c66d7fddb4c3de4e7a18b466c5c490676c11c1d94706",
+      "osd": "original 3 / H1 / C3"
+    },
+    {
+      "label": "shading_off_s0_exp3_C3_D3",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-0969aaaa-7fc9-4f53-b72f-9b6cd0668b8a.jpg",
+      "archived": "D:\\FPGA\\codex\\_build\\20261029project\\s0-shading-bypass-20261031\\user-feedback-20261031\\shading_off_s0_exp3_C3_D3.jpg",
+      "sha256": "14046d9aa390a577a047aaaca25feb57ada4cef6ca767ad1894b6b7060d77e1c",
+      "osd": "original 3 / C3 / D3"
+    }
+  ],
+  "controlled_comparison": false,
+  "limitations": [
+    "Exposure and C/D settings differ",
+    "Camera rotated; physical ROIs are not registered",
+    "Older H1/C OSD versus current C/D OSD indicates different image-pipeline generations",
+    "Ordinary illuminated wall/cabinet scene is not a uniform calibration flat field",
+    "Single JPEG spatial residuals are not sensor random-noise estimates"
+  ],
+  "analysis_artifacts": "D:\\FPGA\\codex\\_build\\20261029project\\s0-shading-bypass-20261031\\user-feedback-20261031\\screenshot_roi_statistics.json",
+  "decision": "Restore pre-S0 shading-on E1 baseline and retain existing LUT values. Confirm residuals with matched exposure, C/D, framing and stable AWB before S1 candidates.",
+  "withdrawn_inference": "Output color ratios from non-flat scenes do not establish that old LUT polarity is wrong."
+}

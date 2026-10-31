@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-31",
+  "branch": "image-shading-on-baseline-20261031",
+  "restored_rtl_baseline_commit": "a2e58a9",
+  "bit_source_commit": "1869376",
+  "bit": "D:\\FPGA\\codex\\_build\\20261029project\\e1-awb-stability-20261031\\compile-v1\\camera_to_dsi_display.bit",
+  "sha256": "7E1E1F74341703F535C63499E5425B90F73C50F293BFC634EE82639EDE7613BD",
+  "programmer": "PRG-2014 Chip validation success: PH1P35MDG324",
+  "download_completed": true,
+  "log": "D:\\FPGA\\codex\\_build\\20261029project\\shading-on-restore-20261031\\program-verified.log",
+  "log_sha256": "e4b99b3d092df1d3877ad107ca5b0457e66e5646c0fb24ae19b5bcf7e68116f0",
+  "mode": "JTAG SRAM download, not Flash",
+  "rtl_verification": "git diff a2e58a9 -- user_source is empty",
+  "board_visual_validation": "pending_user_observation_after_restore",
+  "resources": {
+    "LUT6": 11046,
+    "Slice": 12180,
+    "FF": 10144,
+    "ERAM20K": 52,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "notes": "Restored existing compiled baseline; no new compilation or LUT parameters. Earlier helper attempt had obsolete cable arguments; final log above uses supported cable command and contains no ERROR/FAIL."
+}

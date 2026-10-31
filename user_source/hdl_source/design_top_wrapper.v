@@ -112,9 +112,7 @@
 //  打开 = 用 color_shading.v 做 10x6 分区增益，消除中央偏绿/两侧品红
 //  注释掉 = 直通，用于对比开/关效果
 // =====================================================================
-// S0 对照版：先旁路空间颜色阴影校正，确认现有表的极性/坐标是否正确。
-// S1 标定通过后再恢复此宏并替换 color_shading_lut.v 的数值。
-//`define SHADING_ON
+`define SHADING_ON
 
 module design_top_wrapper (
     input wire        I_sys_clk,
