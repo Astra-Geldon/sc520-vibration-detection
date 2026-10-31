@@ -1,0 +1,67 @@
+{
+  "source_commit": "20783776709c5d25a0e127aefda56a2610f55f71",
+  "branch": "image-almost-success-fixed-20261101",
+  "scope": "Fixed E900/G12/N1; first group after three real frame starts, two-frame settling, bounded NACK retries; pixel chain unchanged from e761ec2",
+  "resources": {
+    "LUT6": 8841,
+    "Slice": 9841,
+    "FF": 8676,
+    "ERAM20K": 39,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_failed_fixed": {
+    "LUT6": 53,
+    "Slice": 101,
+    "FF": 31,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "delta_vs_selected_n1_candidate": {
+    "LUT6": -1201,
+    "Slice": -1278,
+    "FF": -740,
+    "ERAM20K": -4,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.171,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "engineering_parameter_comparison_allowed": true,
+  "engineering_comparison_qualification": null,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD internal setup/hold; inherited external timing coverage limits retained",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "6c75d893f0076cf94cc70c61de72d94c78febe86f1f89b6cc4680fdbb7f7eef4",
+  "bit": {
+    "path": "D:/FPGA/codex/_build/20261029project/startup-parameter-fix-20261101/compile-v1/camera_to_dsi_display.bit",
+    "sha256": "49656553e454546ace5aeb81f3f605e4862d91d822bab2a970b07bd334352213",
+    "bytes": 1789539
+  },
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "label": "fixed_N1"
+  },
+  "board_programming": "success_JTAG_SRAM",
+  "visual_acceptance": "pending_user_observation",
+  "fixed_lift": "N1 unchanged from b8407f8",
+  "key3_key4": "unused; test selectors removed",
+  "frame_processing": "single-frame per-pixel; no alternating capture or extra frame buffer",
+  "generated_utc": "2026-10-31T17:40:56.738808+00:00",
+  "programming_record": "burn-v1/programming.json",
+  "programming_finished_local": "2026-11-01T01:41:06.647012+08:00"
+}

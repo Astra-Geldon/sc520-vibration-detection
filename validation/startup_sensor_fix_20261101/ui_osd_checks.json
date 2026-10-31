@@ -1,0 +1,35 @@
+{
+  "pass": true,
+  "scope": "Real KEY1/KEY2 debounce and normal-mode priority; archived A+Logo name/Logo equivalence, removed experiment labels and unchanged coordinate timing",
+  "source_sha256": {
+    "user_source/hdl_source/img_mode_sel.v": "9b18ec3a2f9fd10691e8df4101a26c2c73fe47d4358b5c312f2bd2386be2e0de",
+    "user_source/hdl_source/osd_overlay.v": "0d327813064d4521de252e79ecf731dfce596e57fae8509fa213e6908a820652",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "tests": {
+    "controls": {
+      "pass": true,
+      "log": "controls.log"
+    },
+    "osd": {
+      "pass": true,
+      "log": "osd.log"
+    },
+    "coordinates": {
+      "pass": true,
+      "log": "coordinates.log"
+    }
+  },
+  "font_and_logo_assets_equal_A_logo": true,
+  "osd_coordinates": 568320,
+  "accepted_unchanged_coordinates": 509696,
+  "removed_diagnostic_coordinates": 19712,
+  "logo_coloured_pixels_per_mode": 4198,
+  "image_modes": 4,
+  "normal_OSD_reference": "ee675b6",
+  "accepted_reference": "b8407f8",
+  "only_normal_key1_key2_ports": true,
+  "normal_mode_priority_and_debounce_pass": true,
+  "coordinate_checks": 128804
+}

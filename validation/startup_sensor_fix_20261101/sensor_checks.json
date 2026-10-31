@@ -1,0 +1,77 @@
+{
+  "hardware_accessed": false,
+  "real_bit_level_I2C_engine": true,
+  "limitation": "Independent simulated register-map slave; real sensor internals, ACKs and applied image not measured",
+  "source_sha256": {
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "52de790317ef77345a1af30ac8008126f8a8c7acca323a83886c4e16ac581a49",
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "016be27b70c68c2cb09fca9df15bf24465105ed51df8ebc7bd3ced20019e36a3",
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+    "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+    "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+    "user_source/hdl_source/uics500_cfg/uii2c.v": "6eed54d134d70f043a50f4c94aded1be9706c1cf850bad3288dc8749fd918e14",
+    "user_source/hdl_source/design_top_wrapper.v": "c3d217036191bd49b0b49a637aa2d00d0197ea8466466b2709d738ab9b62929b"
+  },
+  "cases": [
+    {
+      "case": 0,
+      "passed": true,
+      "result": "PASS case0 writes173 groups1 rejected0 frames5 ticks5 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 142277352000 (1ps)"
+    },
+    {
+      "case": 1,
+      "passed": true,
+      "result": "NACK case1 group1 3812=00\nPASS case1 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 2,
+      "passed": true,
+      "result": "NACK case2 group1 3e00=00\nPASS case2 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 3,
+      "passed": true,
+      "result": "NACK case3 group1 3e01=38\nPASS case3 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 4,
+      "passed": true,
+      "result": "NACK case4 group1 3e02=40\nPASS case4 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 5,
+      "passed": true,
+      "result": "NACK case5 group1 3e09=0b\nPASS case5 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 6,
+      "passed": true,
+      "result": "NACK case6 group1 3e06=00\nPASS case6 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 7,
+      "passed": true,
+      "result": "NACK case7 group1 3e07=c0\nPASS case7 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 8,
+      "passed": true,
+      "result": "NACK case8 group1 3812=30\nPASS case8 writes181 groups2 rejected1 frames6 ticks6 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 158944002000 (1ps)"
+    },
+    {
+      "case": 9,
+      "passed": true,
+      "result": "NACK case9 group0 3306=60\nPASS case9 writes174 groups1 rejected1 frames5 ticks5 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 147685188000 (1ps)"
+    },
+    {
+      "case": 10,
+      "passed": true,
+      "result": "NACK case10 group1 3e01=38\nNACK case10 group2 3e01=38\nNACK case10 group3 3e01=38\nPASS case10 writes189 groups3 rejected3 frames5 ticks5 first_group_frame3 stream_to_hold_ns35695716000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 145588800000 (1ps)"
+    },
+    {
+      "case": 11,
+      "passed": true,
+      "result": "PASS case11 writes165 groups0 rejected0 frames0 ticks0 first_group_frame-1 stream_to_hold_ns18446744073635942311000\nD:\\FPGA\\codex\\_build\\20261029project\\startup-parameter-fix-20261101\\sensor-checks\\startup_bit_tb.v:96: $finish called at 173655673000 (1ps)"
+    }
+  ],
+  "pass": true
+}

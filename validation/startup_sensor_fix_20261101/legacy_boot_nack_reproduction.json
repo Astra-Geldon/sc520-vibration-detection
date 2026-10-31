@@ -1,0 +1,67 @@
+{
+  "hardware_accessed": false,
+  "production_files_modified": false,
+  "reference_commit": "b8407f8",
+  "simulated_clock_hz": 23809523.80952381,
+  "i2c_divider": 237,
+  "real_bit_level_uii2c_used": true,
+  "limitations": "Open-drain register-map sensor model; NACK explicitly injected, not measured on actual sensor. No analog image or sensor startup internals model.",
+  "files": {
+    "startup_key_cycle_bit_tb.v": "5f47257cfa6306c26a94a66147ab71eaf2de9b58597e7c568d3500935fff38ba",
+    "ae_set.v": "db424f788044fb9cc518422e41db5a5c1703c2a8199d168c8f3d7edbbb4e4456",
+    "uicfgcs520.v": "359b4d241d7953d21dc782804611d99283abff4fe4176f86fa3282fb829163c1"
+  },
+  "cases": {
+    "regular": {
+      "pass": true,
+      "requested_gain_codes": [
+        128,
+        112,
+        80,
+        160,
+        128
+      ],
+      "actual_exposure_codes": [
+        900,
+        900,
+        900,
+        900,
+        900
+      ],
+      "results": [
+        "FIRST_DONE time130053079000 requestedAE900 requestedAG128 actualExp900 regs=00/38/40/0b/00/c0 error0 verified1",
+        "LATER_DONE time196486495000 requestedAE900 requestedAG112 actualExp900 regs=00/38/40/0b/00/80 error0 verified1",
+        "LATER_DONE time262919911000 requestedAE900 requestedAG80 actualExp900 regs=00/38/40/09/00/80 error0 verified1",
+        "LATER_DONE time329353327000 requestedAE900 requestedAG160 actualExp900 regs=00/38/40/0f/00/c0 error0 verified1",
+        "LATER_DONE time395786743000 requestedAE900 requestedAG128 actualExp900 regs=00/38/40/0b/00/c0 error0 verified1"
+      ]
+    },
+    "nack": {
+      "pass": true,
+      "requested_gain_codes": [
+        128,
+        112,
+        80,
+        160,
+        128
+      ],
+      "actual_exposure_codes": [
+        1988,
+        900,
+        900,
+        900,
+        900
+      ],
+      "results": [
+        "FIRST_DONE time130053079000 requestedAE900 requestedAG128 actualExp1988 regs=00/7c/40/0b/00/c0 error1 verified0",
+        "LATER_DONE time196486495000 requestedAE900 requestedAG112 actualExp900 regs=00/38/40/0b/00/80 error1 verified0",
+        "LATER_DONE time262919911000 requestedAE900 requestedAG80 actualExp900 regs=00/38/40/09/00/80 error1 verified0",
+        "LATER_DONE time329353327000 requestedAE900 requestedAG160 actualExp900 regs=00/38/40/0f/00/c0 error1 verified0",
+        "LATER_DONE time395786743000 requestedAE900 requestedAG128 actualExp900 regs=00/38/40/0b/00/c0 error1 verified0"
+      ]
+    }
+  },
+  "first_group_hold_after_stream_on_ms": 0.409836,
+  "first_group_release_after_stream_on_ms": 3.278688,
+  "next_group_hold_after_stream_on_ms": 66.843252
+}

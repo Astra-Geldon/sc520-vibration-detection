@@ -1,0 +1,23 @@
+{
+  "pass": true,
+  "scope": "Actual fixed N1 top instances versus archived N1 pre-stage processor and original mixer",
+  "source_sha256": {
+    "user_source/hdl_source/design_top_wrapper.v": "c3d217036191bd49b0b49a637aa2d00d0197ea8466466b2709d738ab9b62929b",
+    "user_source/hdl_source/fixed_n1_lift.v": "5df94985c721bbdb899af084a0e924b8c26f4e349fa7770ea49c98de78535140",
+    "user_source/hdl_source/hdmi_mixer.v": "4c453de076cd2c3aea2a84a146e1f90c015df43dbfba5b9e16b795bce40d0dde",
+    "user_source/hdl_source/osd_overlay.v": "0d327813064d4521de252e79ecf731dfce596e57fae8509fa213e6908a820652",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "accepted_reference": "b8407f8",
+  "original_mixer_ref": "42b0736",
+  "top_source_updated_outside_tested_RTL": false,
+  "cycles": 2358589,
+  "identical_ddr_reads": 2334720,
+  "full_720p_frames": 2,
+  "extra_mode_frames": 4,
+  "production_top_instances_extracted": true,
+  "pixel_latency_unchanged": true,
+  "archived_N1_pixels_exact": true,
+  "OSD_scope": "Current final algorithm name/Logo; removed test labels intentionally excluded from acceptance"
+}
