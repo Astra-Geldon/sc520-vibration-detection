@@ -1,0 +1,10 @@
+{
+  "stage": "S0 shading bypass",
+  "branch": "image-s0-shading-bypass-20261031",
+  "commit": "84fc4aa",
+  "bit": "D:\\FPGA\\codex\\_build\\20261029project\\s0-shading-bypass-20261031\\compile-v1\\camera_to_dsi_display.bit",
+  "sha256": "7FAB80DB751EE10A7F01E1A783D3F1C4B72E7ABF9965E896E6BEFB4B5A63F9CA",
+  "programmer": "PRG-2014 Chip validation success: PH1P35MDG324",
+  "board_visual_validation": "pending_user_observation",
+  "notes": "S0 shading bypass downloaded by JTAG; user must compare with same scene against shading-on image."
+}
