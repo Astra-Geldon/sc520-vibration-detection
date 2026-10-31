@@ -1,0 +1,25 @@
+{
+  "tests": {
+    "numeric": {
+      "pass": true,
+      "log": "numeric.log"
+    },
+    "controls": {
+      "pass": true,
+      "log": "controls.log"
+    }
+  },
+  "source_sha256": {
+    "user_source/hdl_source/highlight_tone.v": "e6a87d70e205df35368e4dcfdac0b625541868c089c517230001d6db086928fa",
+    "user_source/hdl_source/osd_overlay.v": "60ae9bc791d055f478d8099abf0897278ed2336bfaceb0e18ed62e57382731ee",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385",
+    "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "a1510f9de231a81db4522dfa3180d88720dee26edbb38cd8a9242052ddf9ed98",
+    "user_source/hdl_source/design_top_wrapper.v": "3e3d7cef880d7d1925e9241a61a69e6bf158335e07d9ef2d1ac51075372e43ec"
+  },
+  "exhaustive_product_pairs": 524288,
+  "monotone_peak_targets": 1024,
+  "rgb_subordinate_cases": 394752,
+  "pass": true
+}

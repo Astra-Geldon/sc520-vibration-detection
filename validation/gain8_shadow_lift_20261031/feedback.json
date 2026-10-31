@@ -1,0 +1,20 @@
+{
+  "accepted_source_commit": "c74ff5c",
+  "gain_label": 8,
+  "exposure_label": 900,
+  "verified_label": 0,
+  "user_feedback": "高光控制很好；非高光需更强提亮；高光也可略亮。",
+  "observed_parameters_not_sensor_readback": true,
+  "files": [
+    {
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-be18202a-e9d3-41e6-8184-d89bfb37ed8a.jpg",
+      "copy": "D:\\FPGA\\codex\\_build\\20261029project\\gain8-shadow-lift-20261031\\feedback\\user_gain8_1.jpg",
+      "sha256": "7fe269a24063ba4812e9bd23c2057f97ea2c366db742402ea10266a0af810410"
+    },
+    {
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-4813511b-7876-4cd1-8ad5-45c14572b734.jpg",
+      "copy": "D:\\FPGA\\codex\\_build\\20261029project\\gain8-shadow-lift-20261031\\feedback\\user_gain8_2.jpg",
+      "sha256": "e6f3642c88e4353498f0645d6aa3312aed92aac48df42a0b1013882c0db578c0"
+    }
+  ]
+}

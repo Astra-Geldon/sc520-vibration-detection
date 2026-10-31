@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "method": "JTAG SRAM download",
+  "flash_written": false,
+  "source_commit": "c1459cdd6d499c9a9f199915f3d5318d6a4d89bc",
+  "branch": "image-gain8-shadow-lift-20261031",
+  "bit": "D:/FPGA/codex/_build/20261029project/gain8-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit",
+  "sha256": "32ac36a07d75fb6ca9764d98ab493c6a9493fb96a2d9ef9ef0580017c716494c",
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 112,
+    "nominal_gain": 8,
+    "L": 1,
+    "C": 0,
+    "P": 0,
+    "W": 0
+  },
+  "exit_code": 0,
+  "started_utc": "2026-10-31T14:38:26.945979+00:00",
+  "finished_local": "2026-10-31T22:38:36.053099+08:00",
+  "source_bound_checks": {
+    "numeric_controls": "4e0b47bf90540c180424fdc21412a7d5c737b9762da3ab7b38b8afea1d3ed3fe",
+    "pipeline": "c665a9f2a53d69c30e115a8fac49767d7e54d22698aa066e044d77891f895943",
+    "osd": "6ab29c62fe18eabe89610caccf6c0b61b0a1005c8c09441a934dd1ba9e8e93de",
+    "cdc": "92519090e34e7f46806097ef9c5c7c2070543317ff2ab4fefba97ebc6275bda2",
+    "preservation": "bff9d1731b5e4ff1c2a12707fa89507fca5c4afd1009b8b3a5a8620601e63b5e"
+  },
+  "reported_setup_hold_pass": false,
+  "engineering_comparison_qualification": {
+    "scope": "Bench parameter comparison,not production timing signoff",
+    "raw_reported_setup_hold_pass": false,
+    "negative_paths": [
+      {
+        "slack_ns": -0.015,
+        "Begin Point": "u_uicfgcs520/O_gain_sel_gray_reg[0]_syn_9.clk (rising edge triggered by clock pll_clk_24m  { rise@0.000000ns  fall@21.000000ns  period=42.000000 })",
+        "End Point": "S_gain_gray_meta_reg[0]_syn_2.imb (rising edge triggered by clock HDMI_PIXEL_CLK  { rise@0.000000ns  fall@6.666000ns  period=13.333000 })",
+        "Check Type": "setup"
+      },
+      {
+        "slack_ns": -0.013,
+        "Begin Point": "u_uicfgcs520/O_gain_sel_gray_reg[0]_syn_9.clk (rising edge triggered by clock pll_clk_24m  { rise@0.000000ns  fall@21.000000ns  period=42.000000 })",
+        "End Point": "S_gain_gray_meta_reg[0]_syn_2.ima (rising edge triggered by clock HDMI_PIXEL_CLK  { rise@0.000000ns  fall@6.666000ns  period=13.333000 })",
+        "Check Type": "setup"
+      }
+    ],
+    "all_self_clock_setup_groups_pass": {
+      "MIPI_RX_BYTE_CLK -> MIPI_RX_BYTE_CLK": 0.107,
+      "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk": 13.032,
+      "HDMI_PIXEL_CLK -> HDMI_PIXEL_CLK": 0.193,
+      "sys_clk_50m -> sys_clk_50m": 11.488,
+      "pll_clk_24m -> pll_clk_24m": 34.945,
+      "HDMI_SERIAL_CLK -> HDMI_SERIAL_CLK": 0.708,
+      "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk": 33.396,
+      "pll_clk_100m -> pll_clk_100m": 8.113
+    },
+    "reason": "Only two gain-label source to synchronizer-first-stage setup paths; same two-stage CDC design and verified stable-data protocol as gain reference. All same-domain setup and hold checks pass. No SDC changes.",
+    "limitations": "RTL checks do not quantify physical metastability MTBF or certify whole board timing."
+  },
+  "visual_acceptance": "pending_user_observation",
+  "sensor_readback_verified": false,
+  "no_automatic_capture_or_switching": true
+}

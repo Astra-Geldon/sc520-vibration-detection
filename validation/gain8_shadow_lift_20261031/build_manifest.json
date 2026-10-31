@@ -1,0 +1,86 @@
+{
+  "source_commit": "c1459cdd6d499c9a9f199915f3d5318d6a4d89bc",
+  "branch": "image-gain8-shadow-lift-20261031",
+  "scope": "Gain8 default at exposure900, KEY4 L0..3 common RGB8 lift; explicit LUT/shift-add; KEY3 gains retained",
+  "resources": {
+    "LUT6": 10100,
+    "Slice": 11230,
+    "FF": 9469,
+    "ERAM20K": 43,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_gain_compare_v2": {
+    "LUT6": 577,
+    "Slice": 579,
+    "FF": 106,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": -0.015,
+    "STNS_ns": -0.028,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": false,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD internal setup/hold; inherited external timing coverage limits retained",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "6fb8f02935c0d2eea1e3350fd9473d6a11b523a2dfa36ca5ed5ae66fcae5ab5e",
+  "bit": {
+    "path": "D:/FPGA/codex/_build/20261029project/gain8-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit",
+    "sha256": "32ac36a07d75fb6ca9764d98ab493c6a9493fb96a2d9ef9ef0580017c716494c",
+    "bytes": 1789539
+  },
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 112,
+    "nominal_gain": 8,
+    "L": 1,
+    "C": 0,
+    "P": 0,
+    "W": 0
+  },
+  "board_programming": "not_run",
+  "visual_acceptance": "pending_user_observation",
+  "generated_utc": "2026-10-31T14:34:19.636213+00:00",
+  "engineering_parameter_comparison_allowed": true,
+  "strict_positive_setup_margin": false,
+  "engineering_comparison_qualification": {
+    "scope": "Bench parameter comparison,not production timing signoff",
+    "raw_reported_setup_hold_pass": false,
+    "negative_paths": [
+      {
+        "slack_ns": -0.015,
+        "Begin Point": "u_uicfgcs520/O_gain_sel_gray_reg[0]_syn_9.clk (rising edge triggered by clock pll_clk_24m  { rise@0.000000ns  fall@21.000000ns  period=42.000000 })",
+        "End Point": "S_gain_gray_meta_reg[0]_syn_2.imb (rising edge triggered by clock HDMI_PIXEL_CLK  { rise@0.000000ns  fall@6.666000ns  period=13.333000 })",
+        "Check Type": "setup"
+      },
+      {
+        "slack_ns": -0.013,
+        "Begin Point": "u_uicfgcs520/O_gain_sel_gray_reg[0]_syn_9.clk (rising edge triggered by clock pll_clk_24m  { rise@0.000000ns  fall@21.000000ns  period=42.000000 })",
+        "End Point": "S_gain_gray_meta_reg[0]_syn_2.ima (rising edge triggered by clock HDMI_PIXEL_CLK  { rise@0.000000ns  fall@6.666000ns  period=13.333000 })",
+        "Check Type": "setup"
+      }
+    ],
+    "all_self_clock_setup_groups_pass": {
+      "MIPI_RX_BYTE_CLK -> MIPI_RX_BYTE_CLK": 0.107,
+      "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk": 13.032,
+      "HDMI_PIXEL_CLK -> HDMI_PIXEL_CLK": 0.193,
+      "sys_clk_50m -> sys_clk_50m": 11.488,
+      "pll_clk_24m -> pll_clk_24m": 34.945,
+      "HDMI_SERIAL_CLK -> HDMI_SERIAL_CLK": 0.708,
+      "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk": 33.396,
+      "pll_clk_100m -> pll_clk_100m": 8.113
+    },
+    "reason": "Only two gain-label source to synchronizer-first-stage setup paths; same two-stage CDC design and verified stable-data protocol as gain reference. All same-domain setup and hold checks pass. No SDC changes.",
+    "limitations": "RTL checks do not quantify physical metastability MTBF or certify whole board timing."
+  }
+}
