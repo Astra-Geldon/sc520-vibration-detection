@@ -27,44 +27,31 @@ set_clock_groups -asynchronous \
     -group [get_clocks {sys_clk_50m pll_clk_100m pll_clk_24m HDMI_PIXEL_CLK HDMI_SERIAL_CLK}] \
     -group [get_clocks {u_ph1p35_324_ddr_wrapper/u_ddr2/ddr_clk u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk}]
 
-# Five-switch mailboxes hold payload until the receiver commits and returns ACK.
-# Source -> first synchronizer and held payload -> receiver are intentional CDC;
-# constrain their physical flight to 8ns (< the fastest 9.660ns byte period).
-# First -> second synchronizer stays timed and is additionally limited to 4ns.
-# Exact register collections are checked so an optimization cannot silently
-# remove a synchronization stage or leave an exception matching no register.
-foreach {demo_inst demo_width} {
-    u_demo_mipi_controls 5
-    u_demo_hdmi_controls 5
-    u_demo_sensor_controls 1
-    u_demo_mipi_status 5
-    u_demo_sensor_status 3
-} {
-    set demo_payload [get_regs [format {%s/payload[*]} $demo_inst]]
-    set demo_receive [get_regs [format {%s/O_dst_data[*]} $demo_inst]]
-    if {[llength $demo_payload] != $demo_width || [llength $demo_receive] != $demo_width} {
-        error "Five-switch mailbox data width mismatch: $demo_inst"
-    }
-    set_max_delay -from $demo_payload -to $demo_receive -datapath_only 8.0
-    foreach {demo_from demo_to} {request request_s1 acknowledge acknowledge_s1} {
-        set demo_src [get_regs $demo_inst/$demo_from]
-        set demo_dst [get_regs $demo_inst/$demo_to]
-        if {[llength $demo_src] != 1 || [llength $demo_dst] != 1} {
-            error "Five-switch mailbox CDC register missing: $demo_inst/$demo_to"
-        }
-        set_max_delay -from $demo_src -to $demo_dst -datapath_only 8.0
-    }
-    foreach demo_sync {request acknowledge} {
-        set demo_s1 [get_regs ${demo_inst}/${demo_sync}_s1]
-        set demo_s2 [get_regs ${demo_inst}/${demo_sync}_s2]
-        if {[llength $demo_s1] != 1 || [llength $demo_s2] != 1} {
-            error "Five-switch mailbox synchronizer missing: $demo_inst/$demo_sync"
-        }
-        foreach demo_reg [concat $demo_s1 $demo_s2] {
-            if {![get_property ASYNC_REG $demo_reg]} {
-                error "Five-switch mailbox ASYNC_REG missing: $demo_reg"
-            }
-        }
-        set_max_delay -from $demo_s1 -to $demo_s2 4.0
-    }
-}
+# Held payload and toggle handshakes: maximum physical flight 8ns.
+# Keep these commands static: TD read_sdc stores Tcl loops without evaluating them.
+# Synchronizer stage1 -> stage2 remains timed, with an additional 4ns bound.
+set_max_delay -from [get_regs {u_demo_mipi_controls/payload[*]}] -to [get_regs {u_demo_mipi_controls/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_mipi_controls/request}] -to [get_regs {u_demo_mipi_controls/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_mipi_controls/acknowledge}] -to [get_regs {u_demo_mipi_controls/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_mipi_controls/request_s1}] -to [get_regs {u_demo_mipi_controls/request_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_mipi_controls/acknowledge_s1}] -to [get_regs {u_demo_mipi_controls/acknowledge_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_hdmi_controls/payload[*]}] -to [get_regs {u_demo_hdmi_controls/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_hdmi_controls/request}] -to [get_regs {u_demo_hdmi_controls/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_hdmi_controls/acknowledge}] -to [get_regs {u_demo_hdmi_controls/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_hdmi_controls/request_s1}] -to [get_regs {u_demo_hdmi_controls/request_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_hdmi_controls/acknowledge_s1}] -to [get_regs {u_demo_hdmi_controls/acknowledge_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_sensor_controls/payload[*]}] -to [get_regs {u_demo_sensor_controls/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_sensor_controls/request}] -to [get_regs {u_demo_sensor_controls/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_sensor_controls/acknowledge}] -to [get_regs {u_demo_sensor_controls/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_sensor_controls/request_s1}] -to [get_regs {u_demo_sensor_controls/request_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_sensor_controls/acknowledge_s1}] -to [get_regs {u_demo_sensor_controls/acknowledge_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_mipi_status/payload[*]}] -to [get_regs {u_demo_mipi_status/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_mipi_status/request}] -to [get_regs {u_demo_mipi_status/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_mipi_status/acknowledge}] -to [get_regs {u_demo_mipi_status/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_mipi_status/request_s1}] -to [get_regs {u_demo_mipi_status/request_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_mipi_status/acknowledge_s1}] -to [get_regs {u_demo_mipi_status/acknowledge_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_sensor_status/payload[*]}] -to [get_regs {u_demo_sensor_status/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_sensor_status/request}] -to [get_regs {u_demo_sensor_status/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_sensor_status/acknowledge}] -to [get_regs {u_demo_sensor_status/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_demo_sensor_status/request_s1}] -to [get_regs {u_demo_sensor_status/request_s2}] 4.0
+set_max_delay -from [get_regs {u_demo_sensor_status/acknowledge_s1}] -to [get_regs {u_demo_sensor_status/acknowledge_s2}] 4.0

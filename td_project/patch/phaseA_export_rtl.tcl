@@ -42,6 +42,8 @@ step sdc       { read_sdc camera_to_dsi_display.sdc }
 step ip_sdc1   { read_sdc -ip ddr2           ../user_source/hdl_source/ph1p35_ddr/ddr2/src/sdc/ddr2.sdc }
 step ip_sdc2   { read_sdc -ip w128_d512_fifo ../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.tcl }
 
+step demo_registers { source patch/check_demo_cdc_registers.tcl }
+
 step export_db { export_db baseline_rtl.db }
 
 puts ""
