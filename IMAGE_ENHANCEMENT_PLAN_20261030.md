@@ -110,6 +110,8 @@ fix: reduce highlight exposure 20261030
 3. 核查 `awb.v` 的高光剔除、暗部下限、肤色排除和 `sample_count` 门槛，避免曝光切换后有效统计集合突变；先不改变Gamma、shading和视频时序。
 4. 评估曝光1200是否能在保留高光的同时恢复较合理肤色。若需要改RTL，优先用曝光更新toggle跨域通知AWB，在新曝光首个有效帧快速收敛数帧后恢复 `old+(new-old)/64`，不得直接跨域传一拍请求脉冲。
 
+E1 第一版已在分支 `image-e1-awb-stability-20261031` 完成完整 A→B→C 编译，时序 `SWNS=+0.133 ns`、`HWNS=+0.020 ns`、`STNS/HTNS=0`；资源为 LUT6 11046、Slice 12180、FF 10144、ERAM 52、DSP 34、PLL 3、MCU 1。相对 C3 降噪回退基线，LUT6 +25、Slice -22、FF -72，其余关键资源不增加。bit 只归档在 `_build`，尚未烧录和板测。
+
 ### E2：可见的色度降噪候选
 
 E1确认统计稳定后，再在固定Y的前提下筛选色度候选：

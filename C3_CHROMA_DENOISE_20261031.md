@@ -86,6 +86,8 @@ AWB及1/64帧间平滑、Gamma、shading、RAW精度、摄像头初始化、DDR�
 当前 E1 实验分支 `image-e1-awb-stability-20261031` 已加入第一版跨域通知：
 `ae_set/uicfgcs520` 完成曝光表写入后，在24 MHz域翻转持久 toggle；CSI/AWB 域用两级同步检测该事件，随后对8个有效帧使用 `alpha=1/4` 快速收敛，再恢复原有 `alpha=1/64`。这版只增加事件同步和少量寄存器，不改变像素流水长度；尚未完成TD布局资源报告和板上曝光四档验证，不能当作发布版本。
 
+E1 已完成一次完整 A→B→C 编译：`SWNS=+0.133 ns`、`HWNS=+0.020 ns`、`STNS=HTNS=0`；布局资源为 LUT6 11046、Slice 12180、FF 10144、ERAM 52、DSP 34、PLL 3、MCU 1。相对 C3 降噪回退基线，增量为 LUT6 +25、Slice -22、FF -72，其余关键资源不增加。bit 暂存于 `_build/20261029project/e1-awb-stability-20261031/compile-v1/camera_to_dsi_display.bit`，SHA-256 为 `7E1E1F74341703F535C63499E5425B90F73C50F293BFC634EE82639EDE7613BD`；尚未烧录，需板上验证四档曝光和肤色收敛。
+
 ### E2：重做可见的色度降噪候选
 
 当前D0/D2/D3使用3×3、色差上限6码，实际变化小于采集噪声，停止沿用这组参数。下一版候选先离线筛选，再综合：

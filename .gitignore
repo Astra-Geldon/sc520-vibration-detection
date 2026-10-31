@@ -9,6 +9,7 @@ td_project/*_Runs/
 *.timingsummary
 *.rpt
 *.log
+*.log.err
 *.logw
 *.area
 *.trp
