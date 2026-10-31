@@ -1,0 +1,131 @@
+{
+  "status": "offline_research_only_no_rtl_change_or_programming",
+  "reference_production_commit": "6882d4116890253400393fe4e5265cea5d76e0e3",
+  "user_constraints": [
+    "single_frame_video",
+    "no_alternating_capture",
+    "retain_G12_L1_brightness_and_highlight_reference",
+    "DSP_limit_31"
+  ],
+  "artifact_directory": "D:/FPGA/codex/_build/20261029project/gain12-natural-texture-study-20261031",
+  "response_review": {
+    "pass": true,
+    "status": "OFFLINE_INTEGER_MODEL_ONLY_NOT_IMPLEMENTED",
+    "source_sha256": {
+      "D:\\FPGA\\codex\\20261029project\\user_source\\hdl_source\\highlight_tone.v": "e6a87d70e205df35368e4dcfdac0b625541868c089c517230001d6db086928fa",
+      "D:\\FPGA\\codex\\20261029project\\user_source\\hdl_source\\isp\\isp_top.v": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df"
+    },
+    "script_sha256": "14ee9102dff986100b0e30fef57ae77b0b50506748d7566e75ec4cb2d8c5f8c5",
+    "q_shift_anchors": [
+      [
+        0,
+        0
+      ],
+      [
+        24,
+        -2
+      ],
+      [
+        64,
+        -8
+      ],
+      [
+        128,
+        -4
+      ],
+      [
+        168,
+        0
+      ],
+      [
+        200,
+        4
+      ],
+      [
+        220,
+        3
+      ],
+      [
+        237,
+        0
+      ],
+      [
+        255,
+        0
+      ]
+    ],
+    "strengths": {
+      "light": "1/2",
+      "medium": "1"
+    },
+    "highlight_identity_starts_at_input_peak": 208,
+    "candidates": {
+      "light": {
+        "pass": true,
+        "gray_peak_monotone": true,
+        "all_256_peak_targets_represented_exactly": true,
+        "all_peak_ge208_coefficients_identical_to_l1": true,
+        "all_peak_ge208_subordinate_channels_identical_to_l1": true,
+        "non255_channel_never_maps_to255": true,
+        "subordinate_channel_cases": 32896,
+        "highlight_channel_cases": 11160,
+        "non255_channel_cases": 32895,
+        "max_q8_rounding_error_code": 0.5,
+        "max_error_from_rounded_peak_rgb_ratio_code": 0.96875,
+        "rgb_ratio_error_bound_code": "0.5 + value/(2*peak) <= 1",
+        "largest_negative_delta_from_l1_code": -4,
+        "largest_positive_delta_from_l1_code": 2,
+        "unchanged_peak_cases": 84
+      },
+      "medium": {
+        "pass": true,
+        "gray_peak_monotone": true,
+        "all_256_peak_targets_represented_exactly": true,
+        "all_peak_ge208_coefficients_identical_to_l1": true,
+        "all_peak_ge208_subordinate_channels_identical_to_l1": true,
+        "non255_channel_never_maps_to255": true,
+        "subordinate_channel_cases": 32896,
+        "highlight_channel_cases": 11160,
+        "non255_channel_cases": 32895,
+        "max_q8_rounding_error_code": 0.5,
+        "max_error_from_rounded_peak_rgb_ratio_code": 0.9628099173553719,
+        "rgb_ratio_error_bound_code": "0.5 + value/(2*peak) <= 1",
+        "largest_negative_delta_from_l1_code": -8,
+        "largest_positive_delta_from_l1_code": 4,
+        "unchanged_peak_cases": 65
+      }
+    },
+    "scope": [
+      "Input is the current L1 RGB8 basis; E900/G12 sensor capture is unchanged in the model.",
+      "One common gain per RGB pixel; subordinate-channel proofs apply independently to R,G,B.",
+      "No RTL, compilation, resource, timing, video, or sensor-register validation performed.",
+      "No frame merge, capture-card access or board operation performed.",
+      "Local means and every non-highlight pixel brightness are not held constant.",
+      "Rounding bounds do not prove exact perceived hue, clean noise, or natural appearance.",
+      "The ideal 2x reference ignores actual analog noise, AWB changes, shading and clipping.",
+      "High-gain sensor acquisition detail cannot be recovered merely by this mapping."
+    ]
+  },
+  "image_analysis_scope": "Native-image polygon statistics, no image interpolation for metrics. Masks are matched using structure registration. JPEG output does not identify RAW noise or sensor register values. OSD requested labels only. Images have perspective/composition change and possibly unmeasured conditions.",
+  "image_registration": {
+    "matches": 33,
+    "inliers": 13,
+    "median_inlier_error_px": 0.9443503022193909
+  },
+  "feedback_files": {
+    "G12_L1.jpg": {
+      "path": "D:/FPGA/codex/_build/20261029project/gain12-natural-texture-study-20261031/feedback/G12_L1.jpg",
+      "sha256": "cd359162bc6d6d9e31a3058df9277758fe13c09f8e60a3af58060108dfefa07d"
+    },
+    "G24_L0.jpg": {
+      "path": "D:/FPGA/codex/_build/20261029project/gain12-natural-texture-study-20261031/feedback/G24_L0.jpg",
+      "sha256": "0b972a47b31cb685b42ffa9bad6dbb861a698518ae4efc995ecb1ef0a3795f10"
+    }
+  },
+  "evidence_sha256": {
+    "image-review/metrics.json": "9c8750631bdf321f784509649e1ecefdf810cf16072a990d03612a65a04a7374",
+    "image-review/compare_images.py": "1b36532a0b014b14c732588b2276e7a2451860de8aa4b2978954198624db3be0",
+    "response-review/summary.json": "8db62629e9a0290e858ad77f9def9f59bdee59aac4069670d7bb5edac4d55322",
+    "response-review/review_response.py": "14ee9102dff986100b0e30fef57ae77b0b50506748d7566e75ec4cb2d8c5f8c5"
+  }
+}
