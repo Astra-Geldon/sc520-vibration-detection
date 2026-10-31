@@ -21,6 +21,7 @@
 
 module isp_top (
     input 			axi4s_video_aclk,
+	input           I_exposure_toggle,
     input 			I_rst_n			,
     input 			I_tlast			,
     input 			I_tuser			,
@@ -122,6 +123,7 @@ awb #(
 ) u_awb (
     .I_clk   (axi4s_video_aclk),
     .I_rst_n (I_rst_n),
+    .I_exposure_toggle(I_exposure_toggle),
     .I_tlast (m_aixs_tlast),
     .I_tuser (m_aixs_tuser),
     .I_tdata (m_aixs_tdata_96),

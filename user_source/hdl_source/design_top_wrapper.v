@@ -179,6 +179,11 @@ module design_top_wrapper (
     wire 			S_cam_cfg_done;
     wire 			S_ae_cfg_done;
     wire 			S_ae_req; 
+    // 24 MHz AE/I2C domain toggle: one transition after each completed
+    // exposure-table write.  This is synchronized into the CSI/AWB domain;
+    // a one-cycle request pulse must not cross clock domains directly.
+    reg             S_ae_cfg_done_d;
+    reg             S_ae_update_toggle;
 
     // Strict-original baseline: retain the original FPGA sensor controller.
     // The MCU is present as a passive clock/reset-connected instance only;
@@ -862,6 +867,20 @@ module design_top_wrapper (
       .O_iic_error(S_cam_i2c_error)
   );
 
+    // Publish a persistent event only after the sensor AE table is complete.
+    // The initial configuration also produces one event, which lets AWB
+    // discard any pre-configuration statistics before settling.
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_ae_cfg_done_d  <= 1'b0;
+            S_ae_update_toggle <= 1'b0;
+        end else begin
+            S_ae_cfg_done_d <= S_ae_cfg_done;
+            if (!S_ae_cfg_done_d && S_ae_cfg_done)
+                S_ae_update_toggle <= ~S_ae_update_toggle;
+        end
+    end
+
     MCU u_mcu_passive (
         .jtag_tck(1'b0), .jtag_tms(1'b0), .jtag_tdi(1'b0), .jtag_tdo(),
         .gpio0_in(I_button[0]), .gpio0_out(), .gpio0_dir(),
@@ -1028,6 +1047,7 @@ wire [1:0] S_k_sel = 2'd2;
 
 isp_top u_isp_top (
 .axi4s_video_aclk(S_csi_rx_clk),
+.I_exposure_toggle(S_ae_update_toggle),
 .I_rst_n         (S_rst_n),
 .I_tlast         (S_raw_tlast	),
 .I_tuser         (S_raw_tuser	),
