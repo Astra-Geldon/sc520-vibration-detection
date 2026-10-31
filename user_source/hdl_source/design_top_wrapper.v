@@ -1452,6 +1452,7 @@ isp_top u_isp_top (
         .GAIN_DEBUG_EN ( 1 ),
         .LIFT_DEBUG_EN ( 1 ),
         .GAIN12_EN ( 1 ),
+        .NATURAL_LIFT_EN ( 1 ),
         .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),

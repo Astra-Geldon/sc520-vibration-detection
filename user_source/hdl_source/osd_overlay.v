@@ -32,6 +32,7 @@ module osd_overlay #(
     parameter integer SHOULDER_DEBUG_EN = 0,// C/P/W: eight references + white protection
     parameter integer GAIN_DEBUG_EN = 0,    // isolated exposure900/gain comparison
     parameter integer LIFT_DEBUG_EN = 0,    // append L0..L3 RGB8 lift profile
+    parameter integer NATURAL_LIFT_EN = 0, // label lift2/3 as natural candidates N1/2
     parameter integer GAIN12_EN = 0,        // gain index1 label12 instead of16
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
@@ -172,7 +173,7 @@ module osd_overlay #(
     wire S_gain_box, S_gain_white;
     generate
         if (GAIN_DEBUG_EN != 0) begin : g_gain_text
-            osd_gain_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32), .LIFT_DEBUG_EN(LIFT_DEBUG_EN), .GAIN12_EN(GAIN12_EN)) u_line (
+            osd_gain_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32), .LIFT_DEBUG_EN(LIFT_DEBUG_EN), .NATURAL_LIFT_EN(NATURAL_LIFT_EN), .GAIN12_EN(GAIN12_EN)) u_line (
                 .I_x(S_x), .I_y(S_y), .I_enable(I_de),
                 .I_sel(I_gain_sel), .I_verified(I_gain_verified),
                 .I_lift_sel(I_lift_sel),
@@ -311,6 +312,7 @@ module osd_gain_line #(
     parameter integer TEXT_X = 24,
     parameter integer TEXT_Y = 56,
     parameter integer LIFT_DEBUG_EN = 0,
+    parameter integer NATURAL_LIFT_EN = 0,
     parameter integer GAIN12_EN = 0
 )(
     input wire [10:0] I_x,
@@ -331,6 +333,7 @@ module osd_gain_line #(
                 4'd2: f_glyph = {5'b01110,5'b10001,5'b00001,5'b00010,5'b00100,5'b01000,5'b11111};
                 4'd3: f_glyph = {5'b11110,5'b00001,5'b00001,5'b01110,5'b00001,5'b00001,5'b11110};
                 4'd4: f_glyph = {5'b00010,5'b00110,5'b01010,5'b10010,5'b11111,5'b00010,5'b00010};
+                4'd5: f_glyph = {5'b10001,5'b11001,5'b11001,5'b10101,5'b10011,5'b10011,5'b10001}; // N
                 4'd6: f_glyph = {5'b01110,5'b10000,5'b10000,5'b11110,5'b10001,5'b10001,5'b01110};
                 4'd8: f_glyph = {5'b01110,5'b10001,5'b10001,5'b01110,5'b10001,5'b10001,5'b01110};
                 4'd9: f_glyph = {5'b01110,5'b10001,5'b10001,5'b01111,5'b00001,5'b00001,5'b01110};
@@ -354,6 +357,11 @@ module osd_gain_line #(
     end
     wire [10:0] S_local_x = I_x - TEXT_X;
     wire [9:0] S_local_y = I_y - TEXT_Y;
+    // The reference profiles keep L0/L1; only the two replacement curves
+    // use N1/N2.  Default-off preserves the legacy L0..L3 labels exactly.
+    wire S_natural_lift = (NATURAL_LIFT_EN != 0) && I_lift_sel[1];
+    wire [3:0] S_lift_digit = S_natural_lift ?
+                              ({2'd0,I_lift_sel} - 4'd1) : {2'd0,I_lift_sel};
     reg [3:0] S_glyph_id, S_cell_x;
     always @(*) begin
         if      (S_local_x < 11'd12) begin S_glyph_id=4'd10; S_cell_x=S_local_x; end
@@ -371,9 +379,9 @@ module osd_gain_line #(
         else if (S_local_x < 11'd156) begin S_glyph_id=4'd13; S_cell_x=S_local_x-11'd144; end
         else if (S_local_x < 11'd168) begin S_glyph_id=I_verified ? 4'd1 : 4'd0; S_cell_x=S_local_x-11'd156; end
         else if (S_local_x < 11'd180) begin S_glyph_id=4'd15; S_cell_x=S_local_x-11'd168; end
-        else if (S_local_x < 11'd192) begin S_glyph_id=4'd14; S_cell_x=S_local_x-11'd180; end
+        else if (S_local_x < 11'd192) begin S_glyph_id=S_natural_lift ? 4'd5 : 4'd14; S_cell_x=S_local_x-11'd180; end
         else if (S_local_x < 11'd204) begin S_glyph_id=4'd13; S_cell_x=S_local_x-11'd192; end
-        else begin S_glyph_id={2'd0,I_lift_sel}; S_cell_x=S_local_x-11'd204; end
+        else begin S_glyph_id=S_lift_digit; S_cell_x=S_local_x-11'd204; end
     end
     wire [2:0] S_col = S_cell_x[3:1];
     wire [2:0] S_row = S_local_y[3:1];
