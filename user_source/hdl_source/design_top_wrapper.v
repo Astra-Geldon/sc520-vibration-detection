@@ -417,6 +417,12 @@ module design_top_wrapper (
     wire[ 7:0]  S_img_threshold;
     wire        S_img_k_step;
     wire[ 1:0]  S_exp_sel;
+    wire[ 1:0]  S_cam_gain_sel_gray;
+    wire        S_cam_gain_verified;
+    reg [1:0]   S_gain_gray_meta, S_gain_gray_sync, S_gain_gray_prev;
+    reg [1:0]   S_gain_verified_sync;
+    reg [1:0]   S_gain_sel_active;
+    reg         S_gain_verified_active;
     wire[ 3:0]  S_region_sel_req;
     reg [ 3:0]  S_region_sel;
     wire[ 3:0]  S_region_sel_active;
@@ -438,6 +444,8 @@ module design_top_wrapper (
     reg [2:0] S_tone_stage_mode;
     reg [3:0] S_tone_stage_sel;
     reg [1:0] S_tone_stage_exp, S_tone_stage_k;
+    reg [1:0] S_tone_stage_gain;
+    reg S_tone_stage_gain_verified;
     reg [7:0] S_tone_stage_threshold;
     reg S_tone_stage_raw, S_tone_stage_locked;
 
@@ -833,7 +841,7 @@ module design_top_wrapper (
 	
 
   
-  ae_set #(.EXP_RST(3)) u_ae_set (
+  ae_set #(.EXP_RST(3), .GAIN_COMPARE_EN(1)) u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
@@ -846,7 +854,8 @@ module design_top_wrapper (
   );
   
     uicfgcs520 #(
-      .CLK_DIV(23809524 / 100000 - 1)
+      .CLK_DIV(23809524 / 100000 - 1),
+      .AE_VERIFY_EN(1)
   ) u_uicfgcs520 (
       .I_clk(S_24m_clk),  //系统时钟输入
       .I_rst_n(S_cam_i2c_ready), // SC520CS power-up delay completed
@@ -859,7 +868,9 @@ module design_top_wrapper (
       .O_ae_cfg_done(S_ae_cfg_done),  //AE配置完成
       .O_sensor_id(S_cam_sensor_id),
       .O_sensor_id_ok(S_cam_sensor_id_ok),
-      .O_iic_error(S_cam_i2c_error)
+      .O_iic_error(S_cam_i2c_error),
+      .O_gain_sel_gray(S_cam_gain_sel_gray),
+      .O_gain_verified(S_cam_gain_verified)
   );
 
     MCU u_mcu_passive (
@@ -1237,15 +1248,15 @@ isp_top u_isp_top (
     //------------------------------------------------------------------
 //----------------------------------------------------------------------
 //  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
-//      KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=C0/C3各四档高光压缩P0/P1/P2/P3
+//      KEY1=增强彩色 KEY2=算法循环 KEY3=传感器增益24/16/8/4倍 KEY4=本轮不使用
 //    独立模块 img_mode_sel.v（内部10ms去抖 + 按下锁存），输出3 bit模式码。
 //    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
 //----------------------------------------------------------------------
 `ifdef IMG_MODE_KEY
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
-        .EXP_RST    ( 3          ),   // real exposure900; KEY3 retains all four exposures
-        .REGION_RST ( 7          ),   // reference: C3/P3/W0; KEY4 enters W1/W2/W3
+        .EXP_RST    ( 3          ),   // unused UI output; sensor exposure is fixed900
+        .REGION_RST ( 0          ),   // unused UI output; isolate the sensor gain test
         .REGION_N   ( 11         ),
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )
@@ -1254,29 +1265,58 @@ isp_top u_isp_top (
         .I_rst_n    ( S_hdmi_rst_n     ),
         .I_key_n    ( I_key            ),   // {KEY4,KEY3,KEY2,KEY1}，按下=0
         .O_mode     ( S_img_mode       ),
-        .O_exp_sel  ( S_exp_sel        ),
-        .O_region_sel ( S_region_sel_req ),
-        // KEY3由 img_mode_sel 输出曝光候选；最终二值化固定使用增强图像。
+        .O_exp_sel  (                   ),
+        .O_region_sel (                 ),
+        // KEY3 is handled only by ae_set; no independent OSD gain counter.
         .O_th_lock  ( S_img_th_lock_req),
         .O_k_step   ( S_img_k_step     )
     );
 `else
     assign S_img_mode = IMG_MODE[2:0];
-    assign S_exp_sel = 2'd3;
-    assign S_region_sel_req = 4'd7;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
-    // 最终二值化固定增强源；KEY3只改变传感器曝光候选和 OSD 编号。
+    assign S_exp_sel = 2'd3;
+    assign S_region_sel_req = 4'd0; // C0/P0/W0 throughout this comparison
+    // 最终二值化固定增强源；KEY3只改变传感器增益，曝光固定900。
     assign S_img_src_raw = 1'b0;
 
     // Latch compensation choice in vertical blanking; H1 thresholds stay fixed.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) S_region_sel <= 4'd7;
+        if (!S_hdmi_rst_n) S_region_sel <= 4'd0;
         else if (S_hdmi_vsync) S_region_sel <= S_region_sel_req;
     end
     // Gray/binary/Sobel remain their original algorithms, including line delays.
     assign S_region_sel_active = (S_img_mode == 3'd0) ? S_region_sel : 4'd0;
+
+    // The source publishes the requested Gray gain index before its I2C
+    // write/readback sequence. Verified rises only after all six reads match.
+    // Synchronize, require a stable index, then snapshot the label in blanking;
+    // V=0 means pending/error, never a claim that a request was applied.
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) begin
+            S_gain_gray_meta <= 2'b00;
+            S_gain_gray_sync <= 2'b00;
+            S_gain_gray_prev <= 2'b00;
+            S_gain_verified_sync <= 2'b00;
+            S_gain_sel_active <= 2'd0;
+            S_gain_verified_active <= 1'b0;
+        end else begin
+            S_gain_gray_meta <= S_cam_gain_sel_gray;
+            S_gain_gray_sync <= S_gain_gray_meta;
+            S_gain_gray_prev <= S_gain_gray_sync;
+            S_gain_verified_sync <= {S_gain_verified_sync[0], S_cam_gain_verified};
+            if (S_hdmi_vsync) begin
+                S_gain_sel_active <= {S_gain_gray_sync[1],
+                                     S_gain_gray_sync[1] ^ S_gain_gray_sync[0]};
+                S_gain_verified_active <= S_gain_verified_sync[1] &&
+                                          (S_gain_gray_sync == S_gain_gray_prev) &&
+                                          (S_gain_sel_active ==
+                                           {S_gain_gray_sync[1],
+                                            S_gain_gray_sync[1] ^ S_gain_gray_sync[0]});
+            end
+        end
+    end
 
     //------------------------------------------------------------------
     //  简化自适应白平衡（2026-10-24）
@@ -1368,10 +1408,12 @@ isp_top u_isp_top (
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
-            S_tone_stage_sel <= 4'd7;
+            S_tone_stage_sel <= 4'd0;
             S_tone_stage_wide_data <= 27'd0;
             S_tone_stage_peak <= 9'd0;
             S_tone_stage_exp <= 2'd3;
+            S_tone_stage_gain <= 2'd0;
+            S_tone_stage_gain_verified <= 1'b0;
             S_tone_stage_k <= 2'd2;
             S_tone_stage_threshold <= 8'd0;
             S_tone_stage_raw <= 1'b0;
@@ -1384,6 +1426,8 @@ isp_top u_isp_top (
             S_tone_stage_wide_data <= S_tone_prepared_wide_data;
             S_tone_stage_peak <= S_tone_input_peak;
             S_tone_stage_exp <= S_exp_sel;
+            S_tone_stage_gain <= S_gain_sel_active;
+            S_tone_stage_gain_verified <= S_gain_verified_active;
             S_tone_stage_k <= S_k_sel;
             S_tone_stage_threshold <= S_img_threshold;
             S_tone_stage_raw <= S_img_src_raw;
@@ -1404,8 +1448,9 @@ isp_top u_isp_top (
     osd_overlay #(
         .OSD_EN     ( 1    ),
         .TH_DEBUG_EN( 0    ),
-        .REGION_DEBUG_EN ( 1 ),
-        .SHOULDER_DEBUG_EN ( 1 ),
+        .REGION_DEBUG_EN ( 0 ),
+        .SHOULDER_DEBUG_EN ( 0 ),
+        .GAIN_DEBUG_EN ( 1 ),
         .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),
@@ -1428,6 +1473,8 @@ isp_top u_isp_top (
         .I_k_sel    ( S_tone_stage_k    ),
         .I_exp_sel  ( S_tone_stage_exp  ),
         .I_region_sel ( S_tone_stage_sel ),
+        .I_gain_sel ( S_tone_stage_gain ),
+        .I_gain_verified ( S_tone_stage_gain_verified ),
         .I_data     ( S_region_data    ),
         .O_data     ( S_osd_mix        )
     );

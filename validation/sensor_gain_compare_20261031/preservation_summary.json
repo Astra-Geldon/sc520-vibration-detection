@@ -1,0 +1,24 @@
+{
+  "pass": true,
+  "reference": "1d96bb8",
+  "unchanged_files": {
+    "user_source/hdl_source/awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+    "user_source/hdl_source/awb_simple.v": "fb5d39508a0a4767c53a0a963395ea50fc4f6d84f69549e90ee14f0047a5fcdf",
+    "user_source/hdl_source/color_shading.v": "c2f5c446654b57b185577964a028dc8b8627e210a5b1a8500c4af37eb2e74970",
+    "user_source/hdl_source/img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+    "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source/hdl_source/hdmi_mixer.v": "464fa8edd7ecbfd9bb5758dfee874b412df0a12847f0d02cc58fb90434526fb8",
+    "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+    "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+    "user_source/hdl_source/isp/isp_top.v": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385",
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+    "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+    "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+    "user_source/hdl_source/uics500_cfg/uii2c.v": "6eed54d134d70f043a50f4c94aded1be9706c1cf850bad3288dc8749fd918e14"
+  },
+  "sensor_osd_tests_match_current_production_hashes": true
+}

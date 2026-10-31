@@ -30,6 +30,7 @@ module osd_overlay #(
     parameter integer TH_DEBUG_EN = 0,      // 二值化实际阈值/锁定状态诊断
     parameter integer REGION_DEBUG_EN = 0,  // 彩色画面固定H1及补偿档 H=1 C=0/1/2/3/M
     parameter integer SHOULDER_DEBUG_EN = 0,// C/P/W: eight references + white protection
+    parameter integer GAIN_DEBUG_EN = 0,    // isolated exposure900/gain comparison
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
     // ---- 画面尺寸（与 VTC 一致）----
@@ -59,6 +60,8 @@ module osd_overlay #(
     input  wire [ 1:0] I_k_sel,     // 兼容保留，KEY4 已释放
     input  wire [ 1:0] I_exp_sel,   // 曝光候选编号：0=1991,1=1600,2=1200,3=900
     input  wire [ 3:0] I_region_sel,// 0..7=C/P references, 8..10=C3/P3/W1..3
+    input  wire [ 1:0] I_gain_sel,  // sensor gain request index: 24/16/8/4x
+    input  wire        I_gain_verified, // six exposure/gain readbacks matched
     input  wire [ 7:0] I_threshold, // 二值比较器实际使用的阈值
     input  wire        I_th_locked, // 实际已提交的锁定状态
     input  wire [23:0] I_data,      // 来自 img_proc
@@ -158,6 +161,22 @@ module osd_overlay #(
         end
         else begin : g_logo_off
             assign S_logo_q = 2'd0;
+        end
+    endgenerate
+
+    // This line uses the sensor request index and its readback status, not
+    // another local key counter. It remains combinational like the old OSD.
+    wire S_gain_box, S_gain_white;
+    generate
+        if (GAIN_DEBUG_EN != 0) begin : g_gain_text
+            osd_gain_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32)) u_line (
+                .I_x(S_x), .I_y(S_y), .I_enable(I_de),
+                .I_sel(I_gain_sel), .I_verified(I_gain_verified),
+                .O_box(S_gain_box), .O_white(S_gain_white)
+            );
+        end else begin : g_no_gain_text
+            assign S_gain_box = 1'b0;
+            assign S_gain_white = 1'b0;
         end
     endgenerate
 
@@ -268,6 +287,7 @@ module osd_overlay #(
                             S_in_text1    ? (S_text_bit1 ? C_WHITE : C_BLACK) :
                             S_in_box1     ? C_BLACK :
                             S_region_box  ? (S_region_white ? C_WHITE : C_BLACK) :
+                            S_gain_box    ? (S_gain_white ? C_WHITE : C_BLACK) :
                             S_threshold_box ? (S_threshold_white ? C_WHITE : C_BLACK) :
                             S_in_text2    ? (S_text_bit2 ? C_WHITE : C_BLACK) :
                             S_in_box2     ? C_BLACK :
@@ -278,6 +298,80 @@ module osd_overlay #(
         end
     endgenerate
 
+endmodule
+
+// Fourteen 6x8 cells at2x scale: "E=900 G=24 V=1". Single-digit gains
+// are right aligned. V=1 means exposure/gain readback matched; V=0 is pending
+// or error. This fixed-size label needs no framebuffer, DSP or decimal divider.
+module osd_gain_line #(
+    parameter integer TEXT_X = 24,
+    parameter integer TEXT_Y = 56
+)(
+    input wire [10:0] I_x,
+    input wire [9:0] I_y,
+    input wire I_enable,
+    input wire [1:0] I_sel,
+    input wire I_verified,
+    output wire O_box,
+    output wire O_white
+);
+    function [34:0] f_glyph;
+        input [3:0] glyph;
+        begin
+            case (glyph)
+                4'd0: f_glyph = {5'b01110,5'b10001,5'b10011,5'b10101,5'b11001,5'b10001,5'b01110};
+                4'd1: f_glyph = {5'b00100,5'b01100,5'b00100,5'b00100,5'b00100,5'b00100,5'b01110};
+                4'd2: f_glyph = {5'b01110,5'b10001,5'b00001,5'b00010,5'b00100,5'b01000,5'b11111};
+                4'd4: f_glyph = {5'b00010,5'b00110,5'b01010,5'b10010,5'b11111,5'b00010,5'b00010};
+                4'd6: f_glyph = {5'b01110,5'b10000,5'b10000,5'b11110,5'b10001,5'b10001,5'b01110};
+                4'd8: f_glyph = {5'b01110,5'b10001,5'b10001,5'b01110,5'b10001,5'b10001,5'b01110};
+                4'd9: f_glyph = {5'b01110,5'b10001,5'b10001,5'b01111,5'b00001,5'b00001,5'b01110};
+                4'd10: f_glyph = {5'b11111,5'b10000,5'b10000,5'b11110,5'b10000,5'b10000,5'b11111}; // E
+                4'd11: f_glyph = {5'b01110,5'b10001,5'b10000,5'b10111,5'b10001,5'b10001,5'b01110}; // G
+                4'd12: f_glyph = {5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b01010,5'b00100}; // V
+                4'd13: f_glyph = {5'b00000,5'b11111,5'b00000,5'b11111,5'b00000,5'b00000,5'b00000}; // =
+                default: f_glyph = 35'd0;
+            endcase
+        end
+    endfunction
+    reg [3:0] S_tens, S_ones;
+    always @(*) begin
+        case (I_sel)
+            2'd0: begin S_tens=4'd2; S_ones=4'd4; end
+            2'd1: begin S_tens=4'd1; S_ones=4'd6; end
+            2'd2: begin S_tens=4'd15; S_ones=4'd8; end
+            default: begin S_tens=4'd15; S_ones=4'd4; end
+        endcase
+    end
+    wire [10:0] S_local_x = I_x - TEXT_X;
+    wire [9:0] S_local_y = I_y - TEXT_Y;
+    reg [3:0] S_glyph_id, S_cell_x;
+    always @(*) begin
+        if      (S_local_x < 11'd12) begin S_glyph_id=4'd10; S_cell_x=S_local_x; end
+        else if (S_local_x < 11'd24) begin S_glyph_id=4'd13; S_cell_x=S_local_x-11'd12; end
+        else if (S_local_x < 11'd36) begin S_glyph_id=4'd9; S_cell_x=S_local_x-11'd24; end
+        else if (S_local_x < 11'd48) begin S_glyph_id=4'd0; S_cell_x=S_local_x-11'd36; end
+        else if (S_local_x < 11'd60) begin S_glyph_id=4'd0; S_cell_x=S_local_x-11'd48; end
+        else if (S_local_x < 11'd72) begin S_glyph_id=4'd15; S_cell_x=S_local_x-11'd60; end
+        else if (S_local_x < 11'd84) begin S_glyph_id=4'd11; S_cell_x=S_local_x-11'd72; end
+        else if (S_local_x < 11'd96) begin S_glyph_id=4'd13; S_cell_x=S_local_x-11'd84; end
+        else if (S_local_x < 11'd108) begin S_glyph_id=S_tens; S_cell_x=S_local_x-11'd96; end
+        else if (S_local_x < 11'd120) begin S_glyph_id=S_ones; S_cell_x=S_local_x-11'd108; end
+        else if (S_local_x < 11'd132) begin S_glyph_id=4'd15; S_cell_x=S_local_x-11'd120; end
+        else if (S_local_x < 11'd144) begin S_glyph_id=4'd12; S_cell_x=S_local_x-11'd132; end
+        else if (S_local_x < 11'd156) begin S_glyph_id=4'd13; S_cell_x=S_local_x-11'd144; end
+        else begin S_glyph_id=I_verified ? 4'd1 : 4'd0; S_cell_x=S_local_x-11'd156; end
+    end
+    wire [2:0] S_col = S_cell_x[3:1];
+    wire [2:0] S_row = S_local_y[3:1];
+    wire [34:0] S_bitmap = f_glyph(S_glyph_id);
+    wire [5:0] S_row_offset = {1'b0,S_row,2'b00} + {3'b000,S_row};
+    wire [5:0] S_bit_index = 6'd34 - S_row_offset - {3'd0,S_col};
+    wire S_in_text = (I_x >= TEXT_X) && (I_x < TEXT_X+168) &&
+                     (I_y >= TEXT_Y) && (I_y < TEXT_Y+14);
+    assign O_box = I_enable && (I_x >= TEXT_X-4) && (I_x < TEXT_X+172) &&
+                   (I_y >= TEXT_Y-4) && (I_y < TEXT_Y+18);
+    assign O_white = I_enable && S_in_text && (S_col < 3'd5) && S_bitmap[S_bit_index];
 endmodule
 
 // Seven cells in legacy mode: "H=1 C=0" .. "H=1 C=3", "H=1 C=M".

@@ -1,0 +1,91 @@
+{
+  "pass": true,
+  "scope": "Production debounce, fixed900 gain candidates, real tables, grouped writes, six readbacks, injected failures and legacy cycle equivalence",
+  "bit_level_I2C_signalling_tested": false,
+  "hardware_accessed": false,
+  "legacy_reference_commit": "1d96bb8",
+  "tests": {
+    "sensor_case0": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case0.log",
+      "cycles": 7791082,
+      "final_requests": 1
+    },
+    "sensor_case1": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case1.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "sensor_case2": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case2.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "sensor_case3": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case3.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "sensor_case4": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case4.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "sensor_case5": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case5.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "sensor_case6": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case6.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "sensor_case7": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "sensor_case7.log",
+      "cycles": 598474,
+      "final_requests": 2
+    },
+    "legacy": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "legacy.log"
+    },
+    "gain_osd": {
+      "pass": true,
+      "simulation_exit_code": 0,
+      "log": "gain_osd.log"
+    }
+  },
+  "source_sha256": {
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "ad016e9c011355e52e31c1b5eb6c3bef20d0211f6c48c43423d3edf1ccbcd025",
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "a329f709b5f5fa3f588781968f88f0f8894c98abd129468459c86d241aebc9c9",
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+    "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+    "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+    "user_source/hdl_source/osd_overlay.v": "aa10f0f0c31fe046747c4c2f4ae50dbdeb02173a6612223dabc22f8c3bca773d",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385",
+    "user_source/hdl_source/design_top_wrapper.v": "16cd35a3dd0aaa7db28ace7fcc9c582f983a745738c5144ba5fd8c8d25bc2665"
+  },
+  "legacy_equivalence_cycles": 6131192,
+  "osd_checked": true,
+  "osd_pixel_checks": 375808,
+  "logo_colour_checks": 16792,
+  "top_gain_wiring_checks": true
+}

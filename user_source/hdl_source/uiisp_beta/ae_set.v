@@ -31,7 +31,8 @@
 *********************************************************************/
 
 module ae_set #(
-parameter integer EXP_RST = 0 // 0/1/2/3 = 1991/1600/1200/900
+parameter integer EXP_RST = 0, // 0/1/2/3 = 1991/1600/1200/900
+parameter integer GAIN_COMPARE_EN = 0 // KEY3: fixed900, gain160/144/112/80
 )
 (
 input wire I_clk,
@@ -53,7 +54,8 @@ reg 			r_ag_tick = 0;
 	reg [1:0] r_exp_key_sync = 2'b11;
 	reg [17:0] r_exp_key_cnt = 0;
 	reg r_exp_key_level = 1'b1, r_exp_key_level_d = 1'b1;
-	reg [1:0] r_exp_sel = EXP_RST, r_exp_sel_d = EXP_RST;
+	localparam [1:0] KEY_RST = (GAIN_COMPARE_EN != 0) ? 2'd0 : EXP_RST;
+	reg [1:0] r_exp_sel = KEY_RST, r_exp_sel_d = KEY_RST;
 	
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
@@ -75,16 +77,16 @@ always @(posedge I_clk or posedge I_rst) begin
 	end
 end
 
-// KEY3 是异步物理按键；在 24 MHz 摄像头配置时钟域单独同步、去抖并循环曝光档。
-// OSD 在 HDMI 域对同一个物理按键做自己的去抖；顶层通过 EXP_RST 统一设置两边复位档位。
+// KEY3 is synchronized/debounced once in the sensor configuration domain.
+// Normal mode cycles exposure; gain comparison mode cycles gain at exposure900.
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_exp_key_sync <= 2'b11;
 		r_exp_key_cnt <= 18'd0;
 		r_exp_key_level <= 1'b1;
 		r_exp_key_level_d <= 1'b1;
-		r_exp_sel <= EXP_RST;
-		r_exp_sel_d <= EXP_RST;
+		r_exp_sel <= KEY_RST;
+		r_exp_sel_d <= KEY_RST;
 	end else begin
 		r_exp_key_sync <= {r_exp_key_sync[0], I_exp_key_n};
 		r_exp_key_level_d <= r_exp_key_level;
@@ -112,6 +114,20 @@ function [15:0] f_exp_value;
 			2'd1: f_exp_value = 16'd1600;
 			2'd2: f_exp_value = 16'd1200;
 			default: f_exp_value = 16'd900;
+		endcase
+	end
+endfunction
+
+// These are gain-table control codes, not decimal multipliers.
+// 160=16x analog*1.5x digital, 144=16x, 112=8x, 80=4x.
+function [15:0] f_gain_value;
+	input [1:0] sel;
+	begin
+		case(sel)
+			2'd0: f_gain_value = 16'd160;
+			2'd1: f_gain_value = 16'd144;
+			2'd2: f_gain_value = 16'd112;
+			default: f_gain_value = 16'd80;
 		endcase
 	end
 endfunction
@@ -145,18 +161,25 @@ reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0;
 //   151 约让平均亮度回到 121，此时绝大多数帧统计样本 >95%，白墙回到中性。
 //   同时高光过曝也减轻（用户反馈白色监控和墙面分不开）。
 // EXP_RST selects the real sensor exposure; KEY3 keeps all four references.
-reg 	[15:0] 	r_ae_set = f_exp_value(EXP_RST), r_ag_set = 160;
+localparam [15:0] AE_RST = (GAIN_COMPARE_EN != 0) ? 16'd900 : f_exp_value(EXP_RST);
+reg 	[15:0] 	r_ae_set = AE_RST, r_ag_set = 160;
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_button_0 <= 0; 
 		r_button_1 <= 0; 
-		r_ae_set <= f_exp_value(EXP_RST);
+		r_ae_set <= AE_RST;
 		r_ag_set <= 160; 
 	end else begin
 	//	When button pressed, r_button_1 bit is 1. 
 		r_button_0 <= ~I_btn; 
 		r_button_1 <= r_button_0; 
 	
+		if (GAIN_COMPARE_EN != 0) begin
+			// Ignore legacy N2/J14 inputs: only gain varies in this experiment.
+			r_ae_set <= 16'd900;
+			if (r_exp_sel != r_exp_sel_d)
+				r_ag_set <= f_gain_value(r_exp_sel);
+		end else begin
 		if(r_exp_sel != r_exp_sel_d) begin
 			r_ae_set <= f_exp_value(r_exp_sel);
 		end else if(r_button_1[0]) begin
@@ -169,6 +192,7 @@ always @(posedge I_clk or posedge I_rst) begin
 		end else if(r_button_1[3]) begin
 				r_ag_set <= (r_ag_set < 176) ? r_ag_set + r_ag_tick : r_ag_set; 
 		end 
+		end
 		end
 	end
 	

@@ -23,6 +23,7 @@ def main():
     hdl = root / 'user_source/hdl_source'
     top_file = hdl / 'design_top_wrapper.v'
     top = top_file.read_text(encoding='utf-8')
+    gain_compare = '.GAIN_DEBUG_EN ( 1 )' in top
     summary = {'pass': False, 'scope': 'Actual white-prepare/wide-peak/metadata/tone/OSD/mixer versus pre-mixer processor; all11 profiles and4 modes'}
     try:
         def instance(start_text):
@@ -57,6 +58,9 @@ def main():
             'S_tone_stage_sel': 'S_region_sel_active',
             'S_region_data': 'reference_tone', 'S_osd_mix': 'reference_osd_data',
         }
+        if gain_compare:
+            replacements.update({'S_tone_stage_gain_verified': 'S_gain_verified_active',
+                                 'S_tone_stage_gain': 'S_gain_sel_active'})
         for old, new in replacements.items():
             reference_osd = reference_osd.replace(old, new)
         harness = r'''
@@ -187,6 +191,23 @@ initial begin
 end
 endmodule
 '''
+        if gain_compare:
+            # The actual production instances/metadata above are still used.
+            # This branch fixes C/P/W0 and varies the new gain label, including
+            # changes within active video to verify same-pixel retiming.
+            harness = harness.replace('reg S_img_src_raw=0,S_img_th_locked=0;',
+                'reg S_img_src_raw=0,S_img_th_locked=0;\n'
+                'reg [1:0] S_gain_sel_active=3; reg S_gain_verified_active=1;\n'
+                'reg [1:0] S_tone_stage_gain; reg S_tone_stage_gain_verified;')
+            harness = harness.replace('f<46;', 'f<18;')
+            harness = harness.replace('((f-2)/11)', '((f-2)/4)')
+            harness = harness.replace('S_region_sel_active=(f<2)?(f+7):((f-2)%11);',
+                                      'S_region_sel_active=0; S_gain_sel_active=f%4; S_gain_verified_active=f%2;')
+            harness = harness.replace('S_exp_sel=f%4;', 'S_exp_sel=3;')
+            harness = harness.replace('rows=(f<2)?720:96;', 'rows=(f<2)?720:64;')
+            harness = harness.replace('if (f==1 && x%103==0) S_region_sel_active=(x/103)%11;',
+                'if (f==1 && x%103==0) begin S_gain_sel_active=(x/103)%4; S_gain_verified_active=(x/103)%2; end')
+            summary['scope'] = 'Actual gain-label metadata and fixed C/P/W0 pipeline versus original pre-mixer output; four gains and four modes'
         test_file = output / 'tb_highlight_pipeline.v'
         test_file.write_text(harness, encoding='utf-8')
         files = [top_file, hdl/'hdmi_mixer.v', hdl/'highlight_tone.v', hdl/'highlight_region.v', hdl/'highlight_shoulder_lut.v',
@@ -215,7 +236,7 @@ endmodule
         matched=re.search(r'PASS highlight_pipeline: (\d+) cycles, (\d+) identical DDR reads',simulation)
         assert matched, simulation
         summary.update(pass_=True, cycles=int(matched[1]), identical_ddr_reads=int(matched[2]),
-                       full_720p_frames=2, extra_mode_candidate_frames=44, original_mixer_ref='42b0736',
+                       full_720p_frames=2, extra_mode_candidate_frames=16 if gain_compare else 44, original_mixer_ref='42b0736',
                        production_top_instances_extracted=True, pixel_latency_unchanged=True)
         summary['pass']=summary.pop('pass_')
     except (OSError,AssertionError,subprocess.SubprocessError,ValueError) as error:

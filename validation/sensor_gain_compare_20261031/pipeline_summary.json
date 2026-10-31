@@ -1,0 +1,22 @@
+{
+  "pass": true,
+  "scope": "Actual gain-label metadata and fixed C/P/W0 pipeline versus original pre-mixer output; four gains and four modes",
+  "source_sha256": {
+    "user_source/hdl_source/design_top_wrapper.v": "16cd35a3dd0aaa7db28ace7fcc9c582f983a745738c5144ba5fd8c8d25bc2665",
+    "user_source/hdl_source/hdmi_mixer.v": "464fa8edd7ecbfd9bb5758dfee874b412df0a12847f0d02cc58fb90434526fb8",
+    "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+    "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+    "user_source/hdl_source/osd_overlay.v": "aa10f0f0c31fe046747c4c2f4ae50dbdeb02173a6612223dabc22f8c3bca773d",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "cycles": 3186373,
+  "identical_ddr_reads": 3153920,
+  "full_720p_frames": 2,
+  "extra_mode_candidate_frames": 16,
+  "original_mixer_ref": "42b0736",
+  "production_top_instances_extracted": true,
+  "pixel_latency_unchanged": true
+}

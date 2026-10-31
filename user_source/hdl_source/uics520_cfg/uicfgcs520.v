@@ -1,7 +1,8 @@
 `timescale 1ns / 1ps
 
 module uicfgcs520 #(
-    parameter integer CLK_DIV = 16'd239
+    parameter integer CLK_DIV = 16'd239,
+    parameter integer AE_VERIFY_EN = 0
 ) (
     input  wire        I_clk,
     input  wire        I_rst_n,
@@ -14,7 +15,9 @@ module uicfgcs520 #(
     output reg         O_ae_cfg_done,
     output reg  [15:0] O_sensor_id,
     output reg         O_sensor_id_ok,
-    output reg         O_iic_error
+    output reg         O_iic_error,
+    output reg  [1:0]  O_gain_sel_gray,
+    output reg         O_gain_verified
 );
     localparam [7:0] CAM_ID = 8'h6c;
 
@@ -31,6 +34,9 @@ module uicfgcs520 #(
     localparam [3:0] ST_WR_DONE  = 4'd10;
     localparam [3:0] ST_ERROR    = 4'd11;
     localparam [3:0] ST_RESET_WAIT = 4'd12;
+    localparam [3:0] ST_AE_RD_REQ  = 4'd13;
+    localparam [3:0] ST_AE_RD_BUSY = 4'd14;
+    localparam [3:0] ST_AE_RD_DONE = 4'd15;
     localparam integer RESET_WAIT_CYCLES = 119048; // 5 ms at 23.809524 MHz
 
     reg  [3:0]  state;
@@ -70,9 +76,13 @@ module uicfgcs520 #(
             O_sensor_id      <= 16'd0;
             O_sensor_id_ok   <= 1'b0;
             O_iic_error      <= 1'b0;
+            O_gain_sel_gray  <= 2'b00;
+            O_gain_verified  <= 1'b0;
         end else begin
-            if (iic_bus_error)
+            if (iic_bus_error) begin
                 O_iic_error <= 1'b1;
+                O_gain_verified <= 1'b0;
+            end
 
             case (state)
                 ST_IDH_REQ: if (!iic_busy) begin
@@ -128,18 +138,38 @@ module uicfgcs520 #(
                         end
                     end else if (ae_table_active) begin
                         if (reg_index == ae_reg_size) begin
-                            ae_table_active <= 1'b0;
-                            O_ae_cfg_done <= 1'b1;
+                            if (AE_VERIFY_EN != 0) begin
+                                // Reuse entries1..6 for addresses and expected data.
+                                // Keep the request held until all reads complete.
+                                reg_index <= 9'd1;
+                                state <= ST_AE_RD_REQ;
+                            end else begin
+                                ae_table_active <= 1'b0;
+                                O_ae_cfg_done <= 1'b1;
+                            end
                         end else begin
                             state <= ST_WR_REQ;
                         end
                     end else if (I_ae_req) begin
                         ae_table_active <= 1'b1;
                         O_ae_cfg_done <= 1'b0;
+                        O_gain_verified <= 1'b0;
                         reg_index <= 9'd0;
                     end
                 end
                 ST_WR_REQ: if (!iic_busy) begin
+                    // Verified falls at request acceptance, at least one
+                    // 24MHz source cycle before the new label is published.
+                    // A queued request may skip a Gray position; the bundled
+                    // status/data settling interval, not Gray alone, matters.
+                    if (ae_table_active && (reg_index == 9'd0)) begin
+                        case (I_ag)
+                            16'd160: O_gain_sel_gray <= 2'b00;
+                            16'd144: O_gain_sel_gray <= 2'b01;
+                            16'd112: O_gain_sel_gray <= 2'b11;
+                            default: O_gain_sel_gray <= 2'b10;
+                        endcase
+                    end
                     wr_data[7:0]   <= CAM_ID;
                     wr_data[15:8]  <= selected_reg_data[23:16];
                     wr_data[23:16] <= selected_reg_data[15:8];
@@ -170,10 +200,38 @@ module uicfgcs520 #(
                         reset_wait_cnt <= reset_wait_cnt + 1'b1;
                     end
                 end
+                ST_AE_RD_REQ: if (!iic_busy) begin
+                    // Same address ordering as the proven sensor-ID reads.
+                    wr_data <= {8'h00, ae_reg_data[15:8], ae_reg_data[23:16], CAM_ID};
+                    wr_cnt <= 8'd3;
+                    rd_cnt <= 8'd1;
+                    iic_mode <= 1'b1;
+                    iic_req <= 1'b1;
+                    state <= ST_AE_RD_BUSY;
+                end
+                ST_AE_RD_BUSY: if (iic_busy) begin
+                    iic_req <= 1'b0;
+                    state <= ST_AE_RD_DONE;
+                end
+                ST_AE_RD_DONE: if (!iic_busy) begin
+                    if (rd_data != ae_reg_data[7:0])
+                        O_iic_error <= 1'b1;
+                    if (reg_index == 9'd6) begin
+                        ae_table_active <= 1'b0;
+                        O_ae_cfg_done <= 1'b1;
+                        O_gain_verified <= !O_iic_error && !iic_bus_error &&
+                                           (rd_data == ae_reg_data[7:0]);
+                        state <= ST_IDLE;
+                    end else begin
+                        reg_index <= reg_index + 1'b1;
+                        state <= ST_AE_RD_REQ;
+                    end
+                end
                 ST_ERROR: begin
                     iic_req <= 1'b0;
                     O_cfg_done <= 1'b0;
                     O_ae_cfg_done <= 1'b0;
+                    O_gain_verified <= 1'b0;
                 end
                 default: state <= ST_ERROR;
             endcase
