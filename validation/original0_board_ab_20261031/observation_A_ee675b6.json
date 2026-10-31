@@ -1,0 +1,20 @@
+{
+  "date_local": "2026-10-31",
+  "source": "user response to same-scene old-A/current-exposure0 comparison",
+  "board_source_commit": "ee675b6d144c6425f05c60fedd31cdd8a7e1515b",
+  "reference_programming_record": "programming_A_ee675b6.json",
+  "compared_current_configuration": "exposure0/C0/P0/W0",
+  "user_response_zh": "旧版也严重过亮，差别不大",
+  "old_A_severely_overbright": true,
+  "obvious_current_only_overbrightness_reported": false,
+  "stage1_visual_comparison_complete": true,
+  "exposure_quality_issue_resolved": false,
+  "measurement_kind": "qualitative user observation",
+  "automated_capture_performed": false,
+  "sensor_registers_read_back": false,
+  "conclusion": "Prioritize the fixed exposure/gain settings shared by both versions; C3 does not explain this C0 feedback. No claim of pixel equality or a proven saturation stage.",
+  "next_proposed_comparison": "Fixed exposure and base ISP; nominal sensor gains24/16/8/4x via existing gain table",
+  "gain_candidate_implemented": false,
+  "board_kept_on_old_A": true,
+  "new_programming_after_observation": false
+}
