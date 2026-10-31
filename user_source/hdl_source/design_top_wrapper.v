@@ -435,10 +435,11 @@ module design_top_wrapper (
     wire [1:0] S_white_sel_active =
         ((S_region_sel_active >= 4'd8) && (S_region_sel_active <= 4'd10)) ?
         (S_region_sel_active[1:0] + 2'd1) : 2'd0;
-    wire [8:0] S_tone_input_rg_max = (S_csc_wide_data[26:18] > S_csc_wide_data[17:9]) ?
-                                    S_csc_wide_data[26:18] : S_csc_wide_data[17:9];
-    wire [8:0] S_tone_input_peak = (S_tone_input_rg_max > S_csc_wide_data[8:0]) ?
-                                  S_tone_input_rg_max : S_csc_wide_data[8:0];
+    // Lift uses the accepted RGB8 colour basis, never the old RGB9 shoulder.
+    wire [7:0] S_lift_rg_max = (S_imgp_data[23:16] > S_imgp_data[15:8]) ?
+                               S_imgp_data[23:16] : S_imgp_data[15:8];
+    wire [8:0] S_tone_input_peak = {1'b0, (S_lift_rg_max > S_imgp_data[7:0]) ?
+                                           S_lift_rg_max : S_imgp_data[7:0]};
     reg [8:0] S_tone_stage_peak;
     wire S_tone_stage_de, S_tone_stage_vs;
     reg [2:0] S_tone_stage_mode;
@@ -841,7 +842,7 @@ module design_top_wrapper (
 	
 
   
-  ae_set #(.EXP_RST(3), .GAIN_COMPARE_EN(1)) u_ae_set (
+  ae_set #(.EXP_RST(3), .GAIN_COMPARE_EN(1), .GAIN_RST(2)) u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
@@ -1248,7 +1249,7 @@ isp_top u_isp_top (
     //------------------------------------------------------------------
 //----------------------------------------------------------------------
 //  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
-//      KEY1=增强彩色 KEY2=算法循环 KEY3=传感器增益24/16/8/4倍 KEY4=本轮不使用
+//      KEY1=增强彩色 KEY2=算法循环 KEY3=传感器增益24/16/8/4倍 KEY4=L0/L1/L2/L3提亮对照
 //    独立模块 img_mode_sel.v（内部10ms去抖 + 按下锁存），输出3 bit模式码。
 //    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
 //----------------------------------------------------------------------
@@ -1256,8 +1257,8 @@ isp_top u_isp_top (
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
         .EXP_RST    ( 3          ),   // unused UI output; sensor exposure is fixed900
-        .REGION_RST ( 0          ),   // unused UI output; isolate the sensor gain test
-        .REGION_N   ( 11         ),
+        .REGION_RST ( 1          ),   // L1 first; KEY4 L1/L2/L3/L0
+        .REGION_N   ( 4          ),
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )
     )u_img_mode_sel(
@@ -1266,24 +1267,24 @@ isp_top u_isp_top (
         .I_key_n    ( I_key            ),   // {KEY4,KEY3,KEY2,KEY1}，按下=0
         .O_mode     ( S_img_mode       ),
         .O_exp_sel  (                   ),
-        .O_region_sel (                 ),
+        .O_region_sel ( S_region_sel_req ),
         // KEY3 is handled only by ae_set; no independent OSD gain counter.
         .O_th_lock  ( S_img_th_lock_req),
         .O_k_step   ( S_img_k_step     )
     );
 `else
     assign S_img_mode = IMG_MODE[2:0];
+    assign S_region_sel_req = 4'd1;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
     assign S_exp_sel = 2'd3;
-    assign S_region_sel_req = 4'd0; // C0/P0/W0 throughout this comparison
     // 最终二值化固定增强源；KEY3只改变传感器增益，曝光固定900。
     assign S_img_src_raw = 1'b0;
 
     // Latch compensation choice in vertical blanking; H1 thresholds stay fixed.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) S_region_sel <= 4'd0;
+        if (!S_hdmi_rst_n) S_region_sel <= 4'd1;
         else if (S_hdmi_vsync) S_region_sel <= S_region_sel_req;
     end
     // Gray/binary/Sobel remain their original algorithms, including line delays.
@@ -1408,7 +1409,7 @@ isp_top u_isp_top (
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
-            S_tone_stage_sel <= 4'd0;
+            S_tone_stage_sel <= 4'd1;
             S_tone_stage_wide_data <= 27'd0;
             S_tone_stage_peak <= 9'd0;
             S_tone_stage_exp <= 2'd3;
@@ -1434,14 +1435,12 @@ isp_top u_isp_top (
             S_tone_stage_locked <= S_img_th_locked;
         end
     end
-    highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) u_highlight_tone (
+    gain8_lift u_gain8_lift (
         .I_de       ( S_tone_stage_de ),
         .I_enable   ( S_tone_stage_mode == 3'd0 ),
-        .I_sel      ( (S_tone_stage_sel >= 4'd8) ? 3'd7 : S_tone_stage_sel[2:0] ),
+        .I_sel      ( S_tone_stage_sel[1:0] ),
         .I_data     ( S_tone_stage_data ),
-        .I_wide_data( S_tone_stage_wide_data ),
-        .I_peak     ( S_tone_stage_peak ),
-        .O_mask     ( ),
+        .I_peak     ( S_tone_stage_peak[7:0] ),
         .O_data     ( S_region_data )
     );
 `ifdef OSD_ON
@@ -1451,6 +1450,7 @@ isp_top u_isp_top (
         .REGION_DEBUG_EN ( 0 ),
         .SHOULDER_DEBUG_EN ( 0 ),
         .GAIN_DEBUG_EN ( 1 ),
+        .LIFT_DEBUG_EN ( 1 ),
         .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),
@@ -1475,6 +1475,7 @@ isp_top u_isp_top (
         .I_region_sel ( S_tone_stage_sel ),
         .I_gain_sel ( S_tone_stage_gain ),
         .I_gain_verified ( S_tone_stage_gain_verified ),
+        .I_lift_sel ( S_tone_stage_sel[1:0] ),
         .I_data     ( S_region_data    ),
         .O_data     ( S_osd_mix        )
     );

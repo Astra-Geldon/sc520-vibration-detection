@@ -32,7 +32,8 @@
 
 module ae_set #(
 parameter integer EXP_RST = 0, // 0/1/2/3 = 1991/1600/1200/900
-parameter integer GAIN_COMPARE_EN = 0 // KEY3: fixed900, gain160/144/112/80
+parameter integer GAIN_COMPARE_EN = 0, // KEY3: fixed900, gain160/144/112/80
+parameter integer GAIN_RST = 0 // gain comparison reset index; legacy default unchanged
 )
 (
 input wire I_clk,
@@ -54,7 +55,7 @@ reg 			r_ag_tick = 0;
 	reg [1:0] r_exp_key_sync = 2'b11;
 	reg [17:0] r_exp_key_cnt = 0;
 	reg r_exp_key_level = 1'b1, r_exp_key_level_d = 1'b1;
-	localparam [1:0] KEY_RST = (GAIN_COMPARE_EN != 0) ? 2'd0 : EXP_RST;
+	localparam [1:0] KEY_RST = (GAIN_COMPARE_EN != 0) ? GAIN_RST : EXP_RST;
 	reg [1:0] r_exp_sel = KEY_RST, r_exp_sel_d = KEY_RST;
 	
 always @(posedge I_clk or posedge I_rst) begin
@@ -162,13 +163,14 @@ reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0;
 //   同时高光过曝也减轻（用户反馈白色监控和墙面分不开）。
 // EXP_RST selects the real sensor exposure; KEY3 keeps all four references.
 localparam [15:0] AE_RST = (GAIN_COMPARE_EN != 0) ? 16'd900 : f_exp_value(EXP_RST);
-reg 	[15:0] 	r_ae_set = AE_RST, r_ag_set = 160;
+localparam [15:0] AG_RST = (GAIN_COMPARE_EN != 0) ? f_gain_value(KEY_RST) : 16'd160;
+reg 	[15:0] 	r_ae_set = AE_RST, r_ag_set = AG_RST;
 always @(posedge I_clk or posedge I_rst) begin
 	if(I_rst) begin
 		r_button_0 <= 0; 
 		r_button_1 <= 0; 
 		r_ae_set <= AE_RST;
-		r_ag_set <= 160; 
+		r_ag_set <= AG_RST;
 	end else begin
 	//	When button pressed, r_button_1 bit is 1. 
 		r_button_0 <= ~I_btn; 
