@@ -57,11 +57,12 @@
     "label": "fixed_N1"
   },
   "board_programming": "success_JTAG_SRAM",
-  "visual_acceptance": "pending_user_observation",
+  "visual_acceptance": "accepted_by_user_without_key_press",
   "fixed_lift": "N1 unchanged from b8407f8",
   "key3_key4": "unused; test selectors removed",
   "frame_processing": "single-frame per-pixel; no alternating capture or extra frame buffer",
   "generated_utc": "2026-10-31T17:40:56.738808+00:00",
   "programming_record": "burn-v1/programming.json",
-  "programming_finished_local": "2026-11-01T01:41:06.647012+08:00"
+  "programming_finished_local": "2026-11-01T01:41:06.647012+08:00",
+  "visual_acceptance_record": "visual_acceptance.json"
 }

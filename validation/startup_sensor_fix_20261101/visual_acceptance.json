@@ -1,0 +1,15 @@
+{
+  "status": "accepted_by_user",
+  "scope": "Default image after recorded JTAG SRAM download; same scene, no key presses",
+  "recorded_local": "2026-11-01T01:43:57.966350+08:00",
+  "user_feedback": "已恢复，亮部与之前认可的效果相近",
+  "source_commit": "20783776709c5d25a0e127aefda56a2610f55f71",
+  "bit_sha256": "49656553e454546ace5aeb81f3f605e4862d91d822bab2a970b07bd334352213",
+  "programming_finished_local": "2026-11-01T01:41:06.647012+08:00",
+  "exposure": 900,
+  "gain_code": 128,
+  "nominal_gain": 12,
+  "lift": "N1",
+  "physical_failed_register_identified": false,
+  "FPGA_reprogrammed_this_step": false
+}
