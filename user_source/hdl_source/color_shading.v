@@ -34,7 +34,8 @@ module color_shading (
     input  wire        I_de,        // 像素有效
     input  wire [23:0] I_data,      // 来自 awb_simple（RGB888）
     input  wire [ 1:0] I_k_sel,   // CSC 强度档 0:关 1:0.5 2:0.75 3:1.0
-    output wire [23:0] O_data       // 送 img_proc
+    output wire [23:0] O_data,      // legacy clipped path to img_proc
+    output wire [26:0] O_wide_data  // {R9,G9,B9}, same-cycle values BEFORE clipping
 );
 
     //------------------------------------------------------------------
@@ -177,5 +178,6 @@ module color_shading (
     wire [7:0] S_b_out = (S_b_mul[16:8] > 8'hFF) ? 8'hFF : S_b_mul[16:8];
 
     assign O_data = {S_r_out, I_data[15:8], S_b_out};
+    assign O_wide_data = {S_r_mul[16:8], 1'b0, I_data[15:8], S_b_mul[16:8]};
 
 endmodule

@@ -29,6 +29,7 @@ module osd_overlay #(
     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
     parameter integer TH_DEBUG_EN = 0,      // 二值化实际阈值/锁定状态诊断
     parameter integer REGION_DEBUG_EN = 0,  // 彩色画面固定H1及补偿档 H=1 C=0/1/2/3/M
+    parameter integer SHOULDER_DEBUG_EN = 0,// C=0/3 P=0/1/2/3, KEY4 eight candidates
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
     // ---- 画面尺寸（与 VTC 一致）----
@@ -165,7 +166,8 @@ module osd_overlay #(
     wire S_region_box, S_region_white;
     generate
         if (REGION_DEBUG_EN != 0) begin : g_region_text
-            osd_region_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32)) u_line (
+            osd_region_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32),
+                              .SHOULDER_MODE(SHOULDER_DEBUG_EN)) u_line (
                 .I_x       ( S_x            ),
                 .I_y       ( S_y            ),
                 .I_enable  ( I_de && (I_mode == 3'd0) ),
@@ -282,7 +284,8 @@ endmodule
 // Constant glyphs, shifts and additions only; no pixel register or ROM file.
 module osd_region_line #(
     parameter integer TEXT_X = 24,
-    parameter integer TEXT_Y = 56
+    parameter integer TEXT_Y = 56,
+    parameter integer SHOULDER_MODE = 0
 )(
     input wire [10:0] I_x,
     input wire [9:0] I_y,
@@ -303,6 +306,7 @@ module osd_region_line #(
                 4'd5: f_glyph = {5'b00000,5'b11111,5'b00000,5'b11111,5'b00000,5'b00000,5'b00000}; // =
                 4'd6: f_glyph = {5'b01110,5'b10001,5'b10000,5'b10000,5'b10000,5'b10001,5'b01110}; // C
                 4'd7: f_glyph = {5'b10001,5'b11011,5'b10101,5'b10101,5'b10001,5'b10001,5'b10001}; // M
+                4'd8: f_glyph = {5'b11110,5'b10001,5'b10001,5'b11110,5'b10000,5'b10000,5'b10000}; // P
                 default: f_glyph = 35'd0;
             endcase
         end
@@ -314,7 +318,7 @@ module osd_region_line #(
     reg [3:0] S_cell_x;
     always @(*) begin
         if (S_local_x < 11'd12) begin
-            S_glyph_id = 4'd4;
+            S_glyph_id = (SHOULDER_MODE != 0) ? 4'd6 : 4'd4;
             S_cell_x = S_local_x[3:0];
         end
         else if (S_local_x < 11'd24) begin
@@ -322,15 +326,15 @@ module osd_region_line #(
             S_cell_x = S_local_x - 11'd12;
         end
         else if (S_local_x < 11'd36) begin
-            S_glyph_id = 4'd1;
+            S_glyph_id = (SHOULDER_MODE != 0) ? (I_sel[2] ? 4'd3 : 4'd0) : 4'd1;
             S_cell_x = S_local_x - 11'd24;
         end
         else if (S_local_x < 11'd48) begin
-            S_glyph_id = 4'd8; // space
+            S_glyph_id = 4'd15; // space
             S_cell_x = S_local_x - 11'd36;
         end
         else if (S_local_x < 11'd60) begin
-            S_glyph_id = 4'd6;
+            S_glyph_id = (SHOULDER_MODE != 0) ? 4'd8 : 4'd6;
             S_cell_x = S_local_x - 11'd48;
         end
         else if (S_local_x < 11'd72) begin
@@ -338,8 +342,9 @@ module osd_region_line #(
             S_cell_x = S_local_x - 11'd60;
         end
         else begin
-            S_glyph_id = (I_sel < 3'd4) ? {1'b0, I_sel} :
-                         (I_sel == 3'd4) ? 4'd7 : 4'd8;
+            S_glyph_id = (SHOULDER_MODE != 0) ? {2'b0, I_sel[1:0]} :
+                         (I_sel < 3'd4) ? {1'b0, I_sel} :
+                         (I_sel == 3'd4) ? 4'd7 : 4'd15;
             S_cell_x = S_local_x - 11'd72;
         end
     end

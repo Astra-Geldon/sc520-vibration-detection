@@ -31,6 +31,7 @@
 
 // Included here only; do not also add this module as a separate TD Design File.
 `include "highlight_region.v"
+`include "highlight_shoulder_lut.v"
 `include "highlight_tone.v"
 
 // =====================================================================
@@ -406,6 +407,7 @@ module design_top_wrapper (
     wire[23:0]  S_imgp_data;
     wire[23:0]  S_awb_data;
     wire[23:0]  S_csc_data;
+    wire[26:0]  S_csc_wide_data;
     wire[23:0]  S_osd_mix;
     wire[ 2:0]  S_img_mode;
     wire        S_img_src_raw;
@@ -421,6 +423,7 @@ module design_top_wrapper (
     // Retiming uses the mixer's existing first data register. Pixel/DE/VS
     // emerge together; candidate/OSD metadata follow that same register.
     wire [23:0] S_tone_stage_data;
+    reg [26:0] S_tone_stage_wide_data;
     wire S_tone_stage_de, S_tone_stage_vs;
     reg [2:0] S_tone_stage_mode, S_tone_stage_sel;
     reg [1:0] S_tone_stage_exp, S_tone_stage_k;
@@ -1231,8 +1234,8 @@ isp_top u_isp_top (
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
         .EXP_RST    ( 3          ),   // real exposure900; KEY3 retains all four exposures
-        .REGION_RST ( 2          ),   // default C2 medium midtone compensation
-        .REGION_N   ( 5          ),   // C0/C1/C2/C3/H1 mask
+        .REGION_RST ( 0          ),   // reference: C0/P0; KEY4 selects C0/C3 x P0..3
+        .REGION_N   ( 8          ),
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )
     )u_img_mode_sel(
@@ -1249,7 +1252,7 @@ isp_top u_isp_top (
 `else
     assign S_img_mode = IMG_MODE[2:0];
     assign S_exp_sel = 2'd3;
-    assign S_region_sel_req = 3'd2;
+    assign S_region_sel_req = 3'd0;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
@@ -1258,7 +1261,7 @@ isp_top u_isp_top (
 
     // Latch compensation choice in vertical blanking; H1 thresholds stay fixed.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) S_region_sel <= 3'd2;
+        if (!S_hdmi_rst_n) S_region_sel <= 3'd0;
         else if (S_hdmi_vsync) S_region_sel <= S_region_sel_req;
     end
     // Gray/binary/Sobel remain their original algorithms, including line delays.
@@ -1299,10 +1302,13 @@ isp_top u_isp_top (
         .I_de       ( S_hdmi_de        ),
         .I_data     ( S_awb_data       ),
         .I_k_sel   ( S_k_sel         ),
-        .O_data     ( S_csc_data       )
+        .O_data     ( S_csc_data       ),
+        .O_wide_data( S_csc_wide_data  )
     );
 `else
     assign S_csc_data = S_awb_data;
+    assign S_csc_wide_data = {1'b0, S_awb_data[23:16],
+                             1'b0, S_awb_data[15:8], 1'b0, S_awb_data[7:0]};
 `endif
 
     //------------------------------------------------------------------
@@ -1340,7 +1346,8 @@ isp_top u_isp_top (
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
-            S_tone_stage_sel <= 3'd2;
+            S_tone_stage_sel <= 3'd0;
+            S_tone_stage_wide_data <= 27'd0;
             S_tone_stage_exp <= 2'd3;
             S_tone_stage_k <= 2'd2;
             S_tone_stage_threshold <= 8'd0;
@@ -1349,6 +1356,9 @@ isp_top u_isp_top (
         end else begin
             S_tone_stage_mode <= S_img_mode;
             S_tone_stage_sel <= S_region_sel_active;
+            // Same edge as mixer.S_video_data_1d: colour mode is a pure
+            // img_proc passthrough. No extra pixel/sync or DDR read delay.
+            S_tone_stage_wide_data <= S_csc_wide_data;
             S_tone_stage_exp <= S_exp_sel;
             S_tone_stage_k <= S_k_sel;
             S_tone_stage_threshold <= S_img_threshold;
@@ -1361,6 +1371,7 @@ isp_top u_isp_top (
         .I_enable   ( S_tone_stage_mode == 3'd0 ),
         .I_sel      ( S_tone_stage_sel ),
         .I_data     ( S_tone_stage_data ),
+        .I_wide_data( S_tone_stage_wide_data ),
         .O_mask     ( ),
         .O_data     ( S_region_data )
     );
@@ -1369,6 +1380,7 @@ isp_top u_isp_top (
         .OSD_EN     ( 1    ),
         .TH_DEBUG_EN( 0    ),
         .REGION_DEBUG_EN ( 1 ),
+        .SHOULDER_DEBUG_EN ( 1 ),
         .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),

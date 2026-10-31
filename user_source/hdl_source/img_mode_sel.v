@@ -17,7 +17,7 @@
 //      KEY1 (D5 / I_key[0]) → 视觉增强彩色画面
 //      KEY2 (A9 / I_key[1]) → 算法循环： 灰度 → 二值化 → 边缘 → 灰度 …
 //      KEY3 (B9 / I_key[2]) → 曝光候选档循环（0/1/2/3）
-//      KEY4 (C7 / I_key[3]) → 本实验：补偿关闭/弱/中/强/H1品红选区
+//      KEY4 (C7 / I_key[3]) → 当前高光实验：C0/C3 × P0/P1/P2/P3
 //
 //  模式编码（3 bit，最多 8 种）
 //      0 = 原图
@@ -44,8 +44,8 @@ module img_mode_sel #(
     parameter integer CLK_HZ   = 74250000,  // = S_hdmi_pixel_clk
     parameter integer DB_MS    = 10,        // 去抖时间(ms)
     parameter integer EXP_RST  = 1,         // 上电曝光候选：1=1600
-    parameter integer REGION_RST = 1,       // top overrides: C2 on the local-tone branch
-    parameter integer REGION_N = 4,         // 4=legacy classifier UI, 5=local-tone candidates
+    parameter integer REGION_RST = 1,       // top overrides the current reference
+    parameter integer REGION_N = 4,         // top uses 8 for C0/C3 x four shoulder profiles
 
     // 兼容旧例化的保留参数，不再控制 KEY3；扩展算法需修改 KEY2 循环。
     parameter integer EXT_BASE = 4,         // 第一个扩展算法的模式码
