@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-31",
+  "bit_sha256": "59486C45B4FB4BF87DD6101B86CAFCAE63A0B3A44C23377C185A468158349E00",
+  "programming": "PRG-2014 Chip validation success",
+  "observed_states": [
+    "D0",
+    "D2",
+    "D3"
+  ],
+  "osd_state_switching": "confirmed",
+  "visual_difference": "none_visible_to_user",
+  "acceptance": "failed_for_perceptible_denoise",
+  "scene_comparison_caveat": "Attachments are not all identical composition; they document the user observation and state labels, not a pixel-identical A/B metric.",
+  "images": [
+    {
+      "label": "D2_face",
+      "path": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-0aaae757-309c-45af-823e-b5a78a43a3ab.jpg",
+      "sha256": "6c032bedc3c8727ee552c571989b2d8af1423c71acfc8ea41bfceda4b4550bf4",
+      "resolution": "1920x1080"
+    },
+    {
+      "label": "D3_face",
+      "path": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-19e26e87-e8f4-42b4-9059-31b4f406322b.jpg",
+      "sha256": "5b3dc7e060b559ed066a3a4206885273fde7388eb351bfbb089f56b6a30847d2",
+      "resolution": "1920x1080"
+    },
+    {
+      "label": "D0_face",
+      "path": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-d9d55148-27de-44ba-b21e-757e392e7039.jpg",
+      "sha256": "5ab8c8a34d1a482232eb6d9478a663e946fa05e21d758925c98c8b218e37fc15",
+      "resolution": "1920x1080"
+    },
+    {
+      "label": "D2_scene",
+      "path": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-4a82e686-4a01-4cd0-aa46-516110f98f9b.jpg",
+      "sha256": "d7372f21ebb31f2eb344fa46a43b5462a3f7e79d7ccfdbaab7be23cdd668ce03",
+      "resolution": "1920x1080"
+    }
+  ]
+}
