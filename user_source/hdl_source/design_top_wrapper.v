@@ -82,6 +82,20 @@ module design_top_wrapper (
 	wire        	S_csi_valid;             
 	wire[31:0]  	S_csi_data;  
 	wire [15:0] S_csi_data_length;
+
+    // Carry frame events to the sensor-control domain without sampling a
+    // narrow MIPI-domain pulse. Used only to schedule exposure/gain writes.
+    reg S_cam_frame_toggle;
+    reg [2:0] S_cam_frame_sync; // synthesis keep
+    wire S_cam_frame_tick = S_cam_frame_sync[2] ^ S_cam_frame_sync[1];
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if (!S_rst_n) S_cam_frame_toggle <= 1'b0;
+        else if (S_csi_frame_start) S_cam_frame_toggle <= ~S_cam_frame_toggle;
+    end
+    always @(posedge S_24m_clk or negedge S_cam_i2c_ready) begin
+        if (!S_cam_i2c_ready) S_cam_frame_sync <= 3'b000;
+        else S_cam_frame_sync <= {S_cam_frame_sync[1:0], S_cam_frame_toggle};
+    end
 		
 	wire        	S_raw10_frame_start; 
 	wire        	S_raw10_frame_end;   
@@ -261,6 +275,7 @@ module design_top_wrapper (
   ) u_uicfgcs520 (
       .I_clk(S_24m_clk),  //系统时钟输入
       .I_rst_n(S_cam_i2c_ready), // SC520CS power-up delay completed
+      .I_frame_tick(S_cam_frame_tick),
       .I_ae_req(S_ae_req),
       .I_ae(S_ae),
       .I_ag(S_ag),

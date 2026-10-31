@@ -10,6 +10,7 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 
 
 MODEL = r'''
@@ -179,6 +180,11 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     iv = Path('D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin/iverilog.exe')
     hdl = root / 'user_source/hdl_source'
+    if 'I_frame_tick' in (hdl/'uics520_cfg/uicfgcs520.v').read_text(encoding='utf-8'):
+        # The old same-cycle comparison predates the intentional startup wait.
+        # Exercise the current real bit engine instead of hanging without FS.
+        return subprocess.call([sys.executable, str(root/'tools/test_startup_sensor.py'),
+                                '--output', str(out)])
     names = ['uiisp_beta/ae_set.v', 'uics520_cfg/uicfgcs520.v',
              'uics520_cfg/SC520GainTbl.v', 'uics520_cfg/uics520regAE.v',
              'uics520_cfg/uics520reg_720p60.v']

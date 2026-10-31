@@ -5,6 +5,7 @@ module uicfgcs520 #(
 ) (
     input  wire        I_clk,
     input  wire        I_rst_n,
+    input  wire        I_frame_tick, // one I_clk cycle, synchronized real frame-start
     input  wire        I_ae_req,
     input  wire [15:0] I_ae,
     input  wire [15:0] I_ag,
@@ -31,6 +32,8 @@ module uicfgcs520 #(
     localparam [3:0] ST_WR_DONE  = 4'd10;
     localparam [3:0] ST_ERROR    = 4'd11;
     localparam [3:0] ST_RESET_WAIT = 4'd12;
+    localparam [3:0] ST_AE_FRAME_WAIT = 4'd13;
+    localparam [3:0] ST_AE_SETTLE = 4'd14;
     localparam integer RESET_WAIT_CYCLES = 119048; // 5 ms at 23.809524 MHz
 
     reg  [3:0]  state;
@@ -42,6 +45,11 @@ module uicfgcs520 #(
     reg  [8:0]  reg_index;
     reg  [16:0] reset_wait_cnt;
     reg         ae_table_active;
+    reg [15:0]  ae_latched, ag_latched;
+    reg [1:0]   frame_count;
+    reg [1:0]   retry_count;
+    reg         transaction_error;
+    reg         group_error;
     wire        iic_busy;
     wire        iic_bus_error;
     wire [7:0]  rd_data;
@@ -63,6 +71,12 @@ module uicfgcs520 #(
             reg_index        <= 9'd0;
             reset_wait_cnt   <= 17'd0;
             ae_table_active  <= 1'b0;
+            ae_latched       <= 16'd0;
+            ag_latched       <= 16'd0;
+            frame_count      <= 2'd0;
+            retry_count      <= 2'd0;
+            transaction_error <= 1'b0;
+            group_error      <= 1'b0;
             O_cfg_done       <= 1'b0;
             O_ae_cfg_done    <= 1'b0;
             O_sensor_id      <= 16'd0;
@@ -71,6 +85,7 @@ module uicfgcs520 #(
         end else begin
             if (iic_bus_error) begin
                 O_iic_error <= 1'b1;
+                transaction_error <= 1'b1;
             end
 
             case (state)
@@ -127,8 +142,23 @@ module uicfgcs520 #(
                         end
                     end else if (ae_table_active) begin
                         if (reg_index == ae_reg_size) begin
-                            ae_table_active <= 1'b0;
-                            O_ae_cfg_done <= 1'b1;
+                            // A completed bus transaction is not proof of an
+                            // accepted write. Retry the whole held group after
+                            // the next real frame, at most three attempts.
+                            if (group_error) begin
+                                if (retry_count == 2'd2) begin
+                                    state <= ST_ERROR;
+                                end else begin
+                                    retry_count <= retry_count + 1'b1;
+                                    reg_index <= 9'd0;
+                                    group_error <= 1'b0;
+                                    frame_count <= 2'd2;
+                                    state <= ST_AE_FRAME_WAIT;
+                                end
+                            end else begin
+                                frame_count <= 2'd0;
+                                state <= ST_AE_SETTLE;
+                            end
                         end else begin
                             state <= ST_WR_REQ;
                         end
@@ -136,9 +166,18 @@ module uicfgcs520 #(
                         ae_table_active <= 1'b1;
                         O_ae_cfg_done <= 1'b0;
                         reg_index <= 9'd0;
+                        ae_latched <= I_ae;
+                        ag_latched <= I_ag;
+                        retry_count <= 2'd0;
+                        group_error <= 1'b0;
+                        frame_count <= 2'd0;
+                        // Do not race stream-on: allow two complete real
+                        // frame intervals, then start after the third FS.
+                        state <= ST_AE_FRAME_WAIT;
                     end
                 end
                 ST_WR_REQ: if (!iic_busy) begin
+                    transaction_error <= 1'b0;
                     wr_data[7:0]   <= CAM_ID;
                     wr_data[15:8]  <= selected_reg_data[23:16];
                     wr_data[23:16] <= selected_reg_data[15:8];
@@ -154,11 +193,26 @@ module uicfgcs520 #(
                     state <= ST_WR_DONE;
                 end
                 ST_WR_DONE: if (!iic_busy) begin
-                    reg_index <= reg_index + 1'b1;
-                    if (!ae_table_active && (reg_index == 9'd0)) begin
+                    if (!ae_table_active && (transaction_error || iic_bus_error)) begin
+                        // Initialization must also not silently skip a NACKed
+                        // register. Retry this entry after the existing 5ms wait.
+                        if (retry_count == 2'd2) begin
+                            state <= ST_ERROR;
+                        end else begin
+                            retry_count <= retry_count + 1'b1;
+                            reset_wait_cnt <= 17'd0;
+                            state <= ST_RESET_WAIT;
+                        end
+                    end else if (!ae_table_active && (reg_index == 9'd0)) begin
+                        reg_index <= reg_index + 1'b1;
+                        retry_count <= 2'd0;
                         reset_wait_cnt <= 17'd0;
                         state <= ST_RESET_WAIT;
                     end else begin
+                        reg_index <= reg_index + 1'b1;
+                        if (ae_table_active) begin
+                            if (transaction_error || iic_bus_error) group_error <= 1'b1;
+                        end else retry_count <= 2'd0;
                         state <= ST_IDLE;
                     end
                 end
@@ -168,6 +222,19 @@ module uicfgcs520 #(
                     end else begin
                         reset_wait_cnt <= reset_wait_cnt + 1'b1;
                     end
+                end
+                ST_AE_FRAME_WAIT: if (I_frame_tick) begin
+                    if (frame_count == 2'd2) state <= ST_WR_REQ;
+                    else frame_count <= frame_count + 1'b1;
+                end
+                ST_AE_SETTLE: if (I_frame_tick) begin
+                    // Datasheet: frame N writes affect frame N+2. This done
+                    // indicates ACKed writes plus settling, not readback proof.
+                    if (frame_count == 2'd1) begin
+                        ae_table_active <= 1'b0;
+                        O_ae_cfg_done <= 1'b1;
+                        state <= ST_IDLE;
+                    end else frame_count <= frame_count + 1'b1;
                 end
                 ST_ERROR: begin
                     iic_req <= 1'b0;
@@ -208,7 +275,7 @@ module uicfgcs520 #(
     );
 
     SC520GainTbl u_gain (
-        .I_AG(I_ag),
+        .I_AG(ag_latched),
         .O(gain_value)
     );
 
@@ -216,7 +283,7 @@ module uicfgcs520 #(
         .REG_INDEX(reg_index),
         .REG_DATA(ae_reg_data),
         .REG_SIZE(ae_reg_size),
-        .I_AE(I_ae),
+        .I_AE(ae_latched),
         .I_AG(gain_value)
     );
 endmodule
