@@ -1,0 +1,14 @@
+{
+  "date_local": "2026-10-31",
+  "board_named_savepoint": "f4ca7a28dbcdf0471de0238036f3536427e52750",
+  "board_production_source": "bf1a57958d9a547659f1acc6c32a8e5fdc07b516",
+  "programming_record": "programming_exposure_compare.json",
+  "user_response_zh": "那我确定了，应该是现在的压制策略在目前的环境里面仍然不够好，依旧很亮。你想想有什么解决方案",
+  "historical_highlight_effect_reproduced": false,
+  "exact_osd_index_explicitly_confirmed": false,
+  "sensor_registers_read_back": false,
+  "raw_saturation_measured": false,
+  "measurement_kind": "qualitative user observation after historical image download",
+  "next_action_scope": "Research solution; no new parameter implementation or further programming in this stage",
+  "solution_priority": "Verify applied exposure/gain; compare lower sensor gains at fixed exposure, then shorten exposure only if required, finally match bounded nonhighlight lift"
+}

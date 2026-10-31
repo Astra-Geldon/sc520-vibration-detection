@@ -1,0 +1,58 @@
+{
+  "created_local": "2026-10-31T21:19:28.943370+08:00",
+  "repository": "D:/FPGA/codex/20261029project",
+  "documentation_head": "983c92d381b821fa73a5c702d8aae3927c8e063e",
+  "compiled_this_session": false,
+  "programmed_by_this_script": false,
+  "images": [
+    {
+      "name": "exposure_compare_f4ca7a2",
+      "source_commit": "bf1a57958d9a547659f1acc6c32a8e5fdc07b516",
+      "named_savepoint_commit": "f4ca7a28dbcdf0471de0238036f3536427e52750",
+      "source_path": "D:/FPGA/codex/_build/20261029project/stage1-multi-exposure-20261030/fixed-cdc/camera_to_dsi_display.bit",
+      "sha256": "CC0EB63D7AB21C89ED9D2EDA1E80B508DDE6D57E0EC5002E100A6A47528810FC",
+      "default_request": {
+        "exposure_index": 1,
+        "exposure": 1600,
+        "gain_code": 160,
+        "colour": true
+      },
+      "target_request": {
+        "exposure_index": 3,
+        "exposure": 900,
+        "gain_code": 160
+      },
+      "controls": "KEY3 twice from reset: exposure1 -> exposure2 -> exposure3. No H/C/D/P/W.",
+      "provenance": "STAGE1_EXPOSURE_20261030.md; fixed-cdc/pA.log and pC.log",
+      "priority": "First match to initial user report: highlights improved, face too dark.",
+      "archived_path": "D:/FPGA/codex/_build/20261029project/historical-dark-face-reference-20261031/bitstreams/exposure_compare_f4ca7a2.bit",
+      "bytes": 1789539
+    },
+    {
+      "name": "initial_h1_79558c9",
+      "source_commit": "79558c96c30f0817b8eeb7527975538ab62e3f55",
+      "named_savepoint_commit": "f57bdf3994e58914ff0e41dc4fed1f3834310a6e",
+      "source_path": "D:/FPGA/codex/_build/20261029project/h1-local-tone-20261030/retimed/camera_to_dsi_display.bit",
+      "sha256": "91FF9D0F19CB07086AB13EB06A474DF82F30B49269637DBB700AA334F6075BC5",
+      "default_request": {
+        "exposure_index": 2,
+        "exposure": 1200,
+        "gain_code": 160,
+        "C": 2
+      },
+      "target_request": {
+        "exposure_index": 3,
+        "exposure": 900,
+        "gain_code": 160,
+        "C": 3
+      },
+      "controls": "KEY3 once and KEY4 once from reset: exposure3 / original weak C3.",
+      "provenance": "H1_LOCAL_TONE_20261030.md; retimed/build_manifest.json and burn/programming.json",
+      "priority": "Secondary match to later user report: even C3 compensation insufficient.",
+      "archived_path": "D:/FPGA/codex/_build/20261029project/historical-dark-face-reference-20261031/bitstreams/initial_h1_79558c9.bit",
+      "bytes": 1789539
+    }
+  ],
+  "limitations": "Defaults and targets are source requests, not sensor register readback. Historical visual match needs current user confirmation.",
+  "existing_A_current_archive": "D:/FPGA/codex/_build/20261029project/original0-ab-baseline-20261031/bitstreams"
+}
