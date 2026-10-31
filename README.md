@@ -1,6 +1,8 @@
 # SC520 MIPI → HDMI 振动频率检测系统
 > 当前本地实验分支`image-shading-on-baseline-20261031`：已恢复shading开启的E1镜像，用户确认之前观感恢复，但原图3/C3/D3的画质问题仍在。D数值核符合设计，固定每像素Y及3×3尺度不足以处理现有质感问题；最新源码/数值研究、已撤销判断及后续Q0～Q4见 [C3质感复核](IMAGE_QUALITY_REASSESSMENT_20261031.md)，总安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。本次研究未改变生产RTL或板上程序。D候选见 [C3保亮降噪说明](C3_CHROMA_DENOISE_20261031.md)，此前保存点见 [强补偿记录](H1_STRONG_COMPENSATION_20261031.md)。以下A版发布信息用于追溯稳定基线。
 
+> 用户新增硬约束：DSP总数≤34，研究充分后再动工。两轮合成对照、120张正确UGREEN旧帧审计、候选反例和缓存复核见 [零新增DSP研究](ZERO_DSP_IMAGE_QUALITY_STUDY_20261031.md)；优先继续验证复用两行窗口的前置Y/色差处理，大基底只保留作效果对照。当前没有新RTL或新bit。
+
 
 ## 当前交接版本：A-original-reuse + Logo
 
