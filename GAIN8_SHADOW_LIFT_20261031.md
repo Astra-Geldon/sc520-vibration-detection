@@ -50,4 +50,6 @@
 
 完整A→B→C及12处HDMI补丁通过；资源LUT6/Slice/FF/ERAM20K/DSP/PLL/MCU=10079/11222/9441/43/31/3/1，相对G8为−21/−8/−28/0/0/0/0。原始SWNS/STNS/HWNS/HTNS=+0.005/0/+0.020/0ns，报告setup/hold零违例；继承的全板外部时序覆盖限制仍保留，不扩大为全板签核。
 
-2026-10-31 22:54:26 JTAG SRAM下载成功，PRG-2014和download结束判据通过，未写Flash、未占用采集卡、未自动切档。bit：`D:/FPGA/codex/_build/20261029project/gain12-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit`；SHA256=`674075a84e87142d858ecbc77dda6ea7903c5e8a65791f38d618745b0495481f`。本阶段`bitstreams`另存G8与G12两份bit；小型证据存仓库`validation/gain12_shadow_lift_20261031`，原始输出留本阶段_build。实际高光、肤色和噪声待用户比较。
+2026-10-31 22:54:26 JTAG SRAM下载成功，PRG-2014和download结束判据通过，未写Flash、未占用采集卡、未自动切档。bit：`D:/FPGA/codex/_build/20261029project/gain12-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit`；SHA256=`674075a84e87142d858ecbc77dda6ea7903c5e8a65791f38d618745b0495481f`。本阶段`bitstreams`另存G8与G12两份bit；小型证据存仓库`validation/gain12_shadow_lift_20261031`，原始输出留本阶段_build。
+
+最新反馈：用户确认G12“还是不行”，希望非高光用G24、高光用G8。本试验不记为画质验收通过。已核查整帧增益、RAW10提前截位、当前L与线性×3差异及真实双帧融合代价；建议先静态组合验证，再决定实时实现，详见[总计划阶段1.14](IMAGE_ENHANCEMENT_PLAN_20261030.md#阶段114评估非高光g24高光g8的分区目标方案核查)。本次仅更新方案，未修改或烧录新镜像。
