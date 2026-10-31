@@ -1,0 +1,22 @@
+{
+  "pass": true,
+  "scope": "Actual RGB8 L0..3 lift, same-pixel metadata, OSD and mixer versus original pre-mixer reference; four modes and gains",
+  "source_sha256": {
+    "user_source/hdl_source/design_top_wrapper.v": "30fb462d6efa0443dbad2a03005c7925443b441c431693cf62de83fd133a10f6",
+    "user_source/hdl_source/hdmi_mixer.v": "464fa8edd7ecbfd9bb5758dfee874b412df0a12847f0d02cc58fb90434526fb8",
+    "user_source/hdl_source/highlight_tone.v": "f66d5cb8516be9cedf0197fc174f0d50948efecad6d64700d7e5a103434f3c9e",
+    "user_source/hdl_source/highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+    "user_source/hdl_source/highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source/hdl_source/highlight_white_prepare.v": "a0782a1db8a1076e1919b097e7a01cfb19ba20f55ae94e42c4799437bef8d6eb",
+    "user_source/hdl_source/osd_overlay.v": "3d1f97a5e14fcfd61f132f6da36824a7640822d000f0eddf7fa07c4fb61c0c39",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "cycles": 3186373,
+  "identical_ddr_reads": 3153920,
+  "full_720p_frames": 2,
+  "extra_mode_candidate_frames": 16,
+  "original_mixer_ref": "42b0736",
+  "production_top_instances_extracted": true,
+  "pixel_latency_unchanged": true
+}

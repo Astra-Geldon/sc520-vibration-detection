@@ -1,0 +1,19 @@
+{
+  "pass": true,
+  "scope": "Actual E/G/V/L or N glyphs/composition; natural on/off, gain12 on/off, all gains,V,lift,enable; exact default-off baseline pixels and Logo",
+  "reference_commit": "6882d41",
+  "pixel_vectors": 1655808,
+  "logo_coloured_pixels": 4198,
+  "natural_labels": [
+    "L=0",
+    "L=1",
+    "N=1",
+    "N=2"
+  ],
+  "source_sha256": {
+    "user_source/hdl_source/osd_overlay.v": "3d1f97a5e14fcfd61f132f6da36824a7640822d000f0eddf7fa07c4fb61c0c39",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "test_script_sha256": "882d62d71da3382669291b34f8f7071e25baa52ef104ea5676be4ee393e47b87"
+}

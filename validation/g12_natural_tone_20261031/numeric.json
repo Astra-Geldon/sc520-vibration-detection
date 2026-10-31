@@ -1,0 +1,42 @@
+{
+  "pass": true,
+  "scope": "Real natural-profile RTL versus archived L1 and independent piecewise target; UI/reset/mode regression",
+  "source_sha256": {
+    "user_source/hdl_source/highlight_tone.v": "f66d5cb8516be9cedf0197fc174f0d50948efecad6d64700d7e5a103434f3c9e",
+    "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "db424f788044fb9cc518422e41db5a5c1703c2a8199d168c8f3d7edbbb4e4456",
+    "user_source/hdl_source/design_top_wrapper.v": "30fb462d6efa0443dbad2a03005c7925443b441c431693cf62de83fd133a10f6"
+  },
+  "tests": {
+    "numeric": {
+      "pass": true,
+      "log": "numeric.log"
+    },
+    "controls": {
+      "pass": true,
+      "log": "controls.log"
+    }
+  },
+  "reference_commit": "6882d4116890253400393fe4e5265cea5d76e0e3",
+  "reference_tone_sha256": "e6a87d70e205df35368e4dcfdac0b625541868c089c517230001d6db086928fa",
+  "rgb_rotation_cases": 394752,
+  "independent_peak_targets": 1024,
+  "highlight_rgb_equivalence_cases": 100440,
+  "bypass_cases": 2048,
+  "l0_identity": true,
+  "l1_archived_coefficients_and_rgb_exact": true,
+  "highlight_ge208_archived_l1_exact": true,
+  "monotone_peak_targets": true,
+  "no_new255_mapping_or_overflow": true,
+  "common_rgb_rounding_bound_code": 0.5,
+  "common_rgb_ratio_bound_code": 1,
+  "exhaustive_multiplier_domain_repeated": false,
+  "controls": {
+    "default_nominal_gain": 12,
+    "default_exposure": 900,
+    "default_profile_index": 1,
+    "key4_presses": 8,
+    "image_modes": 4,
+    "key4_does_not_change_sensor": true
+  }
+}

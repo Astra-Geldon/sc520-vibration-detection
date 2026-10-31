@@ -1,0 +1,203 @@
+{
+  "source_commit": "9b2d46da431fec047052f686232b00285dd466ff",
+  "branch": "image-g12-natural-tone-20261031",
+  "scope": "Single-frame G12 natural contrast; original L0/L1, new N1/N2, exact L1 at input peak>=208; KEY4 comparison",
+  "resources": {
+    "LUT6": 10036,
+    "Slice": 11197,
+    "FF": 9438,
+    "ERAM20K": 43,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_gain12_reference": {
+    "LUT6": -43,
+    "Slice": -25,
+    "FF": -3,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": -0.002,
+    "STNS_ns": -0.002,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": false,
+  "engineering_parameter_comparison_allowed": true,
+  "engineering_comparison_qualification": {
+    "engineering_parameter_comparison_allowed": true,
+    "raw_reported_setup_hold_pass": false,
+    "full_production_timing_signoff": false,
+    "decision_scope": "Controlled image-quality comparison, same pre-existing source-stable gain-label synchronizer protocol as G8 comparison; no functional pixel-path setup or hold failure",
+    "negative_paths": [
+      {
+        "slack_ns": -0.002,
+        "group": "pll_clk_24m -> HDMI_PIXEL_CLK",
+        "startpoint": "u_uicfgcs520/O_gain_sel_gray_reg[1]_syn_5.clk (rising edge triggered by clock pll_clk_24m  { rise@0.000000ns  fall@21.000000ns  period=42.000000 })",
+        "endpoint_physical_alias": "u_img_proc/S_acc_reg[11]_syn_2.imb (rising edge triggered by clock HDMI_PIXEL_CLK  { rise@0.000000ns  fall@6.666000ns  period=13.333000 })",
+        "actual_endpoint_net": "S_gain_gray_meta[1]",
+        "logic_levels": 0
+      }
+    ],
+    "all_self_clock_setup_groups_pass": [
+      {
+        "group": "MIPI_RX_BYTE_CLK -> MIPI_RX_BYTE_CLK",
+        "setup_WNS_ns": 0.101
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 4.055
+      },
+      {
+        "group": "HDMI_PIXEL_CLK -> HDMI_PIXEL_CLK",
+        "setup_WNS_ns": 0.234
+      },
+      {
+        "group": "sys_clk_50m -> sys_clk_50m",
+        "setup_WNS_ns": 12.756
+      },
+      {
+        "group": "pll_clk_24m -> pll_clk_24m",
+        "setup_WNS_ns": 35.193
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 34.136
+      },
+      {
+        "group": "HDMI_SERIAL_CLK -> HDMI_SERIAL_CLK",
+        "setup_WNS_ns": 0.968
+      },
+      {
+        "group": "pll_clk_100m -> pll_clk_100m",
+        "setup_WNS_ns": 8.211
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 32.085
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 13.7
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 34.503
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 31.122
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 13.224
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 32.717
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 13.155
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 0.0
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 32.425
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 13.477
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 12.349
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 31.922
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 12.982
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 0.0
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 12.413
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 30.102
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk",
+        "setup_WNS_ns": 12.763
+      },
+      {
+        "group": "u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk -> u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk",
+        "setup_WNS_ns": 34.054
+      }
+    ],
+    "HDMI_pixel_setup_WNS_ns": 0.234,
+    "hold_WNS_ns": 0.02,
+    "hold_TNS_ns": 0.0,
+    "source_stable_protocol_RTL_checks": 1220,
+    "source_transition_cases": 224,
+    "report_sha256": "157874c4dccbfe58d77c1409eb0be1e13c4e22ea43cc976620dcb54482ec08f6",
+    "constraints_modified": false,
+    "limitations": [
+      "First synchronizer stage is intentionally allowed to sample asynchronous/phase-crossing status; RTL does not quantify analog metastability MTBF.",
+      "The negative slack is retained in all reports; this is not a claim of global STA pass or external-board timing signoff.",
+      "Control source holds requested gain stable over I2C and at least50ms before raising verified, destination uses two stages and stable snapshots at VS; the six-register board V0 problem is independent and remains unresolved."
+    ]
+  },
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD internal setup/hold; inherited external timing coverage limits retained",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "974833732976d1106e823c76741702dfbe6d8360fd319ccf76546f45b1a1d72d",
+  "bit": {
+    "path": "D:/FPGA/codex/_build/20261029project/g12-natural-tone-20261031/compile-v1/camera_to_dsi_display.bit",
+    "sha256": "8d7dcafd51b9a9d79709b407bf8ef703112ba96a77af0182ba336ed264eacced",
+    "bytes": 1789539
+  },
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "L": 1,
+    "C": 0,
+    "P": 0,
+    "W": 0
+  },
+  "board_programming": "success_JTAG_SRAM",
+  "visual_acceptance": "pending_user_observation",
+  "profiles": {
+    "0": "L0 bypass",
+    "1": "L1 unchanged reference",
+    "2": "N1 light natural contrast",
+    "3": "N2 medium natural contrast"
+  },
+  "frame_processing": "single-frame per-pixel; no alternating capture or extra frame buffer",
+  "generated_utc": "2026-10-31T15:56:40.859401+00:00",
+  "board_programming_evidence": {
+    "path": "D:/FPGA/codex/_build/20261029project/g12-natural-tone-20261031/burn-v1/programming.json",
+    "sha256": "1db0316f45944d3edd0f7e47f1c8c4e9e745d89528a94de232f42d358600222c",
+    "finished_local": "2026-10-31T23:57:01.681421+08:00"
+  },
+  "pre_programming_manifest_sha256": "69d85b2fd51f0af411d7de663e5c84b86875eb6583f6a195f340503b93e19045",
+  "last_updated_utc": "2026-10-31T15:59:54.548260+00:00"
+}

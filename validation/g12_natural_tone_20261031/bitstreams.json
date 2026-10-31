@@ -1,0 +1,12 @@
+{
+  "reference_G12_L1_6882d41.bit": {
+    "source_commit": "6882d41",
+    "sha256": "674075a84e87142d858ecbc77dda6ea7903c5e8a65791f38d618745b0495481f",
+    "bytes": 1789539
+  },
+  "candidate_N1_N2_9b2d46d.bit": {
+    "source_commit": "9b2d46da431fec047052f686232b00285dd466ff",
+    "sha256": "8d7dcafd51b9a9d79709b407bf8ef703112ba96a77af0182ba336ed264eacced",
+    "bytes": 1789539
+  }
+}
