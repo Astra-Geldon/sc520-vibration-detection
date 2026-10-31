@@ -33,7 +33,8 @@
 module ae_set #(
 parameter integer EXP_RST = 0, // 0/1/2/3 = 1991/1600/1200/900
 parameter integer GAIN_COMPARE_EN = 0, // KEY3: fixed900, gain160/144/112/80
-parameter integer GAIN_RST = 0 // gain comparison reset index; legacy default unchanged
+parameter integer GAIN_RST = 0, // gain comparison reset index; legacy default unchanged
+parameter integer GAIN12_EN = 0 // use nominal12x instead of16x at gain index1
 )
 (
 input wire I_clk,
@@ -126,7 +127,7 @@ function [15:0] f_gain_value;
 	begin
 		case(sel)
 			2'd0: f_gain_value = 16'd160;
-			2'd1: f_gain_value = 16'd144;
+			2'd1: f_gain_value = (GAIN12_EN != 0) ? 16'd128 : 16'd144;
 			2'd2: f_gain_value = 16'd112;
 			default: f_gain_value = 16'd80;
 		endcase

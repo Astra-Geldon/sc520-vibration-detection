@@ -842,7 +842,7 @@ module design_top_wrapper (
 	
 
   
-  ae_set #(.EXP_RST(3), .GAIN_COMPARE_EN(1), .GAIN_RST(2)) u_ae_set (
+  ae_set #(.EXP_RST(3), .GAIN_COMPARE_EN(1), .GAIN_RST(1), .GAIN12_EN(1)) u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({I_button,2'b11}),
@@ -1451,6 +1451,7 @@ isp_top u_isp_top (
         .SHOULDER_DEBUG_EN ( 0 ),
         .GAIN_DEBUG_EN ( 1 ),
         .LIFT_DEBUG_EN ( 1 ),
+        .GAIN12_EN ( 1 ),
         .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),

@@ -32,6 +32,7 @@ module osd_overlay #(
     parameter integer SHOULDER_DEBUG_EN = 0,// C/P/W: eight references + white protection
     parameter integer GAIN_DEBUG_EN = 0,    // isolated exposure900/gain comparison
     parameter integer LIFT_DEBUG_EN = 0,    // append L0..L3 RGB8 lift profile
+    parameter integer GAIN12_EN = 0,        // gain index1 label12 instead of16
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
     // ---- 画面尺寸（与 VTC 一致）----
@@ -171,7 +172,7 @@ module osd_overlay #(
     wire S_gain_box, S_gain_white;
     generate
         if (GAIN_DEBUG_EN != 0) begin : g_gain_text
-            osd_gain_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32), .LIFT_DEBUG_EN(LIFT_DEBUG_EN)) u_line (
+            osd_gain_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32), .LIFT_DEBUG_EN(LIFT_DEBUG_EN), .GAIN12_EN(GAIN12_EN)) u_line (
                 .I_x(S_x), .I_y(S_y), .I_enable(I_de),
                 .I_sel(I_gain_sel), .I_verified(I_gain_verified),
                 .I_lift_sel(I_lift_sel),
@@ -309,7 +310,8 @@ endmodule
 module osd_gain_line #(
     parameter integer TEXT_X = 24,
     parameter integer TEXT_Y = 56,
-    parameter integer LIFT_DEBUG_EN = 0
+    parameter integer LIFT_DEBUG_EN = 0,
+    parameter integer GAIN12_EN = 0
 )(
     input wire [10:0] I_x,
     input wire [9:0] I_y,
@@ -345,7 +347,7 @@ module osd_gain_line #(
     always @(*) begin
         case (I_sel)
             2'd0: begin S_tens=4'd2; S_ones=4'd4; end
-            2'd1: begin S_tens=4'd1; S_ones=4'd6; end
+            2'd1: begin S_tens=4'd1; S_ones=(GAIN12_EN != 0) ? 4'd2 : 4'd6; end
             2'd2: begin S_tens=4'd15; S_ones=4'd8; end
             default: begin S_tens=4'd15; S_ones=4'd4; end
         endcase

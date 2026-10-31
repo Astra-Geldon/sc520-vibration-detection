@@ -173,7 +173,7 @@ module uicfgcs520 #(
                     if (ae_table_active && (reg_index == 9'd0)) begin
                         case (I_ag)
                             16'd160: O_gain_sel_gray <= 2'b00;
-                            16'd144: O_gain_sel_gray <= 2'b01;
+                            16'd128, 16'd144: O_gain_sel_gray <= 2'b01;
                             16'd112: O_gain_sel_gray <= 2'b11;
                             default: O_gain_sel_gray <= 2'b10;
                         endcase
