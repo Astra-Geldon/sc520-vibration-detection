@@ -1257,7 +1257,7 @@ isp_top u_isp_top (
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
         .EXP_RST    ( 3          ),   // unused UI output; sensor exposure is fixed900
-        .REGION_RST ( 1          ),   // L1 first; KEY4 L1/L2/L3/L0
+        .REGION_RST ( 2          ),   // N1 first; KEY4 N1/N2/L0/L1
         .REGION_N   ( 4          ),
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )

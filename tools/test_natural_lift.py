@@ -1,4 +1,4 @@
-"""Check the natural profiles against an archived L1 and an independent target.
+"""Check highlight-guard profiles against archived L1 and independent targets.
 
 This runs production gain8_lift RTL, the archived L1 RTL, and the real UI/AE
 controllers in Icarus. Generated HDL, vectors, logs and binaries stay in --output.
@@ -14,18 +14,22 @@ import re
 import subprocess
 
 
-ANCHORS = [(0, 0), (24, -2), (64, -8), (128, -4), (168, 0),
-           (200, 4), (220, 3), (237, 0), (255, 0)]
+PROFILE_KNOTS = {
+    'N1': [(0, 0), (16, 28), (32, 52), (64, 100), (96, 136),
+           (128, 160), (160, 176), (192, 192), (255, 255)],
+    'N2': [(0, 0), (16, 40), (32, 72), (64, 124), (96, 156),
+           (128, 176), (160, 184), (192, 192), (255, 255)],
+}
 
 
 def nearest(value):
     return (2 * value.numerator + value.denominator) // (2 * value.denominator)
 
 
-def offset(value):
-    for (x0, y0), (x1, y1) in zip(ANCHORS, ANCHORS[1:]):
+def target(value, knots):
+    for (x0, y0), (x1, y1) in zip(knots, knots[1:]):
         if x0 <= value <= x1:
-            return Fraction(y0) + Fraction((value - x0) * (y1 - y0), x1 - x0)
+            return nearest(Fraction(y0) + Fraction((value - x0) * (y1 - y0), x1 - x0))
     raise AssertionError(value)
 
 
@@ -41,9 +45,11 @@ def main():
     iv = Path('D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin/iverilog.exe')
     files = [hdl / name for name in ['highlight_tone.v', 'img_mode_sel.v', 'uiisp_beta/ae_set.v']]
     bound_files = files + [hdl / 'design_top_wrapper.v']
-    summary = {'pass': False, 'scope': 'Real natural-profile RTL versus archived L1 and independent piecewise target; UI/reset/mode regression',
+    summary = {'pass': False, 'scope': 'Real highlight-guard RTL versus archived L1 and independent input-peak targets; high-peak identity and UI/reset/mode regression',
                'source_sha256': {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
-                                 for p in bound_files}, 'tests': {}}
+                                 for p in bound_files},
+               'test_script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+               'tests': {}}
 
     def run(name, bench, extra_files=()):
         tb = out / (name + '.v')
@@ -76,11 +82,30 @@ def main():
         l1_gains = [(packed[p] >> 22) & 2047 for p in range(256)]
         l1_peaks = [(p * l1_gains[p] + 128) >> 8 for p in range(256)]
         targets = list(range(256)) + l1_peaks
-        for strength in [Fraction(1, 2), Fraction(1)]:
-            candidate = [q if p >= 208 else nearest(Fraction(q) + strength * offset(q))
-                         for p, q in enumerate(l1_peaks)]
+        candidates = {}
+        for label, knots in PROFILE_KNOTS.items():
+            candidate = [target(p, knots) for p in range(256)]
             assert all(a <= b for a, b in zip(candidate, candidate[1:]))
+            assert candidate[192:] == list(range(192, 256))
+            assert all(value >= p for p, value in enumerate(candidate))
+            candidates[label] = candidate
             targets.extend(candidate)
+        summary['profile_input_peak_knots'] = PROFILE_KNOTS
+        summary['visible_peak_deltas_vs_l1'] = {
+            label: {'minimum_code': min(a-b for a, b in zip(values, l1_peaks)),
+                    'maximum_code': max(a-b for a, b in zip(values, l1_peaks)),
+                    'different_peak_count': sum(a != b for a, b in zip(values, l1_peaks)),
+                    'absolute_delta_ge10_peak_count': sum(abs(a-b) >= 10 for a, b in zip(values, l1_peaks)),
+                    'absolute_delta_ge20_peak_count': sum(abs(a-b) >= 20 for a, b in zip(values, l1_peaks))}
+            for label, values in candidates.items()}
+        summary['representative_peak_targets'] = [
+            {'input_peak': p, 'L0': p, 'L1': l1_peaks[p],
+             **{label: values[p] for label, values in candidates.items()}}
+            for p in [0, 16, 32, 64, 96, 128, 160, 176, 192, 208, 224, 240, 255]]
+        summary['N2_minus_N1_peak_delta'] = {
+            'maximum_code': max(a-b for a, b in zip(candidates['N2'], candidates['N1'])),
+            'different_peak_count': sum(a != b for a, b in zip(candidates['N2'], candidates['N1'])),
+            'absolute_delta_ge10_peak_count': sum(abs(a-b) >= 10 for a, b in zip(candidates['N2'], candidates['N1']))}
         target_file = out / 'independent_peak_targets.hex'
         target_file.write_text('\n'.join(f'{target:02x}' for target in targets) + '\n', encoding='ascii')
         legacy_modules = legacy[legacy.index('module gain8_lift_gain('):]
@@ -111,7 +136,7 @@ initial begin
    previous=result[23:16];peak_checks=peak_checks+1;
    if(s==0&&gain!==256)$fatal(1,"L0 coefficient not identity");
    if(s==1&&gain!==old_gain)$fatal(1,"archived L1 coefficient changed p%0d",p);
-   if(s>0&&p>=208&&gain!==old_gain)$fatal(1,"highlight coefficient changed s%0d p%0d",s,p);
+   if(s>=2&&p>=192&&gain!==256)$fatal(1,"highlight coefficient not identity s%0d p%0d",s,p);
    // Every possible subordinate intensity occupies each of R,G,B in turn.
    for(v=0;v<=p;v=v+1)for(c=0;c<3;c=c+1)begin
     case(c)
@@ -125,8 +150,8 @@ initial begin
     if(result!=={8'(expected_r),8'(expected_g),8'(expected_b)})$fatal(1,"common RGB product mismatch");
     if(s==0&&result!==data)$fatal(1,"L0 RGB bypass changed");
     if(s==1&&result!==old_result)$fatal(1,"L1 archived RGB mismatch");
-    if(s>0&&p>=208)begin
-     if(result!==old_result)$fatal(1,"highlight archived RGB mismatch");
+    if(s>=2&&p>=192)begin
+     if(result!==data)$fatal(1,"highlight RGB not input identity");
      highlights=highlights+1;
     end
     for(channel=0;channel<3;channel=channel+1)begin
@@ -156,13 +181,14 @@ endmodule
         summary.update(rgb_rotation_cases=int(result[1]), independent_peak_targets=int(result[2]),
                        highlight_rgb_equivalence_cases=int(result[3]), bypass_cases=int(result[4]),
                        l0_identity=True, l1_archived_coefficients_and_rgb_exact=True,
-                       highlight_ge208_archived_l1_exact=True, monotone_peak_targets=True,
+                       highlight_ge192_input_identity=True, monotone_peak_targets=True,
+                       highlight_identity_profiles=['N1', 'N2'], highlight_identity_starts_at_peak=192,
                        no_new255_mapping_or_overflow=True, common_rgb_rounding_bound_code=0.5,
                        common_rgb_ratio_bound_code=1,
                        exhaustive_multiplier_domain_repeated=False)
         top = (hdl / 'design_top_wrapper.v').read_text(encoding='utf-8')
         assert re.search(r'ae_set\s*#\(\.EXP_RST\(3\),\s*\.GAIN_COMPARE_EN\(1\),\s*\.GAIN_RST\(1\),\s*\.GAIN12_EN\(1\)\)', top)
-        assert re.search(r'\.REGION_RST\s*\(\s*1\s*\)', top)
+        assert re.search(r'\.REGION_RST\s*\(\s*2\s*\)', top)
         assert re.search(r'\.REGION_N\s*\(\s*4\s*\)', top)
         run('controls', r'''
 `timescale 1ns/1ps
@@ -170,7 +196,7 @@ module tb;
 reg clk=0;always #5 clk=~clk;
 reg rstn=0;reg[3:0] keys=15;wire[2:0] mode;wire[3:0] lift;
 wire[15:0] ae,ag;wire req;
-img_mode_sel #(.CLK_HZ(1000),.DB_MS(1),.REGION_RST(1),.REGION_N(4)) ui(
+img_mode_sel #(.CLK_HZ(1000),.DB_MS(1),.REGION_RST(2),.REGION_N(4)) ui(
  .I_clk(clk),.I_rst_n(rstn),.I_key_n(keys),.O_mode(mode),.O_region_sel(lift));
 ae_set #(.EXP_RST(3),.GAIN_COMPARE_EN(1),.GAIN_RST(1),.GAIN12_EN(1)) sensor(
  .I_clk(clk),.I_rst(!rstn),.I_btn(4'b1111),.I_exp_key_n(1'b1),
@@ -183,20 +209,20 @@ integer k;
 initial begin
  #1;rstn=1;#1;rstn=0;repeat(4)@(negedge clk);rstn=1;
  repeat(12)@(negedge clk);
- if(lift!==1||mode!==0||ae!==900||ag!==128)$fatal(1,"wrong startup");
+ if(lift!==2||mode!==0||ae!==900||ag!==128)$fatal(1,"wrong startup");
  for(k=0;k<8;k=k+1)begin
-  press(3);if(lift!==((k+2)%4))$fatal(1,"KEY4 wrap");
+  press(3);if(lift!==((k+3)%4))$fatal(1,"KEY4 wrap");
   if(ae!==900||ag!==128)$fatal(1,"KEY4 changed sensor");
  end
  press(1);if(mode!==1)$fatal(1,"gray");press(1);if(mode!==2)$fatal(1,"binary");
  press(1);if(mode!==3)$fatal(1,"Sobel");press(0);if(mode!==0)$fatal(1,"colour");
- if(lift!==1)$fatal(1,"mode key changed lift");
- $display("PASS controls: L1 reset,8 KEY4 presses,4 modes; sensor E900/code128 independent");$finish;
+ if(lift!==2)$fatal(1,"mode key changed lift");
+ $display("PASS controls: N1 reset,8 KEY4 presses,4 modes; sensor E900/code128 independent");$finish;
 end
 endmodule
 ''')
         summary['controls'] = {'default_nominal_gain': 12, 'default_exposure': 900,
-                               'default_profile_index': 1, 'key4_presses': 8, 'image_modes': 4,
+                               'default_profile_index': 2, 'key4_presses': 8, 'image_modes': 4,
                                'key4_does_not_change_sensor': True}
         summary['pass'] = True
     except (AssertionError, OSError, ValueError, subprocess.SubprocessError) as error:
