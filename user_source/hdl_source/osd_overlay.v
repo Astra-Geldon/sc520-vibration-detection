@@ -2,7 +2,7 @@
 //  osd_overlay.v  ——  视频 OSD 叠加（基础要求 2.3(4)）
 //
 //  插入位置
-//      img_proc → C3 → hdmi_mixer → chroma denoise → [osd_overlay] → HDMI
+//      img_proc ──► [osd_overlay] ──► hdmi_mixer
 //      时钟域 S_hdmi_pixel_clk（74.25 MHz），与 VTC / mixer 同域。
 //
 //  显示内容
@@ -14,7 +14,7 @@
 //  ★ 关键：仍然保持"数据零延迟"
 //      O_data 相对 I_data 是**纯组合**的（一个 3 选 1 mux），
 //      因为坐标计数器只用来算出"该不该覆盖"，不参与数据通路。
-//      当前放在降噪之后，和降噪后的 DE/VS 一起使用，不再另加像素延迟。
+//      这样 hdmi_mixer 的 2 级数据/DE 对齐照旧成立，de 不用跟着延拍。
 //      实现：Logo 用 LUT ROM（640 条 case 的 32 bit 字 + 变量移位取像素），
 //      字模用 case ROM，两者都是**组合输出**，因此叠加位置与像素坐标严格对齐。
 //
@@ -29,7 +29,6 @@ module osd_overlay #(
     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
     parameter integer TH_DEBUG_EN = 0,      // 二值化实际阈值/锁定状态诊断
     parameter integer REGION_DEBUG_EN = 0,  // 彩色画面固定H1及补偿档 H=1 C=0/1/2/3/M
-    parameter integer DENOISE_DEBUG_EN = 0, // 彩色画面固定C3及色度降噪档 C=3 D=0/1/2/3
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
 
     // ---- 画面尺寸（与 VTC 一致）----
@@ -58,11 +57,11 @@ module osd_overlay #(
     input  wire        I_src_raw,   // 二值化来源：1=原图，0=视觉增强输入
     input  wire [ 1:0] I_k_sel,     // 兼容保留，KEY4 已释放
     input  wire [ 1:0] I_exp_sel,   // 曝光候选编号：0=1991,1=1600,2=1200,3=900
-    input  wire [ 2:0] I_region_sel,// 旧补偿档；DENOISE_DEBUG_EN时为D0..D3色度降噪档
+    input  wire [ 2:0] I_region_sel,// 补偿：0=关闭，1=弱，2=中，3=强，4=仅查看H1掩码
     input  wire [ 7:0] I_threshold, // 二值比较器实际使用的阈值
     input  wire        I_th_locked, // 实际已提交的锁定状态
-    input  wire [23:0] I_data,      // 当前视频；本实验为降噪后的C3图像
-    output wire [23:0] O_data       // 同拍叠加OSD，送HDMI
+    input  wire [23:0] I_data,      // 来自 img_proc
+    output wire [23:0] O_data       // 送 hdmi_mixer
 );
 
     //------------------------------------------------------------------
@@ -165,9 +164,8 @@ module osd_overlay #(
     // H=1 C=0/1/2/3/M 与上方真实曝光编号分行显示；M表示查看品红H1掩码。
     wire S_region_box, S_region_white;
     generate
-        if ((REGION_DEBUG_EN != 0) || (DENOISE_DEBUG_EN != 0)) begin : g_region_text
-            osd_region_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32),
-                              .DENOISE_MODE(DENOISE_DEBUG_EN)) u_line (
+        if (REGION_DEBUG_EN != 0) begin : g_region_text
+            osd_region_line #(.TEXT_X(TEXT_X), .TEXT_Y(TEXT_Y + 32)) u_line (
                 .I_x       ( S_x            ),
                 .I_y       ( S_y            ),
                 .I_enable  ( I_de && (I_mode == 3'd0) ),
@@ -281,12 +279,10 @@ module osd_overlay #(
 endmodule
 
 // Seven 6x8 character cells, 2x scale: "H=1 C=0" .. "H=1 C=3", "H=1 C=M".
-// DENOISE_MODE instead shows "C=3 D=0" .. "C=3 D=3".
 // Constant glyphs, shifts and additions only; no pixel register or ROM file.
 module osd_region_line #(
     parameter integer TEXT_X = 24,
-    parameter integer TEXT_Y = 56,
-    parameter integer DENOISE_MODE = 0
+    parameter integer TEXT_Y = 56
 )(
     input wire [10:0] I_x,
     input wire [9:0] I_y,
@@ -307,7 +303,6 @@ module osd_region_line #(
                 4'd5: f_glyph = {5'b00000,5'b11111,5'b00000,5'b11111,5'b00000,5'b00000,5'b00000}; // =
                 4'd6: f_glyph = {5'b01110,5'b10001,5'b10000,5'b10000,5'b10000,5'b10001,5'b01110}; // C
                 4'd7: f_glyph = {5'b10001,5'b11011,5'b10101,5'b10101,5'b10001,5'b10001,5'b10001}; // M
-                4'd9: f_glyph = {5'b11110,5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b11110}; // D
                 default: f_glyph = 35'd0;
             endcase
         end
@@ -319,7 +314,7 @@ module osd_region_line #(
     reg [3:0] S_cell_x;
     always @(*) begin
         if (S_local_x < 11'd12) begin
-            S_glyph_id = (DENOISE_MODE != 0) ? 4'd6 : 4'd4;
+            S_glyph_id = 4'd4;
             S_cell_x = S_local_x[3:0];
         end
         else if (S_local_x < 11'd24) begin
@@ -327,7 +322,7 @@ module osd_region_line #(
             S_cell_x = S_local_x - 11'd12;
         end
         else if (S_local_x < 11'd36) begin
-            S_glyph_id = (DENOISE_MODE != 0) ? 4'd3 : 4'd1;
+            S_glyph_id = 4'd1;
             S_cell_x = S_local_x - 11'd24;
         end
         else if (S_local_x < 11'd48) begin
@@ -335,7 +330,7 @@ module osd_region_line #(
             S_cell_x = S_local_x - 11'd36;
         end
         else if (S_local_x < 11'd60) begin
-            S_glyph_id = (DENOISE_MODE != 0) ? 4'd9 : 4'd6;
+            S_glyph_id = 4'd6;
             S_cell_x = S_local_x - 11'd48;
         end
         else if (S_local_x < 11'd72) begin

@@ -36,7 +36,6 @@ module awb  #(
 (
     input                   I_clk  ,
     input                   I_rst_n,
-    input                   I_exposure_toggle,
 
 
     input                   I_tlast  ,
@@ -288,22 +287,6 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   wire [19:0] S_smooth_r_hold = S_smooth_r_sum[19:0];
   wire [19:0] S_smooth_b_calc = S_smooth_b_sum[19:0];
   reg         S_awb_first;
-  // Exposure updates arrive as a toggle from the 24 MHz sensor/I2C domain.
-  // Keep the event until a valid AWB frame commits, then use a short fast
-  // settle window before returning to the normal 1/64 frame smoothing.
-  reg         S_exp_toggle_meta;
-  reg         S_exp_toggle_sync;
-  reg         S_exp_toggle_seen;
-  reg  [3:0]  S_fast_frames;
-
-  wire signed [20:0] S_fast_step_r = S_delta_r >>> 2;
-  wire signed [20:0] S_fast_step_b = S_delta_b >>> 2;
-  wire signed [21:0] S_fast_r_sum = $signed({2'b0, in_r_r1}) +
-                                    {{1{S_fast_step_r[20]}}, S_fast_step_r};
-  wire signed [21:0] S_fast_b_sum = $signed({2'b0, in_b_r1}) +
-                                    {{1{S_fast_step_b[20]}}, S_fast_step_b};
-  wire [19:0] S_fast_r_hold = S_fast_r_sum[19:0];
-  wire [19:0] S_fast_b_hold = S_fast_b_sum[19:0];
 
   always @(posedge I_clk or negedge I_rst_n) begin
       if (!I_rst_n) begin
@@ -320,19 +303,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
           in_r_r1   <= 20'h10000;
           in_b_r1   <= 20'h10000;
           S_awb_first <= 1'b1;
-          S_exp_toggle_meta <= 1'b0;
-          S_exp_toggle_sync <= 1'b0;
-          S_exp_toggle_seen <= 1'b0;
-          S_fast_frames <= 4'd0;
       end
       else begin
-          // Two-flop synchronizer for the persistent AE-complete event.
-          S_exp_toggle_meta <= I_exposure_toggle;
-          S_exp_toggle_sync <= S_exp_toggle_meta;
-          if (S_exp_toggle_sync != S_exp_toggle_seen) begin
-              S_exp_toggle_seen <= S_exp_toggle_sync;
-              S_fast_frames <= 4'd8;
-          end
           case (S_dst)
               DIV_IDLE: begin
                   //------------------------------------------------------------------
@@ -398,19 +370,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                   if (S_dcnt == 6'd0) begin
                       // 样本不足时保持上一组增益；有效帧才更新并结束冷启动状态。
                       if (S_frame_ok) begin
-                          if (S_awb_first) begin
-                              in_r_r1 <= S_gain_r_hold;
-                              in_b_r1 <= S_gain_calc;
-                          end else if (S_fast_frames != 0) begin
-                              // Exposure changed: converge over eight valid
-                              // frames at alpha=1/4, then resume alpha=1/64.
-                              in_r_r1 <= S_fast_r_hold;
-                              in_b_r1 <= S_fast_b_hold;
-                              S_fast_frames <= S_fast_frames - 1'b1;
-                          end else begin
-                              in_r_r1 <= S_smooth_r_hold;
-                              in_b_r1 <= S_smooth_b_calc;
-                          end
+                          in_r_r1 <= S_awb_first ? S_gain_r_hold : S_smooth_r_hold;
+                          in_b_r1 <= S_awb_first ? S_gain_calc   : S_smooth_b_calc;
                           S_awb_first <= 1'b0;
                       end
                       S_dst   <= DIV_IDLE;

@@ -71,7 +71,7 @@
 //
 //  打开（默认）= 用板载 4 个按键 KEY1~KEY4 选择（按下=低）：
 //        SW3 拨上 → 强制原图    SW2 拨上 → 二值化
-//        KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=C3色度降噪D0/D1/D2/D3
+//        KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=补偿C0/C1/C2/C3/H1选区查看
 //  注释掉      = 回到编译期固定模式（用下面的 IMG_MODE），资源可回到只综合一种
 //
 //  ★ 与队友功能的分隔：本开关只影响两个地方 ——
@@ -91,8 +91,8 @@
 //  OSD_LOGO_ROM = Logo 走 EG_LOGIC_BRAM + osd_logo.mif（厂商 rom_bmp.v 同款）
 //                 注释掉则 Logo 恒为透明，只留文字，便于对比排查
 //
-//  关掉 OSD_ON 后 osd_overlay 完全不例化，降噪后的像素直接送 HDMI，
-//  只裁掉 OSD 资源，C3 与色度降噪仍保留。
+//  关掉 OSD_ON 后 osd_overlay 完全不例化，mixer 直接吃 img_proc 的输出，
+//  资源回到未加 OSD 的状态。
 // =====================================================================
 `define OSD_ON
 `define OSD_LOGO_ROM
@@ -179,11 +179,6 @@ module design_top_wrapper (
     wire 			S_cam_cfg_done;
     wire 			S_ae_cfg_done;
     wire 			S_ae_req; 
-    // 24 MHz AE/I2C domain toggle: one transition after each completed
-    // exposure-table write.  This is synchronized into the CSI/AWB domain;
-    // a one-cycle request pulse must not cross clock domains directly.
-    reg             S_ae_cfg_done_d;
-    reg             S_ae_update_toggle;
 
     // Strict-original baseline: retain the original FPGA sensor controller.
     // The MCU is present as a passive clock/reset-connected instance only;
@@ -411,6 +406,7 @@ module design_top_wrapper (
     wire[23:0]  S_imgp_data;
     wire[23:0]  S_awb_data;
     wire[23:0]  S_csc_data;
+    wire[23:0]  S_osd_mix;
     wire[ 2:0]  S_img_mode;
     wire        S_img_src_raw;
     wire        S_img_th_lock_req;
@@ -430,21 +426,6 @@ module design_top_wrapper (
     reg [1:0] S_tone_stage_exp, S_tone_stage_k;
     reg [7:0] S_tone_stage_threshold;
     reg S_tone_stage_raw, S_tone_stage_locked;
-    // The mixer has two remaining registers after O_stage_data. Carry the
-    // PRE-tone protection flag and UI metadata through those same two clocks.
-    wire S_tone_protect = (S_tone_stage_mode != 3'd0) ||
-                         (S_tone_stage_data[23:16] >= 8'd208) ||
-                         (S_tone_stage_data[15:8] >= 8'd208) ||
-                         (S_tone_stage_data[7:0] >= 8'd208);
-    wire [19:0] S_tone_meta = {S_tone_stage_mode, S_tone_stage_exp,
-                              S_tone_stage_sel, S_tone_stage_k,
-                              S_tone_stage_threshold, S_tone_stage_raw,
-                              S_tone_stage_locked};
-    reg [19:0] S_denoise_meta_2d, S_denoise_meta_3d;
-    reg S_denoise_protect_2d, S_denoise_protect_3d;
-    wire S_denoise_in_hs, S_denoise_in_vs, S_denoise_in_de;
-    wire [23:0] S_denoise_in_data, S_denoise_clean_data;
-    wire [19:0] S_denoise_out_meta;
 
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -867,20 +848,6 @@ module design_top_wrapper (
       .O_iic_error(S_cam_i2c_error)
   );
 
-    // Publish a persistent event only after the sensor AE table is complete.
-    // The initial configuration also produces one event, which lets AWB
-    // discard any pre-configuration statistics before settling.
-    always @(posedge S_24m_clk or negedge S_rst_n) begin
-        if (!S_rst_n) begin
-            S_ae_cfg_done_d  <= 1'b0;
-            S_ae_update_toggle <= 1'b0;
-        end else begin
-            S_ae_cfg_done_d <= S_ae_cfg_done;
-            if (!S_ae_cfg_done_d && S_ae_cfg_done)
-                S_ae_update_toggle <= ~S_ae_update_toggle;
-        end
-    end
-
     MCU u_mcu_passive (
         .jtag_tck(1'b0), .jtag_tms(1'b0), .jtag_tdi(1'b0), .jtag_tdo(),
         .gpio0_in(I_button[0]), .gpio0_out(), .gpio0_dir(),
@@ -1047,7 +1014,6 @@ wire [1:0] S_k_sel = 2'd2;
 
 isp_top u_isp_top (
 .axi4s_video_aclk(S_csi_rx_clk),
-.I_exposure_toggle(S_ae_update_toggle),
 .I_rst_n         (S_rst_n),
 .I_tlast         (S_raw_tlast	),
 .I_tuser         (S_raw_tuser	),
@@ -1257,7 +1223,7 @@ isp_top u_isp_top (
     //------------------------------------------------------------------
 //----------------------------------------------------------------------
 //  模式选择：板载 4 个按键（KEY1..KEY4 = D5/A9/B9/C7，按下=0）
-//      KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=C3色度降噪D0/D1/D2/D3
+//      KEY1=增强彩色 KEY2=算法循环 KEY3=曝光参考循环 KEY4=补偿C0/C1/C2/C3/H1选区查看
 //    独立模块 img_mode_sel.v（内部10ms去抖 + 按下锁存），输出3 bit模式码。
 //    `IMG_MODE_KEY 关掉时退回编译期固定模式 IMG_MODE。
 //----------------------------------------------------------------------
@@ -1265,8 +1231,8 @@ isp_top u_isp_top (
     img_mode_sel #(
         .MODE_RST   ( IMG_MODE   ),   // 上电默认模式
         .EXP_RST    ( 3          ),   // real exposure900; KEY3 retains all four exposures
-        .REGION_RST ( 0          ),   // D0: original C3 brightness/color baseline
-        .REGION_N   ( 4          ),   // D0 off, D1 weak, D2 medium, D3 strong chroma denoise
+        .REGION_RST ( 2          ),   // default C2 medium midtone compensation
+        .REGION_N   ( 5          ),   // C0/C1/C2/C3/H1 mask
         .CLK_HZ     ( 75000000   ),   // = S_hdmi_pixel_clk（2026-10-24 起 75 MHz）
         .DB_MS      ( 10         )
     )u_img_mode_sel(
@@ -1283,16 +1249,16 @@ isp_top u_isp_top (
 `else
     assign S_img_mode = IMG_MODE[2:0];
     assign S_exp_sel = 2'd3;
-    assign S_region_sel_req = 3'd0;
+    assign S_region_sel_req = 3'd2;
     assign S_img_th_lock_req = 1'b0;
     assign S_img_k_step = 1'b0;
 `endif
     // 最终二值化固定增强源；KEY3只改变传感器曝光候选和 OSD 编号。
     assign S_img_src_raw = 1'b0;
 
-    // Commit D0..D3 in vertical blanking; C3 and H1 thresholds stay fixed.
+    // Latch compensation choice in vertical blanking; H1 thresholds stay fixed.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) S_region_sel <= 3'd0;
+        if (!S_hdmi_rst_n) S_region_sel <= 3'd2;
         else if (S_hdmi_vsync) S_region_sel <= S_region_sel_req;
     end
     // Gray/binary/Sobel remain their original algorithms, including line delays.
@@ -1343,7 +1309,7 @@ isp_top u_isp_top (
     //  基础图像处理：video_out -> awb_simple -> color_shading -> img_proc
     //    灰度/Sobel固定video_out原图；二值化固定增强图像，KEY3用于曝光候选
     //    mode=0 始终显示增强后的 S_csc_data，二值化来源选择不影响彩色画面
-    //                              -> C3 -> hdmi_mixer -> chroma denoise -> OSD
+    //                              -> osd -> hdmi_mixer
     //    彩色/灰度同拍；多数滤波中心晚1行1像素，Sobel保持原有延迟；不改HDMI同步
     //------------------------------------------------------------------
     img_proc #(
@@ -1368,13 +1334,13 @@ isp_top u_isp_top (
         .O_th_locked( S_img_th_locked )
     );
     //------------------------------------------------------------------
-    //  C3 keeps its existing mixer register boundary. OSD/Logo is applied
-    //  AFTER denoise so text is never fed through a color filter.
+    //  OSD 叠加：右上角安路 Logo + 左上角算法名
+    //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
     //------------------------------------------------------------------
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
-            S_tone_stage_sel <= 3'd0;
+            S_tone_stage_sel <= 3'd2;
             S_tone_stage_exp <= 2'd3;
             S_tone_stage_k <= 2'd2;
             S_tone_stage_threshold <= 8'd0;
@@ -1393,7 +1359,7 @@ isp_top u_isp_top (
     highlight_tone u_highlight_tone (
         .I_de       ( S_tone_stage_de ),
         .I_enable   ( S_tone_stage_mode == 3'd0 ),
-        .I_sel      ( 3'd3 ), // fixed accepted C3; KEY4 now selects D0..D3
+        .I_sel      ( S_tone_stage_sel ),
         .I_data     ( S_tone_stage_data ),
         .O_mask     ( ),
         .O_data     ( S_region_data )
@@ -1402,8 +1368,7 @@ isp_top u_isp_top (
     osd_overlay #(
         .OSD_EN     ( 1    ),
         .TH_DEBUG_EN( 0    ),
-        .REGION_DEBUG_EN ( 0 ),
-        .DENOISE_DEBUG_EN ( 1 ),
+        .REGION_DEBUG_EN ( 1 ),
         .LOGO_EN    ( 1    ),
         .H_ACTIVE   ( 1280 ),
         .V_ACTIVE   ( 720  ),
@@ -1417,20 +1382,20 @@ isp_top u_isp_top (
     )u_osd_overlay(
         .I_clk      ( S_hdmi_pixel_clk ),
         .I_rst_n    ( S_hdmi_rst_n     ),
-        .I_de       ( S_hdmi_out_de   ),
-        .I_vs       ( S_hdmi_out_vsync ),
-        .I_mode     ( S_denoise_out_meta[19:17] ),
-        .I_src_raw  ( S_denoise_out_meta[1] ),
-        .I_threshold( S_denoise_out_meta[9:2] ),
-        .I_th_locked( S_denoise_out_meta[0] ),
-        .I_k_sel    ( S_denoise_out_meta[11:10] ),
-        .I_exp_sel  ( S_denoise_out_meta[16:15] ),
-        .I_region_sel ( S_denoise_out_meta[14:12] ),
-        .I_data     ( S_denoise_clean_data ),
-        .O_data     ( S_hdmi_out_data )
+        .I_de       ( S_tone_stage_de   ),
+        .I_vs       ( S_tone_stage_vs   ),
+        .I_mode     ( S_tone_stage_mode ),
+        .I_src_raw  ( S_tone_stage_raw  ),
+        .I_threshold( S_tone_stage_threshold ),
+        .I_th_locked( S_tone_stage_locked ),
+        .I_k_sel    ( S_tone_stage_k    ),
+        .I_exp_sel  ( S_tone_stage_exp  ),
+        .I_region_sel ( S_tone_stage_sel ),
+        .I_data     ( S_region_data    ),
+        .O_data     ( S_osd_mix        )
     );
 `else
-    assign S_hdmi_out_data = S_denoise_clean_data;
+    assign S_osd_mix = S_region_data;
 `endif
 
     hdmi_mixer #(
@@ -1458,35 +1423,11 @@ isp_top u_isp_top (
         .O_stage_data    ( S_tone_stage_data ),
         .O_stage_de      ( S_tone_stage_de   ),
         .O_stage_vs      ( S_tone_stage_vs   ),
-        .I_stage_result  ( S_region_data     ),
-        .O_hdmi_vsync    ( S_denoise_in_vs   ),
-        .O_hdmi_hsync    ( S_denoise_in_hs   ),
-        .O_hdmi_de       ( S_denoise_in_de   ),
-        .O_hdmi_data     ( S_denoise_in_data )
-    );
-
-    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n) begin
-            S_denoise_meta_2d <= 20'd0;
-            S_denoise_meta_3d <= 20'd0;
-            S_denoise_protect_2d <= 1'b1;
-            S_denoise_protect_3d <= 1'b1;
-        end else begin
-            S_denoise_meta_2d <= S_tone_meta;
-            S_denoise_meta_3d <= S_denoise_meta_2d;
-            S_denoise_protect_2d <= S_tone_protect;
-            S_denoise_protect_3d <= S_denoise_protect_2d;
-        end
-    end
-    // Delay the complete raster (including blanking), keeping HDMI HS/VS/DE
-    // and metadata together. The DDR read request remains at the original VTC.
-    chroma_denoise_stream #(.H_TOTAL(1650)) u_chroma_denoise (
-        .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
-        .I_hs(S_denoise_in_hs), .I_vs(S_denoise_in_vs), .I_de(S_denoise_in_de),
-        .I_data(S_denoise_in_data), .I_protect(S_denoise_protect_3d),
-        .I_meta(S_denoise_meta_3d),
-        .O_hs(S_hdmi_out_hsync), .O_vs(S_hdmi_out_vsync), .O_de(S_hdmi_out_de),
-        .O_data(S_denoise_clean_data), .O_meta(S_denoise_out_meta)
+        .I_stage_result  ( S_osd_mix         ),
+        .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
+        .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
+        .O_hdmi_de       ( S_hdmi_out_de      ),
+        .O_hdmi_data     ( S_hdmi_out_data    )
     );
 
     //==================================================================
