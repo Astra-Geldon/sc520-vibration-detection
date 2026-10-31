@@ -39,13 +39,26 @@ step legalize { legalize_phy_inst }
 step place    { place }
 step route    { route }
 step routed_db { export_db demo_routed.db }
-step demo_cdc { source patch/check_demo_cdc.tcl }
 step timing   { update_timing -mode final }
 step tstatus  { report_timing_status  -file camera_to_dsi_display_phy.ts }
 step tsum     { report_timing_summary -file patched_final_timing.rpt }
+step tcheck   { source patch/check_production_timing.tcl }
 step area     { report_area -io_info  -file camera_to_dsi_display_phy.area }
 step bitgen   { bitgen -bit camera_to_dsi_display.bit }
 
 puts ""
+# The child can alter its own reporting constraints without touching this session.
+step demo_cdc {
+    set child [file normalize patch/phaseD_audit_demo_cdc.tcl]
+    exec [info nameofexecutable] $child > demo_cdc_audit.log 2>@1
+    set fd [open demo_cdc_audit.log r]
+    set audit_log [read $fd]
+    close $fd
+    puts $audit_log
+    if {[string first {DEMO_CDC_PHYSICAL_PASS groups=25} $audit_log] < 0 ||
+        [string first PHASE_D_DONE $audit_log] < 0} {
+        error "Independent DEMO CDC audit failed; see demo_cdc_audit.log"
+    }
+}
 puts "########## PHASE_C_DONE ERR=$::ERR ##########"
 exit 0

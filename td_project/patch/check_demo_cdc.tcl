@@ -1,7 +1,8 @@
 # Audit the exact routed placement with all clocks present but clock-group
 # exceptions temporarily removed, so TD prints numerical data-flight delays.
-# No rerouting/optimization occurs in this reporting view. Restore all project
-# and IP constraints even when the audit fails; bitgen uses production SDC.
+# Executed ONLY in a separate TD process from demo_routed.db. No rerouting
+# occurs here. The parent process retains production clocks and constraints;
+# TD 6.2 cannot reliably restore all clocks after clear_sdc in the same process.
 source patch/check_demo_cdc_registers.tcl
 set fd [open camera_to_dsi_display.sdc r]
 set demo_sdc [read $fd]
@@ -12,7 +13,6 @@ foreach line [split $demo_sdc "\n"] {
     if {![string match {set_clock_groups *} [string trim $line]]} {puts $fd $line}
 }
 close $fd
-set demo_audit_result [catch {
     clear_sdc
     read_sdc demo_cdc_physical_view.sdc
     read_sdc -ip ddr2 ../user_source/hdl_source/ph1p35_ddr/ddr2/src/sdc/ddr2.sdc
@@ -66,12 +66,3 @@ foreach {inst width} {
 }
 if {$demo_cdc_paths != 25} {error "DEMO CDC audit group count mismatch"}
 puts "DEMO_CDC_PHYSICAL_PASS groups=$demo_cdc_paths"
-
-} demo_audit_message demo_audit_options]
-clear_sdc
-read_sdc camera_to_dsi_display.sdc
-read_sdc -ip ddr2 ../user_source/hdl_source/ph1p35_ddr/ddr2/src/sdc/ddr2.sdc
-read_sdc -ip w128_d512_fifo ../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.tcl
-update_timing -mode final
-if {$demo_audit_result} {return -options $demo_audit_options $demo_audit_message}
-puts DEMO_CDC_PRODUCTION_CONSTRAINTS_RESTORED
