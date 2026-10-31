@@ -11,7 +11,8 @@ module demo_switch_debounce #(
     output reg O_valid
 );
     localparam integer CW = (DEBOUNCE_CYCLES < 2) ? 1 : $clog2(DEBOUNCE_CYCLES);
-    reg [4:0] sync1, sync2, candidate;
+    (* async_reg = "true", preserve = "true" *) reg [4:0] sync1, sync2;
+    reg [4:0] candidate;
     reg [CW-1:0] count;
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -40,18 +41,21 @@ module demo_control_cdc #(
     input wire I_src_clk, input wire I_src_rst_n,
     input wire [WIDTH-1:0] I_src_data, input wire I_src_valid,
     input wire I_dst_clk, input wire I_dst_rst_n, input wire I_dst_apply,
-    output reg [WIDTH-1:0] O_dst_data, output reg O_dst_valid
+    (* preserve = "true" *) output reg [WIDTH-1:0] O_dst_data,
+    output reg O_dst_valid
 );
-    reg [WIDTH-1:0] payload;
-    reg request, acknowledge, sent;
-    reg [1:0] acknowledge_sync, request_sync;
+    (* preserve = "true" *) reg [WIDTH-1:0] payload;
+    (* preserve = "true" *) reg request, acknowledge;
+    reg sent;
+    (* async_reg = "true", preserve = "true" *) reg acknowledge_s1, acknowledge_s2;
+    (* async_reg = "true", preserve = "true" *) reg request_s1, request_s2;
     always @(posedge I_src_clk or negedge I_src_rst_n) begin
         if (!I_src_rst_n) begin
             payload <= INITIAL; request <= 0; sent <= 0;
-            acknowledge_sync <= 0;
+            acknowledge_s1 <= 0; acknowledge_s2 <= 0;
         end else begin
-            acknowledge_sync <= {acknowledge_sync[0], acknowledge};
-            if (I_src_valid && (request == acknowledge_sync[1]) &&
+            acknowledge_s1 <= acknowledge; acknowledge_s2 <= acknowledge_s1;
+            if (I_src_valid && (request == acknowledge_s2) &&
                 (!sent || I_src_data != payload)) begin
                 payload <= I_src_data;
                 request <= ~request; sent <= 1'b1;
@@ -60,13 +64,13 @@ module demo_control_cdc #(
     end
     always @(posedge I_dst_clk or negedge I_dst_rst_n) begin
         if (!I_dst_rst_n) begin
-            request_sync <= 0; acknowledge <= 0;
+            request_s1 <= 0; request_s2 <= 0; acknowledge <= 0;
             O_dst_data <= INITIAL; O_dst_valid <= 0;
         end else begin
-            request_sync <= {request_sync[0], request};
-            if (I_dst_apply && (request_sync[1] != acknowledge)) begin
+            request_s1 <= request; request_s2 <= request_s1;
+            if (I_dst_apply && (request_s2 != acknowledge)) begin
                 O_dst_data <= payload; O_dst_valid <= 1'b1;
-                acknowledge <= request_sync[1];
+                acknowledge <= request_s2;
             end
         end
     end

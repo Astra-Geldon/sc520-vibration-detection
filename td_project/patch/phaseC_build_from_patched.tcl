@@ -38,6 +38,7 @@ step opt_gate { optimize_gate -packarea camera_to_dsi_display_gate.area }
 step legalize { legalize_phy_inst }
 step place    { place }
 step route    { route }
+step demo_cdc { source patch/check_demo_cdc.tcl }
 step timing   { update_timing -mode final }
 step tstatus  { report_timing_status  -file camera_to_dsi_display_phy.ts }
 step tsum     { report_timing_summary -file patched_final_timing.rpt }
