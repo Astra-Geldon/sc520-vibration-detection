@@ -3,7 +3,6 @@ module hdmi_mixer #(
     parameter V_OFFSET = 0,
     parameter IMG_WIDTH = 1600,
     parameter IMG_HEIGHT = 900,
-    parameter integer DEBUG_MODE = 0,
     // Optional combinational processor between the EXISTING data registers.
     // Read requests, all sync registers and total pixel latency stay intact.
     parameter integer PIXEL_STAGE_EN = 0
@@ -17,7 +16,6 @@ module hdmi_mixer #(
     input wire        I_video_user,
     input wire        I_video_last,
 
-    input wire[3:0]   I_debug_status,
 
     output wire       O_video_rd_en,
     input wire[23:0]  I_video_rd_data,
@@ -111,82 +109,7 @@ module hdmi_mixer #(
             S_video_data_1d  <= I_video_rd_data;
             S_video_data_2d  <= (PIXEL_STAGE_EN != 0) ? I_stage_result : S_video_data_1d;
 
-            if(DEBUG_MODE == 1) begin
-                if(S_video_de_2d) begin
-                    if(S_x < 12'd128)
-                        O_hdmi_data <= 24'hff0000;
-                    else if(S_x < 12'd256)
-                        O_hdmi_data <= 24'h00ff00;
-                    else if(S_x < 12'd384)
-                        O_hdmi_data <= 24'h0000ff;
-                    else if(S_x < 12'd512)
-                        O_hdmi_data <= 24'hffff00;
-                    else if(S_x < 12'd640)
-                        O_hdmi_data <= 24'h00ffff;
-                    else if(S_x < 12'd768)
-                        O_hdmi_data <= 24'hff00ff;
-                    else if(S_x < 12'd896)
-                        O_hdmi_data <= 24'hffffff;
-                    else
-                        O_hdmi_data <= 24'h202020;
-                end
-                else begin
-                    O_hdmi_data <= 24'd0;
-                end
-            end
-            else if(DEBUG_MODE == 2) begin
-                if(S_video_de_2d) begin
-                    case (I_debug_status)
-                        4'b0000: O_hdmi_data <= 24'h000000;
-                        4'b0001: O_hdmi_data <= 24'hff0000;
-                        4'b0011: O_hdmi_data <= 24'hffff00;
-                        4'b0111: O_hdmi_data <= 24'h00ff00;
-                        4'b1111: O_hdmi_data <= I_video_rd_data;
-                        default: O_hdmi_data <= 24'h0000ff;
-                    endcase
-                end
-                else begin
-                    O_hdmi_data <= 24'd0;
-                end
-            end
-            else if(DEBUG_MODE == 3) begin
-                if(S_video_de_2d) begin
-                    if(S_x < 12'd256)
-                        O_hdmi_data <= I_debug_status[0] ? 24'hff8000 : 24'h201000;
-                    else if(S_x < 12'd512)
-                        O_hdmi_data <= I_debug_status[1] ? 24'hffff00 : 24'h202000;
-                    else if(S_x < 12'd768)
-                        O_hdmi_data <= I_debug_status[2] ? 24'hff0000 : 24'h200000;
-                    else
-                        O_hdmi_data <= I_debug_status[3] ? 24'h00ffff : 24'h002020;
-                end
-                else begin
-                    O_hdmi_data <= 24'd0;
-                end
-            end
-            else if(DEBUG_MODE == 4) begin
-                // Full-screen MIPI receive diagnostic.  The status is
-                // generated and synchronized in design_top_wrapper.
-                if(S_video_de_2d) begin
-                    case (I_debug_status)
-                        4'd0: O_hdmi_data <= 24'h000080; // blue: sensor config incomplete
-                        4'd1: O_hdmi_data <= 24'h000000; // black: no MIPI HS traffic
-                        4'd2: O_hdmi_data <= 24'h00ffff; // cyan: HS present, no complete frame
-                        4'd3: O_hdmi_data <= 24'hff0000; // red: D-PHY lane error
-                        4'd4: O_hdmi_data <= 24'hff00ff; // magenta: RAW10 line length error
-                        4'd5: O_hdmi_data <= 24'hffff00; // yellow: not 720 lines per frame
-                        4'd6: O_hdmi_data <= 24'h00ff00; // green: MIPI frame structure passed
-                        4'd7: O_hdmi_data <= 24'hff8000; // orange: sensor I2C transaction error
-                        default: O_hdmi_data <= 24'hffffff;
-                    endcase
-                end
-                else begin
-                    O_hdmi_data <= 24'd0;
-                end
-            end
-            else begin
-                O_hdmi_data <= S_window_active_2d ? S_video_data_2d : 24'd0;
-            end
+            O_hdmi_data <= S_window_active_2d ? S_video_data_2d : 24'd0;
         end
     end
 

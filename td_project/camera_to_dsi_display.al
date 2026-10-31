@@ -344,71 +344,12 @@
                     <Attr Name="CompileOrder" Val="55"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/uart_tx.v">
-                <FileInfo>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="56"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/uart_log_debug.v">
-                <FileInfo>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="57"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/clk_pixel_meter.v">
-                <FileInfo>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="58"/>
-                </FileInfo>
-            </File>
             <File Path="../user_source/hdl_source/vibration/vib_ddr_arb.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="59"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/vibration/vib_ddr_selftest.v">
-                <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="60"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/vibration/vib_video_tap.v">
-                <FileInfo>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="61"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/vib_gauss3x3.v">
-                <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="62"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/vib_lk_grid.v">
-                <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="63"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/img_proc.v">
@@ -464,15 +405,6 @@
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="70"/>
-                </FileInfo>
-            </File>
-            <File Path="../user_source/hdl_source/awb_simple.v">
-                <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
-                    <Attr Name="UsedInSyn" Val="true"/>
-                    <Attr Name="UsedInP&R" Val="true"/>
-                    <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="71"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/color_shading_lut.v">

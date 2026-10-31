@@ -26,206 +26,34 @@
 *7) _r delay or register
 *8) _s state mechine
 *********************************************************************/
-/*********ae_set �ֶ��������AE ***********
---�汾��1.0
-*********************************************************************/
-
-module ae_set #(
-parameter integer EXP_RST = 0, // 0/1/2/3 = 1991/1600/1200/900
-parameter integer GAIN_COMPARE_EN = 0, // KEY3: fixed900, gain160/144/112/80
-parameter integer GAIN_RST = 0, // gain comparison reset index; legacy default unchanged
-parameter integer GAIN12_EN = 0 // use nominal12x instead of16x at gain index1
-)
-(
-input wire I_clk,
-input wire I_rst,
-input wire [3:0]I_btn,
-input wire I_exp_key_n,
-input wire I_ae_cfg_done,
-input wire I_cam_cfg_done,
-output wire O_ae_req,
-output wire [15:0] O_ae,
-output wire [15:0] O_ag
+// Fixed production exposure/gain selected from the accepted N1 comparison.
+// Keep one startup request after camera initialization: the factory mode table
+// has different defaults, so constants alone must not bypass this grouped write.
+module ae_set (
+    input  wire        I_clk,
+    input  wire        I_rst,
+    input  wire        I_ae_cfg_done,
+    input  wire        I_cam_cfg_done,
+    output reg         O_ae_req = 1'b0,
+    output reg [15:0]  O_ae,
+    output reg [15:0]  O_ag
 );
-	
+    localparam [15:0] FIXED_EXPOSURE = 16'd900;
+    localparam [15:0] FIXED_GAIN = 16'd128; // 8x analog * 1.5x digital = 12x
 
-reg 	[19:0] 	rc_ae_tick = 0; 
-reg 			r_ae_tick = 0; 
-reg 	[4:0] 	rc_ag_tick = 0; 
-reg 			r_ag_tick = 0; 
-	reg [1:0] r_exp_key_sync = 2'b11;
-	reg [17:0] r_exp_key_cnt = 0;
-	reg r_exp_key_level = 1'b1, r_exp_key_level_d = 1'b1;
-	localparam [1:0] KEY_RST = (GAIN_COMPARE_EN != 0) ? GAIN_RST : EXP_RST;
-	reg [1:0] r_exp_sel = KEY_RST, r_exp_sel_d = KEY_RST;
-	
-always @(posedge I_clk or posedge I_rst) begin
-	if(I_rst) begin
-		rc_ae_tick <= 0; 
-		r_ae_tick <= 0; 
-		rc_ag_tick <= 0; 
-		r_ag_tick <= 0; 
-	end else begin
-	//	Trigger AE Inc / Dec per 1 ms. 
-		rc_ae_tick <= rc_ae_tick + 1; 
-		r_ae_tick <= 0; 
-		if(rc_ae_tick >= 99999) begin
-			rc_ae_tick <= 0; 
-			r_ae_tick <= 1; 
-		end 
-	//	Trigger AG Inc / Dec per 32 ms. 
-		rc_ag_tick <= rc_ag_tick + r_ae_tick; 
-		r_ag_tick <= (&rc_ag_tick) && r_ae_tick; 
-	end
-end
-
-// KEY3 is synchronized/debounced once in the sensor configuration domain.
-// Normal mode cycles exposure; gain comparison mode cycles gain at exposure900.
-always @(posedge I_clk or posedge I_rst) begin
-	if(I_rst) begin
-		r_exp_key_sync <= 2'b11;
-		r_exp_key_cnt <= 18'd0;
-		r_exp_key_level <= 1'b1;
-		r_exp_key_level_d <= 1'b1;
-		r_exp_sel <= KEY_RST;
-		r_exp_sel_d <= KEY_RST;
-	end else begin
-		r_exp_key_sync <= {r_exp_key_sync[0], I_exp_key_n};
-		r_exp_key_level_d <= r_exp_key_level;
-		if (r_exp_key_sync[1] != r_exp_key_level) begin
-			if (r_exp_key_cnt == 18'd238095) begin
-				r_exp_key_level <= r_exp_key_sync[1];
-				r_exp_key_cnt <= 18'd0;
-			end else begin
-				r_exp_key_cnt <= r_exp_key_cnt + 1'b1;
-			end
-		end else begin
-			r_exp_key_cnt <= 18'd0;
-		end
-		if (r_exp_key_level_d && !r_exp_key_level)
-			r_exp_sel <= r_exp_sel + 1'b1;
-		r_exp_sel_d <= r_exp_sel;
-	end
-end
-
-function [15:0] f_exp_value;
-	input [1:0] sel;
-	begin
-		case(sel)
-			2'd0: f_exp_value = 16'd1991;
-			2'd1: f_exp_value = 16'd1600;
-			2'd2: f_exp_value = 16'd1200;
-			default: f_exp_value = 16'd900;
-		endcase
-	end
-endfunction
-
-// These are gain-table control codes, not decimal multipliers.
-// 160=16x analog*1.5x digital, 144=16x, 112=8x, 80=4x.
-function [15:0] f_gain_value;
-	input [1:0] sel;
-	begin
-		case(sel)
-			2'd0: f_gain_value = 16'd160;
-			2'd1: f_gain_value = (GAIN12_EN != 0) ? 16'd128 : 16'd144;
-			2'd2: f_gain_value = 16'd112;
-			default: f_gain_value = 16'd80;
-		endcase
-	end
-endfunction
-	
-//	Use button to add / sub idelay values. I_button[0]:IncDatDly, [1]DecDatDly, [2]IncI_clkDly, [3]DecI_clkDly
-reg 	[3:0] 	r_button_0 = 0, r_button_1 = 0; 
-// 原厂720p60模式VTS=1000，曝光以半行计，最大值为2*VTS-9=1991。
-// 2026-10-30 阶段1候选：曝光 1991 -> 1600（降约 20%）。
-//   该值只改变传感器曝光寄存器默认值；AWB、shading、视频时序和按键调节逻辑保持原样。
-//   ★ 为什么改曝光而不是改增益
-//     实测把 r_ag_set 从 160 改到 151，亮度 137.3 -> 136.9（几乎没变），
-//     SC520GainTbl 里 151/160 对应 0x3e07 = 0x9C/0xC0（数字 fine gain），
-//     但实际亮度完全不动 -> 说明该 fine gain 寄存器写入没有生效。
-//     而曝光时间 0x3e00~0x3e02 是每帧都要重写的，改动必然生效。
-//   ★ 为什么需要降
-//     增益 160 时平均亮度 137，约 16% 的像素 R+G+B>=720 被 AWB 的过曝过滤排除；
-//     被排除的恰是最亮的高光（暖白，本身偏红），剩余样本偏绿 -> gain_r 偏大
-//     -> 白墙偏红。实测统计样本 50~70% 的帧白墙G/R=0.866（偏红13%），
-//     样本 95%+ 的帧白墙G/R=0.986（中性）。降到 1600 后亮度约 110，
-//     过曝大幅减少，统计样本变全，白墙应回到中性。
-// 2026-10-24：增益 144 -> 151（约 1.35 倍模拟增益）。
-//   曝光 1991 已在硬件上限（720p60 下约 1/60s，整帧曝光），画面暗是因为
-//   晚上教室环境光不足，只能靠模拟增益补。
-//
-//   ★ 为什么不是 160（最初选的）
-//     实测视频发现：增益 160 时平均亮度 137，大量像素 R+G+B>=720 被 AWB 的
-//     过曝过滤排除。而被排除的恰恰是「最亮的高光」（暖白，本身偏红），
-//     导致剩余统计样本偏绿 -> gain_r 偏大 -> 过度提 R -> 白墙偏红。
-//     数据：统计样本 50~70% 的帧 白墙G/R=0.866（偏红13%）；
-//           统计样本 95%+ 的帧 白墙G/R=0.986（中性）。
-//   151 约让平均亮度回到 121，此时绝大多数帧统计样本 >95%，白墙回到中性。
-//   同时高光过曝也减轻（用户反馈白色监控和墙面分不开）。
-// EXP_RST selects the real sensor exposure; KEY3 keeps all four references.
-localparam [15:0] AE_RST = (GAIN_COMPARE_EN != 0) ? 16'd900 : f_exp_value(EXP_RST);
-localparam [15:0] AG_RST = (GAIN_COMPARE_EN != 0) ? f_gain_value(KEY_RST) : 16'd160;
-reg 	[15:0] 	r_ae_set = AE_RST, r_ag_set = AG_RST;
-always @(posedge I_clk or posedge I_rst) begin
-	if(I_rst) begin
-		r_button_0 <= 0; 
-		r_button_1 <= 0; 
-		r_ae_set <= AE_RST;
-		r_ag_set <= AG_RST;
-	end else begin
-	//	When button pressed, r_button_1 bit is 1. 
-		r_button_0 <= ~I_btn; 
-		r_button_1 <= r_button_0; 
-	
-		if (GAIN_COMPARE_EN != 0) begin
-			// Ignore legacy N2/J14 inputs: only gain varies in this experiment.
-			r_ae_set <= 16'd900;
-			if (r_exp_sel != r_exp_sel_d)
-				r_ag_set <= f_gain_value(r_exp_sel);
-		end else begin
-		if(r_exp_sel != r_exp_sel_d) begin
-			r_ae_set <= f_exp_value(r_exp_sel);
-		end else if(r_button_1[0]) begin
-			r_ae_set <= (r_ae_set > 2) ? r_ae_set - r_ae_tick : r_ae_set; 
-		end else if(r_button_1[1]) begin
-			r_ae_set <= (r_ae_set < 1991) ? r_ae_set + r_ae_tick : r_ae_set; 
-		end 
-		if(r_button_1[2]) begin
-				r_ag_set <= (r_ag_set > 16) ? r_ag_set - r_ag_tick : r_ag_set; 
-		end else if(r_button_1[3]) begin
-				r_ag_set <= (r_ag_set < 176) ? r_ag_set + r_ag_tick : r_ag_set; 
-		end 
-		end
-		end
-	end
-	
-//	Update AG / AE when changed. 
-reg 	[15:0] 	r_ae ; 
-reg 	[15:0] 	r_ag ; 
-reg 			r_ae_req = 0; //synthesis keep
-assign O_ae = r_ae;
-assign O_ag = r_ag;
-assign O_ae_req = r_ae_req;
-
-always @(posedge I_clk or posedge I_rst) begin
-	if(I_rst) begin
-		r_ae_req <= 0; 
-		r_ae     <= 1990; 
-		// Start from a value different from r_ag_set.  This deliberately
-		// causes one grouped AE/AG write after the sensor setting completes;
-		// otherwise the requested default gain would never reach SC520CS.
-		r_ag     <= 17; 
-	end else if(r_ae_req) begin
-		r_ae_req <= 0; 
-	end else if(((r_ae != r_ae_set) || (r_ag != r_ag_set))&&(I_cam_cfg_done==1'b1)&&(I_ae_cfg_done==1'b1)) begin
-		r_ae     <= r_ae_set; 
-		r_ag     <= r_ag_set; 
-		r_ae_req <= 1; 
-	end
-end
-
-
+    always @(posedge I_clk or posedge I_rst) begin
+        if (I_rst) begin
+            O_ae_req <= 1'b0;
+            // Preserve the previous startup handshake and output values.
+            O_ae <= 16'd1990;
+            O_ag <= 16'd17;
+        end else if (O_ae_req) begin
+            O_ae_req <= 1'b0;
+        end else if (((O_ae != FIXED_EXPOSURE) || (O_ag != FIXED_GAIN)) &&
+                     I_cam_cfg_done && I_ae_cfg_done) begin
+            O_ae <= FIXED_EXPOSURE;
+            O_ag <= FIXED_GAIN;
+            O_ae_req <= 1'b1;
+        end
+    end
 endmodule
-
-
-	
