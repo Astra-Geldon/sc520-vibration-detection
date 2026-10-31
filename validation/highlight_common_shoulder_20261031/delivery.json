@@ -1,0 +1,50 @@
+{
+  "source_commit": "fe3fec774e4adb870f54bf18152af1f120c77f00",
+  "branch": "image-highlight-shoulder-20261031",
+  "bit": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\compile-v3\\camera_to_dsi_display.bit",
+    "sha256": "b985aabd936b2d8cf5fd6ce3cbdd875a0b37b3038108275aecf0d4ab6d55786f"
+  },
+  "resources": {
+    "LUT6": 10012,
+    "Slice": 11175,
+    "FF": 9565,
+    "ERAM20K": 43,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "timing": {
+    "SWNS_ns": 0.161,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "verification": {
+    "kernel": true,
+    "internal_and_precomputed_peak": true,
+    "full_pipeline": true,
+    "pipeline_cycles": 5834789,
+    "identical_ddr_reads": 5775360
+  },
+  "programming": {
+    "success": true,
+    "method": "JTAG SRAM download",
+    "source_commit": "fe3fec774e4adb870f54bf18152af1f120c77f00",
+    "branch": "image-highlight-shoulder-20261031",
+    "bit": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\compile-v3\\camera_to_dsi_display.bit",
+    "sha256": "b985aabd936b2d8cf5fd6ce3cbdd875a0b37b3038108275aecf0d4ab6d55786f",
+    "started_utc": "2026-10-31T11:19:43.557502+00:00",
+    "finished_utc": "2026-10-31T11:19:52.903091+00:00",
+    "exit_code": 0,
+    "error": null,
+    "chip": "PH1P35MDG324",
+    "default_exposure": 900,
+    "default_candidate": "C0/P0",
+    "visual_acceptance": "pending_user_observation",
+    "scope": "Pre-shading-clip RGB9 shoulder candidate; user confirmed connection/power; Flash not written",
+    "log_sha256": "5141ffc209a402449cbd5e90e66f507a469838f4f09a2efb195dc2d7f4a483aa"
+  },
+  "visual_acceptance": "pending_user_observation",
+  "generated_utc": "2026-10-31T11:20:44.195429+00:00"
+}

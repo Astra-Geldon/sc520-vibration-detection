@@ -88,4 +88,8 @@ bit：`D:/FPGA/codex/_build/20261029project/highlight-common-shoulder-20261031/c
 
 SHA256：`B985AABD936B2D8CF5FD6CE3CBDD875A0B37B3038108275AECF0D4AB6D55786F`。
 
-阶段摘要归档到`validation/highlight_common_shoulder_20261031/`。不写Flash，不推送云端。完整流水回归仍在进行，当前板上仍为Gamma尾段单项镜像，验证通过后才烧录本候选；编译成功不表示画质验收通过。
+完整流水回归已通过：提取实际顶层的峰值逻辑、同沿寄存、tone/OSD/mixer实例，与mixer前处理的参考链逐像素比较。2帧完整720p＋32帧96行覆盖八候选×四模式、动态高光和控制切换、复位、OSD/Logo；5,834,789个周期、5,775,360次DDR读取全部一致，总像素延迟保持。八个生产输入哈希均与`compile-v3`冻结源匹配。
+
+2026-10-31 **19:19:52**完成JTAG SRAM烧录，退出码0，日志同时包含PRG-2014芯片校验成功及download完成标记；没有写Flash。板上保持原图3、C0/P0参考，不会自动切换。短按KEY4比较P1/P2/P3，再按进入C3组。
+
+阶段摘要已归档到`validation/highlight_common_shoulder_20261031/`，原始bit、仿真和烧录日志保留在`_build`阶段目录。未推送云端。**等待用户实际画质与持续视频反馈，尚不宣布高光问题解决。**

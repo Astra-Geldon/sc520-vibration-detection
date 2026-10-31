@@ -1,6 +1,6 @@
 # SC520 MIPI → HDMI 振动频率检测系统
 
-> 当前分支`image-highlight-shoulder-20261031`：用户反馈Gamma尾段修正“稍有改善，但仍过亮”，继续阶段1.11第二步——保留shading裁剪前RGB9，复用C3三路乘法器做共同高光压缩。源码`fe3fec7`已完整编译，核心RTL内部/预计算峰值两分支的1,070,624组独立对照通过，完整流水回归进行中，尚未烧录此候选。KEY4循环`C0/P0～P3 → C3/P0～P3`，默认原图3/曝光900、C0/P0（压缩关闭参考）。实现、按键与验收见 [裁剪前高光压缩](HIGHLIGHT_COMMON_SHOULDER_20261031.md)。
+> 当前分支`image-highlight-shoulder-20261031`：用户反馈Gamma尾段修正“稍有改善，但仍过亮”，继续阶段1.11第二步——保留shading裁剪前RGB9，复用C3三路乘法器做共同高光压缩。源码`fe3fec7`已完整编译，两个峰值RTL分支的1,070,624组独立对照及34帧完整流水回归通过，于2026-10-31 **19:19:52**完成JTAG SRAM烧录，等待实际画质验收。KEY4循环`C0/P0～P3 → C3/P0～P3`，默认原图3/曝光900、C0/P0（压缩关闭参考）；短按KEY4才进入弱/中/强压缩。实现、bit与按键见 [裁剪前高光压缩](HIGHLIGHT_COMMON_SHOULDER_20261031.md)。
 
 > 新候选布局资源：10012 LUT6、11175 Slice、9565 FF、43 ERAM、34 DSP；相对 [Gamma参考](GAMMA_TAIL_CANDIDATE_20261031.md)增加179/213/107/0/0。SWNS/HWNS +0.161/+0.020ns，报告中setup/hold通过。满足用户DSP不增加的要求；保留正常区域与现有shading。[高光余量研究](HIGHLIGHT_HEADROOM_REVIEW_20261031.md)中的更早AWB/传感器裁剪仍是能力限制，画质尚未验收。
 

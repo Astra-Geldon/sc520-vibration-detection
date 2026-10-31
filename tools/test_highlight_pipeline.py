@@ -18,24 +18,29 @@ def main():
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    output = args.output or root.parent / '_build' / root.name / 'h1-local-tone-20261030' / 'pipeline_checks'
+    output = args.output or root.parent / '_build' / root.name / 'highlight-common-shoulder-20261031' / 'pipeline_checks'
     output.mkdir(parents=True, exist_ok=True)
     hdl = root / 'user_source/hdl_source'
     top_file = hdl / 'design_top_wrapper.v'
     top = top_file.read_text(encoding='utf-8')
-    summary = {'pass': False, 'scope': 'Actual top-level retiming versus original mixer; RGB/sync/read requests'}
+    summary = {'pass': False, 'scope': 'Actual wide sideband/metadata/tone/OSD/mixer versus pre-mixer ideal processor; all8 profiles and4 modes'}
     try:
         def instance(start_text):
             start = top.index(start_text)
             stop = top.index('    );', start) + len('    );')
             return top[start:stop]
-        tone = instance('    highlight_tone u_highlight_tone (')
+        tone_marker = '    highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) u_highlight_tone ('
+        peak_start = top.index('    wire [8:0] S_tone_input_rg_max =')
+        peak_stop = top.index('    reg [8:0] S_tone_stage_peak;', peak_start)
+        peak_logic = top[peak_start:peak_stop]
+        tone = instance(tone_marker)
         osd = instance('    osd_overlay #(')
         mixer = instance('    hdmi_mixer #(')
-        stop = top.index('    highlight_tone u_highlight_tone (')
+        stop = top.index(tone_marker)
         start = top.rfind('    always @(posedge S_hdmi_pixel_clk', 0, stop)
         metadata = top[start:stop]
         assert 'S_tone_stage_mode <= S_img_mode;' in metadata
+        assert 'S_tone_stage_peak <= S_tone_input_peak;' in metadata
         assert '.PIXEL_STAGE_EN ( 1 )' in mixer
         assert re.search(r'else if \(S_hdmi_vsync\) S_region_sel <= S_region_sel_req;', top)
         original = subprocess.check_output(['git', 'show', '42b0736:user_source/hdl_source/hdmi_mixer.v'], cwd=root)
@@ -60,6 +65,9 @@ always #6.666667 S_hdmi_pixel_clk=~S_hdmi_pixel_clk;
 reg S_hdmi_rst_n=0;
 reg S_hdmi_vsync=0,S_hdmi_hsync=0,S_hdmi_de=0,S_hdmi_user=0,S_hdmi_last=0;
 reg [23:0] S_imgp_data=0;
+reg [26:0] S_csc_wide_data=0;
+reg [26:0] S_tone_stage_wide_data;
+reg [8:0] S_tone_stage_peak;
 reg [2:0] S_img_mode=7,S_region_sel_active=2;
 reg [1:0] S_exp_sel=2,S_k_sel=2;
 reg [7:0] S_img_threshold=48;
@@ -103,7 +111,7 @@ always @(posedge S_hdmi_pixel_clk) begin
 end
 highlight_tone reference_processor (
  .I_de(S_hdmi_de),.I_enable(S_img_mode==0),.I_sel(S_region_sel_active),
- .I_data(S_imgp_data),.O_mask(),.O_data(reference_tone));
+ .I_data(S_imgp_data),.I_wide_data(S_csc_wide_data),.I_peak(9'd0),.O_mask(),.O_data(reference_tone));
 hdmi_mixer_original #(.IMG_WIDTH(1280),.IMG_HEIGHT(720),.DEBUG_MODE(0)) reference_mixer (
  .I_clk(S_hdmi_pixel_clk),.I_rst_n(S_hdmi_rst_n),
  .I_video_vsync(S_hdmi_vsync),.I_video_hsync(S_hdmi_hsync),.I_video_de(S_hdmi_de),
@@ -111,7 +119,7 @@ hdmi_mixer_original #(.IMG_WIDTH(1280),.IMG_HEIGHT(720),.DEBUG_MODE(0)) referenc
  .O_video_rd_en(reference_read),.I_video_rd_data(reference_osd_data),
  .O_hdmi_vsync(reference_vs),.O_hdmi_hsync(reference_hs),.O_hdmi_de(reference_de),.O_hdmi_data(reference_data));
 '''
-        harness += metadata + tone + osd + mixer + reference_osd
+        harness += peak_logic + metadata + tone + osd + mixer + reference_osd
         harness += r'''
 task blank;
  input integer cycles;
@@ -127,28 +135,32 @@ initial begin
  #1 S_hdmi_rst_n=1; #1 S_hdmi_rst_n=0;
  blank(8); @(negedge S_hdmi_pixel_clk);S_hdmi_rst_n=1;
  blank(10);
- // Two complete720p moving/random frames, plus all20 mode/candidate pairs.
- for(f=0;f<22;f=f+1) begin
+ // Two complete720p moving/random frames, plus all32 mode/candidate pairs.
+ for(f=0;f<34;f=f+1) begin
   @(negedge S_hdmi_pixel_clk);
   S_hdmi_vsync=1;S_hdmi_user=1;
-  S_img_mode=(f<2)?0:((f-2)/5);
-  S_region_sel_active=(f<2)?(f+2):((f-2)%5);
+  S_img_mode=(f<2)?0:((f-2)/8);
+  S_region_sel_active=(f<2)?(f+2):((f-2)%8);
   S_exp_sel=f%4;
   blank(8);
   @(negedge S_hdmi_pixel_clk);S_hdmi_vsync=0;S_hdmi_user=0;
   rows=(f<2)?720:96;
   old_reads=reads;
   for(y=0;y<rows;y=y+1) begin
+   if(y%120==0) $display("PROGRESS frame%0d row%0d/%0d",f,y,rows);
    S_hdmi_hsync=1;blank(8);S_hdmi_hsync=0;
    for(x=0;x<1280;x=x+1) begin
     @(negedge S_hdmi_pixel_clk);
     S_hdmi_de=1;S_hdmi_last=(x==1279);
     noise={noise[30:0],noise[31]^noise[21]^noise[1]^noise[0]};
-    S_imgp_data=noise[23:0];
+    S_csc_wide_data = {9'(noise[8:0]%283),9'(noise[17:9]%256),9'(noise[26:18]%276)};
+    S_imgp_data=(S_img_mode==0) ? {(S_csc_wide_data[26:18]>255 ? 8'hff : S_csc_wide_data[25:18]),
+                                 S_csc_wide_data[16:9],
+                                 (S_csc_wide_data[8:0]>255 ? 8'hff : S_csc_wide_data[7:0])} : noise[23:0];
     if ((x>f*7+200 && x<f*7+320 && y>160 && y<250) || x==0 || x==1279)
-      S_imgp_data=24'hffffff;
+      begin S_imgp_data=24'hffffff; S_csc_wide_data={9'd282,9'd255,9'd275}; end
     // Control transitions within active video must retime with their pixel.
-    if (f==1 && x%317==0) S_region_sel_active=(x/317)%5;
+    if (f==1 && x%317==0) S_region_sel_active=(x/317)%8;
    end
    blank(5);
   end
@@ -167,7 +179,7 @@ endmodule
 '''
         test_file = output / 'tb_highlight_pipeline.v'
         test_file.write_text(harness, encoding='utf-8')
-        files = [top_file, hdl/'hdmi_mixer.v', hdl/'highlight_tone.v', hdl/'highlight_region.v',
+        files = [top_file, hdl/'hdmi_mixer.v', hdl/'highlight_tone.v', hdl/'highlight_region.v', hdl/'highlight_shoulder_lut.v',
                  hdl/'osd_overlay.v', hdl/'osd_font_rom.v', hdl/'osd_logo_rom.v']
         files = [path for path in files if path.is_file()]
         summary['source_sha256'] = {path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
@@ -178,14 +190,21 @@ endmodule
         build = subprocess.run(command, cwd=root, capture_output=True, text=True, errors='replace', timeout=60)
         (output/'compile.log').write_text(build.stdout+build.stderr, encoding='utf-8')
         assert build.returncode==0, build.stdout+build.stderr
-        run = subprocess.run([str(compiler.with_name('vvp.exe')),str(compiled)],cwd=root,capture_output=True,text=True,errors='replace',timeout=300)
-        (output/'simulation.log').write_text(run.stdout+run.stderr,encoding='utf-8')
-        print(run.stdout, end='')
-        assert run.returncode==0, run.stderr
-        matched=re.search(r'PASS highlight_pipeline: (\d+) cycles, (\d+) identical DDR reads',run.stdout)
-        assert matched, run.stdout
+        with (output/'simulation.log').open('w', encoding='utf-8', buffering=1) as logfile:
+            run = subprocess.Popen([str(compiler.with_name('vvp.exe')), '-i', str(compiled)], cwd=root, stdout=logfile, stderr=subprocess.STDOUT, text=True, errors='replace')
+            try:
+                exit_code = run.wait(timeout=1800)
+            except subprocess.TimeoutExpired:
+                run.kill()
+                run.wait()
+                raise
+        simulation = (output/'simulation.log').read_text(encoding='utf-8')
+        print(simulation, end='')
+        assert exit_code==0, simulation
+        matched=re.search(r'PASS highlight_pipeline: (\d+) cycles, (\d+) identical DDR reads',simulation)
+        assert matched, simulation
         summary.update(pass_=True, cycles=int(matched[1]), identical_ddr_reads=int(matched[2]),
-                       full_720p_frames=2, extra_mode_candidate_frames=20, original_mixer_ref='42b0736',
+                       full_720p_frames=2, extra_mode_candidate_frames=32, original_mixer_ref='42b0736',
                        production_top_instances_extracted=True, pixel_latency_unchanged=True)
         summary['pass']=summary.pop('pass_')
     except (OSError,AssertionError,subprocess.SubprocessError,ValueError) as error:

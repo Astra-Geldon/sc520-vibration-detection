@@ -1,0 +1,159 @@
+{
+  "pass": true,
+  "completed_frames": [
+    {
+      "frame": 0,
+      "rows": 720
+    },
+    {
+      "frame": 1,
+      "rows": 720
+    },
+    {
+      "frame": 2,
+      "rows": 96
+    },
+    {
+      "frame": 3,
+      "rows": 96
+    },
+    {
+      "frame": 4,
+      "rows": 96
+    },
+    {
+      "frame": 5,
+      "rows": 96
+    },
+    {
+      "frame": 6,
+      "rows": 96
+    },
+    {
+      "frame": 7,
+      "rows": 96
+    },
+    {
+      "frame": 8,
+      "rows": 96
+    },
+    {
+      "frame": 9,
+      "rows": 96
+    },
+    {
+      "frame": 10,
+      "rows": 96
+    },
+    {
+      "frame": 11,
+      "rows": 96
+    },
+    {
+      "frame": 12,
+      "rows": 96
+    },
+    {
+      "frame": 13,
+      "rows": 96
+    },
+    {
+      "frame": 14,
+      "rows": 96
+    },
+    {
+      "frame": 15,
+      "rows": 96
+    },
+    {
+      "frame": 16,
+      "rows": 96
+    },
+    {
+      "frame": 17,
+      "rows": 96
+    },
+    {
+      "frame": 18,
+      "rows": 96
+    },
+    {
+      "frame": 19,
+      "rows": 96
+    },
+    {
+      "frame": 20,
+      "rows": 96
+    },
+    {
+      "frame": 21,
+      "rows": 96
+    },
+    {
+      "frame": 22,
+      "rows": 96
+    },
+    {
+      "frame": 23,
+      "rows": 96
+    },
+    {
+      "frame": 24,
+      "rows": 96
+    },
+    {
+      "frame": 25,
+      "rows": 96
+    },
+    {
+      "frame": 26,
+      "rows": 96
+    },
+    {
+      "frame": 27,
+      "rows": 96
+    },
+    {
+      "frame": 28,
+      "rows": 96
+    },
+    {
+      "frame": 29,
+      "rows": 96
+    },
+    {
+      "frame": 30,
+      "rows": 96
+    },
+    {
+      "frame": 31,
+      "rows": 96
+    },
+    {
+      "frame": 32,
+      "rows": 96
+    },
+    {
+      "frame": 33,
+      "rows": 96
+    }
+  ],
+  "completed_frame_count": 34,
+  "cycles": 5834789,
+  "identical_ddr_reads": 5775360,
+  "pipeline_inputs_match_frozen_build": {
+    "user_source/hdl_source/design_top_wrapper.v": true,
+    "user_source/hdl_source/hdmi_mixer.v": true,
+    "user_source/hdl_source/highlight_tone.v": true,
+    "user_source/hdl_source/highlight_region.v": true,
+    "user_source/hdl_source/highlight_shoulder_lut.v": true,
+    "user_source/hdl_source/osd_overlay.v": true,
+    "user_source/hdl_source/osd_font_rom.v": true,
+    "user_source/hdl_source/osd_logo_rom.v": true
+  },
+  "source_commit": "fe3fec774e4adb870f54bf18152af1f120c77f00",
+  "peak_before_existing_mixer_boundary": true,
+  "registered_peak_and_wide_rgb_aligned": true,
+  "reference_peak_combinational": true,
+  "test_script_sha256": "49054d2fd3d71c3036a81457b635628fbbe44d945f2b16aa19e74400404b6e92"
+}
