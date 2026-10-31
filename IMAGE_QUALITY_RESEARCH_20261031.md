@@ -60,6 +60,10 @@ Vitis 的双边滤波适合“随机噪声且资源充足”的平台，但不�
 
 ## 选择的工程方案
 
+### S0 当前进度（2026-10-31）
+
+S0 旁路版已完成完整 A→B→C 编译，代码只注释了 `SHADING_ON`，bit 保存在 `_build/20261029project/s0-shading-bypass-20261031/compile-v1/camera_to_dsi_display.bit`。资源为 LUT6 10927、Slice 12075、FF 10163、ERAM 52、DSP 26、PLL 3、MCU 1；时序 `SWNS=+0.145 ns`、`HWNS=+0.020 ns`、`STNS=HTNS=0`。当前只完成编译，尚未上板观察，不能据此判断旁路画质。
+
 ### S0：先验证表极性和坐标
 
 1. 用同一曝光900、同一照明拍白墙/白纸和完全遮光暗场；每个场景至少保存5帧。
