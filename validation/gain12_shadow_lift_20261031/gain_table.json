@@ -1,0 +1,15 @@
+{
+  "pass": true,
+  "scope": "Actual SC520GainTbl independent RTL check of G4/G8/G12/G16/G24 table codes;no hardware",
+  "I_AG": 128,
+  "3e09": "0B",
+  "3e06": "00",
+  "3e07": "C0",
+  "analog_gain": 8,
+  "digital_gain": 1.5,
+  "nominal_total_gain": 12,
+  "source_sha256": {
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68"
+  },
+  "new_hardware_access": false
+}

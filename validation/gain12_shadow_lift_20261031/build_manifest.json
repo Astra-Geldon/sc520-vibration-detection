@@ -1,0 +1,54 @@
+{
+  "source_commit": "6882d4116890253400393fe4e5265cea5d76e0e3",
+  "branch": "image-gain12-shadow-lift-20261031",
+  "scope": "Gain12 default at exposure900, KEY4 L0..3 common RGB8 lift; explicit LUT/shift-add; KEY3 gains retained",
+  "resources": {
+    "LUT6": 10079,
+    "Slice": 11222,
+    "FF": 9441,
+    "ERAM20K": 43,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_gain8_lift": {
+    "LUT6": -21,
+    "Slice": -8,
+    "FF": -28,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.005,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD internal setup/hold; inherited external timing coverage limits retained",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "671a487fe69e58278b428b8ae5fca8641e4344a85dfe906cfecb40c9aa275009",
+  "bit": {
+    "path": "D:/FPGA/codex/_build/20261029project/gain12-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit",
+    "sha256": "674075a84e87142d858ecbc77dda6ea7903c5e8a65791f38d618745b0495481f",
+    "bytes": 1789539
+  },
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "L": 1,
+    "C": 0,
+    "P": 0,
+    "W": 0
+  },
+  "board_programming": "not_run",
+  "visual_acceptance": "pending_user_observation",
+  "generated_utc": "2026-10-31T14:53:50.830466+00:00"
+}

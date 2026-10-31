@@ -1,0 +1,15 @@
+{
+  "scope": "Extracted actual top CDC block, all16 gain transitions, sevenphase offsets, positivebitskew, sourceverified1cyclelead, failedreadback andreset",
+  "source_sha256": {
+    "user_source/hdl_source/design_top_wrapper.v": "7835a37b5f58adb7c399871cffbf03ee3aa449e27b024910f9841a455f9d0f4b",
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "359b4d241d7953d21dc782804611d99283abff4fe4176f86fa3282fb829163c1"
+  },
+  "production_block_extracted": true,
+  "compile_returncode": 0,
+  "simulation_returncode": 0,
+  "limitations": "RTL simulation does not model analog metastability or prove physical CDC timing. Source status must fall before any new data, and data must settle before success; snapshot may remain previous frame until VS.",
+  "checks": 1220,
+  "transitions": 224,
+  "coalesced_gray_jumps": 56,
+  "pass": true
+}

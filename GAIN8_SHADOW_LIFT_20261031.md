@@ -39,3 +39,15 @@
 生产源码提交`c1459cd 增加8倍增益基底的三档保色提亮和KEY4对照`。bit位于`D:/FPGA/codex/_build/20261029project/gain8-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit`，SHA256=`32ac36a07d75fb6ca9764d98ab493c6a9493fb96a2d9ef9ef0580017c716494c`。首次下载脚本因Windows路径转义未执行；修正脚本参数后22:38:36取得PRG-2014和download结束成功，见`burn-v1-retry`，不混用失败记录。未写Flash，未占用采集卡或自动切档。
 
 新旧两份bit另存本阶段`bitstreams`，旧增益菜单默认G24，恢复G8须KEY3两次；新版默认G8/L1。全部输出和原日志留在本阶段`_build`，仓库`validation/gain8_shadow_lift_20261031`保存小型摘要。当前只确认源码/仿真/构建/下载，亮度、肤色、噪声与动态视频由用户继续观察；未宣称V0已解决。
+
+## 当前追加试验：默认G12，提亮曲线保持（2026-10-31 22:54）
+
+按用户要求，以348cb31的G8提亮版建立分支`image-gain12-shadow-lift-20261031`，生产源码`6882d41 默认改为12倍增益，保留8倍参考和全部提亮档`。默认E900/G12/L1；KEY3一次切G8，后续G4→G24→G12。KEY4仍L1→L2→L3→L0→L1，KEY1/KEY2保持。独立参数GAIN12_EN默认0保留旧G16，当前顶层开启后把index1改为12并同步传递至OSD；不是只改显示文字。
+
+标称G12使用控制码128，对应3e09/06/07=0B/00/C0，即8倍模拟×1.5倍数字；相对G8只提高数字fine gain，不称为模拟12倍、采集SNR提升或显示亮度必然精确增加50%。曝光、L核心、ISP/AWB/shading/Gamma、视频时序和Logo保持。既有六寄存器V问题仍未解决，不从下载成功推断真实传感器已全部读回一致。
+
+真实增益表G4/G8/G12/G16/G24、G12复位/KEY4隔离/图像模式、413952 OSD点/4198 Logo点和1220次状态快照检查通过。静态核对顶层只改增益默认和标签参数，L核心及像素块逐字节保持，复用上一轮完整帧流水证据，未重复运行完整帧仿真。
+
+完整A→B→C及12处HDMI补丁通过；资源LUT6/Slice/FF/ERAM20K/DSP/PLL/MCU=10079/11222/9441/43/31/3/1，相对G8为−21/−8/−28/0/0/0/0。原始SWNS/STNS/HWNS/HTNS=+0.005/0/+0.020/0ns，报告setup/hold零违例；继承的全板外部时序覆盖限制仍保留，不扩大为全板签核。
+
+2026-10-31 22:54:26 JTAG SRAM下载成功，PRG-2014和download结束判据通过，未写Flash、未占用采集卡、未自动切档。bit：`D:/FPGA/codex/_build/20261029project/gain12-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit`；SHA256=`674075a84e87142d858ecbc77dda6ea7903c5e8a65791f38d618745b0495481f`。本阶段`bitstreams`另存G8与G12两份bit；小型证据存仓库`validation/gain12_shadow_lift_20261031`，原始输出留本阶段_build。实际高光、肤色和噪声待用户比较。

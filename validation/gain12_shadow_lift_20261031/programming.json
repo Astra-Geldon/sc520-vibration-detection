@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "method": "JTAG SRAM download",
+  "flash_written": false,
+  "source_commit": "6882d4116890253400393fe4e5265cea5d76e0e3",
+  "branch": "image-gain12-shadow-lift-20261031",
+  "bit": "D:/FPGA/codex/_build/20261029project/gain12-shadow-lift-20261031/compile-v1/camera_to_dsi_display.bit",
+  "sha256": "674075a84e87142d858ecbc77dda6ea7903c5e8a65791f38d618745b0495481f",
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "L": 1,
+    "C": 0,
+    "P": 0,
+    "W": 0
+  },
+  "exit_code": 0,
+  "started_utc": "2026-10-31T14:54:16.917931+00:00",
+  "finished_local": "2026-10-31T22:54:26.215486+08:00",
+  "source_bound_checks": {
+    "controls": "f68606c22b22e9b11eab0b957852b11b11d456604567fe46ed291fbfed768c41",
+    "gain_table": "c66ea6fca8830329dbd8ff994e0e0928070e78ca0d1873ab376af97ee7fd3251",
+    "osd": "635403ed3d871146d2de53b4235f6db983d47b3d96bfb757edd7d92008186b18",
+    "cdc": "384f9db75fcab89660465b79b293252b286e98d7e7d4373dbb9d3c9b94d0a43b",
+    "preservation": "43b890bbf0e75ed9ff5c769f0d48b72a9cf36a6fa80bad192560e1a5e51abb04"
+  },
+  "reported_setup_hold_pass": true,
+  "engineering_comparison_qualification": null,
+  "visual_acceptance": "pending_user_observation",
+  "sensor_readback_verified": false,
+  "no_automatic_capture_or_switching": true
+}

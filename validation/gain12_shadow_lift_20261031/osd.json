@@ -1,0 +1,10 @@
+{
+  "pass": true,
+  "pixel_vectors": 413952,
+  "scope": "Actual E/G/V/L glyphs and overlay,all gains,V states,L profiles,enable;Logo preservation",
+  "source_sha256": {
+    "user_source/hdl_source/osd_overlay.v": "7607466fe062be316bc8cc2e9e2c4ed69c63ddc7aabb740c42fece596c18a35b",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  }
+}

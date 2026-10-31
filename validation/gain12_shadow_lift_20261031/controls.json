@@ -1,0 +1,8 @@
+{
+  "pass": true,
+  "scope": "G12 reset E900/code128;KEY4 independence and L modes;unchanged modes",
+  "source_sha256": {
+    "user_source/hdl_source/img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "db424f788044fb9cc518422e41db5a5c1703c2a8199d168c8f3d7edbbb4e4456"
+  }
+}
