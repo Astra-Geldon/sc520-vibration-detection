@@ -1,4 +1,6 @@
 # SC520 MIPI → HDMI 振动频率检测系统
+> 当前实施分支`image-gamma-tail-only-20261031`：以当前认可的`d75dc8e`曝光参数对照镜像为单因素基线，先只修Gamma最高段，保留C0～C3/M菜单。默认900/C2，比较此前截图须切C0。实现/编译/烧录状态见 [Gamma单项候选](GAMMA_TAIL_CANDIDATE_20261031.md)；下方E1/降噪条目是保留的历史研究，不是本分支运行菜单。
+
 > 最新高光反馈：用户认可当前观感，但原图0～3/C0的亮部仍有大片纯白。已完成 [保留观感的高光余量研究](HIGHLIGHT_HEADROOM_REVIEW_20261031.md)：Gamma旧尾段平台、AWB/shading提前裁剪分别核查；建议先修尾段，再评估裁剪前共同RGB压缩，保留shading及正常区域亮度。当前只读研究，未改RTL、编译或烧录；旧同场景C3采样暂缓，DSP≤34不变。
 
 > 当前本地实验分支`image-shading-on-baseline-20261031`：生产源码保持shading开启的E1恢复版，用户确认之前观感恢复，但原图3/C3/D3的画质问题仍在。D数值核符合设计，固定每像素Y及3×3尺度不足以处理现有质感问题；源码/数值研究、已撤销判断及Q0～Q4见 [C3质感复核](IMAGE_QUALITY_REASSESSMENT_20261031.md)，总安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。研究未改生产RTL；板上临时测量镜像与最新采样状态见下方更新。D候选见 [C3保亮降噪说明](C3_CHROMA_DENOISE_20261031.md)，此前保存点见 [强补偿记录](H1_STRONG_COMPENSATION_20261031.md)。以下A版发布信息用于追溯稳定基线。

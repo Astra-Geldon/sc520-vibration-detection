@@ -235,7 +235,9 @@ module axis_gamma_rgb96 (
                 4'hc: begin base = 8'd209; delta = 8'd12; end
                 4'hd: begin base = 8'd221; delta = 8'd12; end
                 4'he: begin base = 8'd233; delta = 8'd11; end
-                default: begin base = 8'd255; delta = 8'd0; end
+                // Preserve the continuous highlight tail: 240->244, 255->255.
+                // Earlier segments and the registered pixel/sync latency stay identical.
+                default: begin base = 8'd244; delta = 8'd11; end
             endcase
 
             interpolation = delta * value[3:0] + 8;
