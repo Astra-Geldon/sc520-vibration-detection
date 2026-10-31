@@ -1,0 +1,59 @@
+{
+  "source_commit": "442677e17ca3a05715fcbfa38ea6b1e28ae975b5",
+  "branch": "image-almost-success-fixed-20261101",
+  "scope": "Fixed E900/G12/N1; retired candidate controls, parameter OSD, sensor gain-readback test, diagnostics/tap/UART removed; image modes and original ISP/DDR/HDMI kept",
+  "resources": {
+    "LUT6": 8788,
+    "Slice": 9740,
+    "FF": 8645,
+    "ERAM20K": 39,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_selected_n1_candidate": {
+    "LUT6": -1254,
+    "Slice": -1379,
+    "FF": -771,
+    "ERAM20K": -4,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.177,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "engineering_parameter_comparison_allowed": true,
+  "engineering_comparison_qualification": null,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD internal setup/hold; inherited external timing coverage limits retained",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "cdcb6752dd7eae50b105074780d68b2e0ac6e5d81da808e3c48996857a5410be",
+  "bit": {
+    "path": "D:/FPGA/codex/_build/20261029project/almost-success-fixed-20261101/compile-v1/camera_to_dsi_display.bit",
+    "sha256": "c3261e42d6a81353e3409aa142dd80433939464f9c893e9cc8576b7716abe08a",
+    "bytes": 1789539
+  },
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "label": "fixed_N1"
+  },
+  "board_programming": "success_JTAG_SRAM",
+  "visual_acceptance": "pending_user_observation",
+  "fixed_lift": "N1 unchanged from b8407f8",
+  "key3_key4": "unused; test selectors removed",
+  "frame_processing": "single-frame per-pixel; no alternating capture or extra frame buffer",
+  "generated_utc": "2026-10-31T16:45:14.720677+00:00",
+  "programming_finished_local": "2026-11-01T00:45:36.012506+08:00",
+  "programming_record": "D:/FPGA/codex/_build/20261029project/almost-success-fixed-20261101/burn-v1/programming.json",
+  "programming_record_sha256": "51a85088e57f661112422a373e69bd37cb015655944be73720654476ddc3d64c"
+}

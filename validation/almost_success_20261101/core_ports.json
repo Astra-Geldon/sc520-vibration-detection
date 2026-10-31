@@ -1,0 +1,19 @@
+{
+  "pass": true,
+  "scope": "Preserved named core instance port connections vs b8407f8; not a DDR behavioral simulation",
+  "port_lists_equal": {
+    "u_PLL": true,
+    "u_mcu_passive": true,
+    "u_isp_top": true,
+    "u_video_in": true,
+    "u_vib_ddr_arb": true,
+    "u_video_out": true,
+    "u_mc_to_user_interface": true,
+    "u_ph1p35_324_ddr_wrapper": true,
+    "u_hdmi_vtc": true,
+    "u_hdmi_tx": true
+  },
+  "source_sha256": {
+    "user_source/hdl_source/design_top_wrapper.v": "78558e73e919dcf6a1544eb3e29e30fe53c4925c85497956a8be316aca285461"
+  }
+}

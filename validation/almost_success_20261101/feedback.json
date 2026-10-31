@@ -1,0 +1,12 @@
+{
+  "selected_parameters": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "label": "fixed_N1"
+  },
+  "reference_commit": "b8407f8",
+  "user_request": "固定截图参数，删除不需要的测试冗余，编译并烧录，本地提交名几乎成功版",
+  "image": "D:/FPGA/codex/_build/20261029project/almost-success-fixed-20261101/feedback/accepted_E900_G12_N1.jpg",
+  "sha256": "8cf2ef6479fde860d6b55e285afd3ee3b980ec5e2c22d479edfc705e04287249"
+}

@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "method": "JTAG SRAM download",
+  "flash_written": false,
+  "source_commit": "442677e17ca3a05715fcbfa38ea6b1e28ae975b5",
+  "branch": "image-almost-success-fixed-20261101",
+  "bit": "D:/FPGA/codex/_build/20261029project/almost-success-fixed-20261101/compile-v1/camera_to_dsi_display.bit",
+  "sha256": "c3261e42d6a81353e3409aa142dd80433939464f9c893e9cc8576b7716abe08a",
+  "default_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12,
+    "label": "fixed_N1"
+  },
+  "fixed_lift": "N1 unchanged from b8407f8",
+  "exit_code": 0,
+  "started_utc": "2026-10-31T16:45:26.989669+00:00",
+  "finished_local": "2026-11-01T00:45:36.012506+08:00",
+  "source_bound_checks": {
+    "numeric": "4ccafeddf044f2bfb10d0c236a8c7a7dd56b8cfc1a960b9fb3a9faf89b4d0449",
+    "ui_osd": "e71d5443803be7f1774dad2754de820386765615b1734c311e7dc6f483ac9a5c",
+    "pipeline": "680969a26257a5af17ac5971006be73681f4316998010bc4df80c6f16b183a09",
+    "sensor": "c361b49de58de390d29813d496221af29bf603a1e32df49c97cdf0d456185ec4",
+    "preservation": "460a3f9d21435bb20b0f4533416b43ec492098fd6f2d5eb40273ca13069cc45e"
+  },
+  "reported_setup_hold_pass": true,
+  "engineering_comparison_qualification": null,
+  "whole_design_timing_signoff": false,
+  "visual_acceptance": "pending_user_observation",
+  "sensor_readback_test_removed": true,
+  "no_automatic_capture_or_switching": true
+}

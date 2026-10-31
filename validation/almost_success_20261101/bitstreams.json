@@ -1,0 +1,18 @@
+{
+  "reference_selected_N1_b8407f8.bit": {
+    "source_commit": "b8407f8",
+    "sha256": "d359728c2caad2a07f2469b778d7281459ae78a309bd088bcf28ed90fd1575b3",
+    "bytes": 1789539
+  },
+  "fixed_E900_G12_N1_442677e.bit": {
+    "source_commit": "442677e17ca3a05715fcbfa38ea6b1e28ae975b5",
+    "sha256": "c3261e42d6a81353e3409aa142dd80433939464f9c893e9cc8576b7716abe08a",
+    "bytes": 1789539
+  },
+  "几乎成功版.bit": {
+    "source_commit": "442677e17ca3a05715fcbfa38ea6b1e28ae975b5",
+    "sha256": "c3261e42d6a81353e3409aa142dd80433939464f9c893e9cc8576b7716abe08a",
+    "bytes": 1789539,
+    "alias_of": "fixed_E900_G12_N1_442677e.bit"
+  }
+}

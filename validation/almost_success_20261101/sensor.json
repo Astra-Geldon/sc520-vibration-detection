@@ -1,0 +1,59 @@
+{
+  "pass": true,
+  "scope": "Fixed E900/G12 initialization/group write equivalence; only6 test readbacks removed",
+  "reference_commit": "b8407f8",
+  "source_sha256": {
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "52de790317ef77345a1af30ac8008126f8a8c7acca323a83886c4e16ac581a49",
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "4dbcc63c240978bcb51ec64b07f78d2b6c5ada36c4cb97095801a21c521333c6",
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+    "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+    "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885"
+  },
+  "tests": {
+    "handshake": {
+      "pass": true,
+      "log": "handshake.log"
+    },
+    "integrated_case0": {
+      "pass": true,
+      "log": "integrated_case0.log"
+    },
+    "integrated_case1": {
+      "pass": true,
+      "log": "integrated_case1.log"
+    },
+    "integrated_case2": {
+      "pass": true,
+      "log": "integrated_case2.log"
+    },
+    "integrated_case3": {
+      "pass": true,
+      "log": "integrated_case3.log"
+    },
+    "integrated_case4": {
+      "pass": true,
+      "log": "integrated_case4.log"
+    }
+  },
+  "hardware_accessed": false,
+  "bit_level_I2C_signalling_tested": false,
+  "required_tables_and_bit_level_engine_unchanged": true,
+  "init_writes": 165,
+  "group_writes": 8,
+  "exact_transaction_data_order_and_cycle_cases": 4,
+  "exact_transactions_per_success_case": 175,
+  "required_sensor_id_reads": 2,
+  "removed_test_register_reads": 6,
+  "fixed_exposure": 900,
+  "fixed_gain_code": 128,
+  "nominal_gain": 12,
+  "fixed_sensor_registers": {
+    "3e00": "00",
+    "3e01": "38",
+    "3e02": "40",
+    "3e09": "0b",
+    "3e06": "00",
+    "3e07": "c0",
+    "3812": "30"
+  }
+}

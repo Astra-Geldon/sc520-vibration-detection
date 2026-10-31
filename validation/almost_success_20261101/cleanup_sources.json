@@ -1,0 +1,12 @@
+{
+  "removed_from_project": [
+    "uart_tx.v",
+    "uart_log_debug.v",
+    "clk_pixel_meter.v",
+    "vibration/vib_ddr_selftest.v",
+    "vibration/vib_video_tap.v",
+    "vib_gauss3x3.v",
+    "vib_lk_grid.v",
+    "awb_simple.v"
+  ]
+}

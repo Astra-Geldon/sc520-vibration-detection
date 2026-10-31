@@ -1,0 +1,14 @@
+{
+  "pass": true,
+  "scope": "Fixed N1 real RTL versus archived b8407f8 candidate2; complete peak/subordinate RGB rotations",
+  "source_sha256": {
+    "user_source/hdl_source/fixed_n1_lift.v": "5df94985c721bbdb899af084a0e924b8c26f4e349fa7770ea49c98de78535140"
+  },
+  "archived_N1_module_sha256": "bfd6f75060936ea2f7c8f6ba80db74c8bb82001ce6ed4779661536ae20e986f5",
+  "rgb_rotation_cases": 98688,
+  "highlight_rgb_identity_cases": 43104,
+  "bypass_cases": 512,
+  "all_256_gain_coefficients_exact": true,
+  "monotone_peak_targets": true,
+  "highlight_ge192_input_identity": true
+}

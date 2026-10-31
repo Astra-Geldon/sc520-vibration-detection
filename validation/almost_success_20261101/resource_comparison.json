@@ -1,0 +1,59 @@
+{
+  "fixed_release": {
+    "resources": {
+      "LUT6": 8788,
+      "Slice": 9740,
+      "FF": 8645,
+      "ERAM20K": 39,
+      "DSP": 31,
+      "PLL": 3,
+      "MCU": 1
+    },
+    "report": "D:/FPGA/codex/_build/20261029project/almost-success-fixed-20261101/compile-v1/camera_to_dsi_display_phy.area",
+    "report_sha256": "81fbefe4eb093d72489ec459ab804a8220ae76ebacfd72683e373d19d3c03749"
+  },
+  "selected_N1_candidate": {
+    "resources": {
+      "LUT6": 10042,
+      "Slice": 11119,
+      "FF": 9416,
+      "ERAM20K": 43,
+      "DSP": 31,
+      "PLL": 3,
+      "MCU": 1
+    },
+    "report": "D:/FPGA/codex/_build/20261029project/g12-highlight-guard-20261101/compile-v1/camera_to_dsi_display_phy.area",
+    "report_sha256": "079f8058a694fa96b379b3c4bacde18f62f8ca0287da9e251a77cc84d438fc64"
+  },
+  "accepted_A_logo": {
+    "resources": {
+      "LUT6": 9329,
+      "Slice": 10410,
+      "FF": 9332,
+      "ERAM20K": 43,
+      "DSP": 31,
+      "PLL": 3,
+      "MCU": 1
+    },
+    "report": "D:/FPGA/codex/_build/20261029project/A-original-reuse-logo-20261030/camera_to_dsi_display_phy.area",
+    "report_sha256": "9d5278a8ba9b77defb34bcd76f7a3c37c748810caaba8c31ca4b0ad062e8e2a8"
+  },
+  "delta_vs_selected_candidate": {
+    "LUT6": -1254,
+    "Slice": -1379,
+    "FF": -771,
+    "ERAM20K": -4,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "delta_vs_A_logo": {
+    "LUT6": -541,
+    "Slice": -670,
+    "FF": -687,
+    "ERAM20K": -4,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  }
+}
