@@ -1,0 +1,44 @@
+{
+  "verified_local": "2026-10-31T21:05:08.154729+08:00",
+  "independent_check": true,
+  "scope": "Read-only hashes, sizes, Git commits, old A source defaults. No hardware access, build, programming, production edits or commits.",
+  "images": [
+    {
+      "name": "A_ee675b6_logo",
+      "original_path": "D:/FPGA/codex/_build/20261029project/A-original-reuse-logo-20261030/camera_to_dsi_display.bit",
+      "archived_path": "D:/FPGA/codex/_build/20261029project/original0-ab-baseline-20261031/bitstreams/A_ee675b6_logo.bit",
+      "original_sha256": "251C00C1523D4820E48BD48BA6F5BCEA6EBFB524E06E12E2F9B75EB1A0517A1B",
+      "archived_sha256": "251C00C1523D4820E48BD48BA6F5BCEA6EBFB524E06E12E2F9B75EB1A0517A1B",
+      "manifest_sha256": "251C00C1523D4820E48BD48BA6F5BCEA6EBFB524E06E12E2F9B75EB1A0517A1B",
+      "original_bytes": 1789539,
+      "archived_bytes": 1789539,
+      "manifest_bytes": 1789539,
+      "source_commit_type": "commit",
+      "pass": true
+    },
+    {
+      "name": "current_a7a12be_white_protect",
+      "original_path": "D:/FPGA/codex/_build/20261029project/highlight-white-protection-20261031/compile-v1/camera_to_dsi_display.bit",
+      "archived_path": "D:/FPGA/codex/_build/20261029project/original0-ab-baseline-20261031/bitstreams/current_a7a12be_white_protect.bit",
+      "original_sha256": "E650DAE0130C9372D8D534FE636616FB5C74BAB3B0AE276745162496304FFE0D",
+      "archived_sha256": "E650DAE0130C9372D8D534FE636616FB5C74BAB3B0AE276745162496304FFE0D",
+      "manifest_sha256": "E650DAE0130C9372D8D534FE636616FB5C74BAB3B0AE276745162496304FFE0D",
+      "original_bytes": 1789539,
+      "archived_bytes": 1789539,
+      "manifest_bytes": 1789539,
+      "source_commit_type": "commit",
+      "pass": true
+    }
+  ],
+  "old_A_default_source_checks": {
+    "default_colour_mode0": true,
+    "logo_enabled": true,
+    "shading_enabled": true,
+    "shading_k2": true,
+    "awb_simple_not_enabled": true,
+    "default_exposure1991_gain160": true,
+    "no_new_exposure_or_region_menu": true
+  },
+  "result": "PASS",
+  "limits": "Confirms preserved artifacts and declared source defaults, not current sensor register application or visual acceptance."
+}

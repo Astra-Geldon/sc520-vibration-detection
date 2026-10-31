@@ -1,0 +1,47 @@
+{
+  "purpose": "Preserve both existing bitstreams for repeatable A/current board comparison without rebuilding",
+  "created_local": "2026-10-31T21:04:05.337863+08:00",
+  "repository": "D:/FPGA/codex/20261029project",
+  "docs_commit_at_backup": "2ba95bcf92c5a5532ca2081c34474524facaf29d",
+  "compiled_this_session": false,
+  "programmed_by_this_script": false,
+  "images": [
+    {
+      "name": "A_ee675b6_logo",
+      "description": "User-approved A original-reuse + Anlogic Logo reference",
+      "source_commit": "ee675b6d144c6425f05c60fedd31cdd8a7e1515b",
+      "source_path": "D:/FPGA/codex/_build/20261029project/A-original-reuse-logo-20261030/camera_to_dsi_display.bit",
+      "sha256": "251C00C1523D4820E48BD48BA6F5BCEA6EBFB524E06E12E2F9B75EB1A0517A1B",
+      "default_request": {
+        "exposure": 1991,
+        "gain_control": 160,
+        "mode": "colour with original AWB/Gamma/shading + Logo",
+        "C_P_W": "not implemented in this revision"
+      },
+      "provenance": "A_RELEASE_LOGO_20261030.md",
+      "archived_path": "D:/FPGA/codex/_build/20261029project/original0-ab-baseline-20261031/bitstreams/A_ee675b6_logo.bit",
+      "bytes": 1789539,
+      "source_commit_exists": true
+    },
+    {
+      "name": "current_a7a12be_white_protect",
+      "description": "Current image before returning to A; C/P/W comparison candidate",
+      "source_commit": "a7a12be282e9ef2b63dc2f3111d51b3ebe474db3",
+      "source_path": "D:/FPGA/codex/_build/20261029project/highlight-white-protection-20261031/compile-v1/camera_to_dsi_display.bit",
+      "sha256": "E650DAE0130C9372D8D534FE636616FB5C74BAB3B0AE276745162496304FFE0D",
+      "default_request": {
+        "exposure": 900,
+        "gain_control": 160,
+        "mode": "colour",
+        "C": 3,
+        "P": 3,
+        "W": 0
+      },
+      "provenance": "HIGHLIGHT_WHITE_PROTECTION_20261031.md; compile-v1/build_manifest.json; burn-v1/programming.json",
+      "archived_path": "D:/FPGA/codex/_build/20261029project/original0-ab-baseline-20261031/bitstreams/current_a7a12be_white_protect.bit",
+      "bytes": 1789539,
+      "source_commit_exists": true
+    }
+  ],
+  "note": "Defaults are source requests. This backup does not read actual sensor registers."
+}

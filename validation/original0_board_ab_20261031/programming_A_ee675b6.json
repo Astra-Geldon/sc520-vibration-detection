@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "method": "JTAG SRAM download",
+  "flash_written": false,
+  "compiled_this_session": false,
+  "source_commit": "ee675b6d144c6425f05c60fedd31cdd8a7e1515b",
+  "bit": "D:/FPGA/codex/_build/20261029project/original0-ab-baseline-20261031/bitstreams/A_ee675b6_logo.bit",
+  "sha256": "251C00C1523D4820E48BD48BA6F5BCEA6EBFB524E06E12E2F9B75EB1A0517A1B",
+  "started_utc": "2026-10-31T13:05:04.616914+00:00",
+  "finished_utc": "2026-10-31T13:05:13.802527+00:00",
+  "finished_local": "2026-10-31T21:05:13.802527+08:00",
+  "exit_code": 0,
+  "error": null,
+  "chip": "PH1P35MDG324",
+  "default_request": {
+    "exposure": 1991,
+    "gain_control": 160,
+    "mode": "colour with original AWB/Gamma/shading + Logo",
+    "C_P_W": "not implemented in this revision"
+  },
+  "visual_acceptance": "pending user observation",
+  "log_sha256": "54F9AC5A6B88A398EA16E63C7C167EFFCCEEE1DBF4E5667963718E45CBA8A640",
+  "no_further_automatic_switching": true
+}
