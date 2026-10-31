@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "source_sha256": "9bec26bd352e34c02baa38d23c261efb9c40103d5ad6c01814f932e14f8944cc",
+  "hardware_accessed": false,
+  "result": "PASS controls: all32vectors bounce frame-boundary stopped-clock latest-request reset commits38\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\controls-tests-v2\\controls_tb.v:58: $finish called at 13740000 (1ps)",
+  "archived_from": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/controls-tests-v2/summary.json",
+  "archived_source_sha256": "19edf8970ffcd93c9e62052457acd51cd36115fbb4e1cd3614bf6eed98f20e6b"
+}

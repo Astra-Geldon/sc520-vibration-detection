@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "baseline": "f86bc17",
+  "changed_production_files": [
+    "td_project/camera_to_dsi_display.sdc",
+    "td_project/patch/check_demo_cdc.tcl",
+    "td_project/patch/check_demo_cdc_registers.tcl",
+    "td_project/patch/check_production_timing.tcl",
+    "td_project/patch/phaseA_export_rtl.tcl",
+    "td_project/patch/phaseC_build_from_patched.tcl",
+    "td_project/patch/phaseD_audit_demo_cdc.tcl",
+    "user_source/constraints_source/pin.adc",
+    "user_source/hdl_source/awb.v",
+    "user_source/hdl_source/demo_switch_control.v",
+    "user_source/hdl_source/design_top_wrapper.v",
+    "user_source/hdl_source/isp/demosaic_4x_2_0/bilinear_interpolation.v",
+    "user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v",
+    "user_source/hdl_source/isp/isp_top.v",
+    "user_source/hdl_source/osd_overlay.v",
+    "user_source/hdl_source/uiisp_beta/ae_set.v"
+  ],
+  "critical_files_byte_identical_to_baseline": [
+    "user_source/hdl_source/fixed_n1_lift.v",
+    "user_source/hdl_source/color_shading.v",
+    "user_source/hdl_source/color_shading_lut.v",
+    "user_source/hdl_source/img_proc.v",
+    "user_source/hdl_source/hdmi_mixer.v",
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v",
+    "user_source/hdl_source/uics500_cfg/uii2c.v",
+    "user_source/hdl_source/osd_logo_rom.v",
+    "user_source/hdl_source/osd_font_rom.v",
+    "td_project/patch/phaseB_patch_db.tcl"
+  ],
+  "physical_inputs": 5,
+  "no_C8_wiring": true,
+  "C12_pure_input_pin_constraint": true,
+  "source_commit": "85c7f7dd5f6eacd72b2879c589c8fb0e0e55476d",
+  "archived_from": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/preservation-final.json",
+  "archived_source_sha256": "aec9f7b3eafd55f12eb4d6522dd1dd0020ffb71844190e02f1a58423c9895223"
+}

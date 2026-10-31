@@ -1,0 +1,27 @@
+{
+  "pass": true,
+  "reference_commit": "f86bc17",
+  "source_sha256": {
+    "isp/isp_top.v": "33ec6a1081f3542ac5eaecc4cd1e16bd0dbbff782f25b3313fcda0effa67675e",
+    "awb.v": "5509ed6fb4795d402e990d1816fa06bed45b7f83546ae0b1934cc6923ef9452e",
+    "isp/demosaic_4x_2_0/demosaic.v": "59c61d1e3d3891cb0520e758e3c5f5ce5e7950b0a05c66f3ef5384ee6b28920f",
+    "isp/demosaic_4x_2_0/bilinear_interpolation.v": "768600de59f273f527dfb9e710376ad269f0e67346684506646e4fb03fa57c04"
+  },
+  "ram_scope": "Synchronous read-before-write dual-port behavioural model; unchanged real signal_delay RTL, not vendor silicon timing",
+  "checks": {
+    "bilinear_raw": {
+      "pass": true,
+      "result": "PASS bilinear all-on_cycle_checks=120044 raw_four_pixel_words=21972 Bayer_formats=4 sync_latency=5\nD:\\FPGA\\codex\\_build\\20261029project\\six-switch-demo-20261101\\isp-tests\\bilinear_raw\\tb.v:63: $finish called at 300160000 (1ps)"
+    },
+    "gamma": {
+      "pass": true,
+      "result": "PASS gamma all-on_and_identity_cycles=4100 channel_values=256\nD:\\FPGA\\codex\\_build\\20261029project\\six-switch-demo-20261101\\isp-tests\\gamma\\tb.v:31: $finish called at 41050000 (1ps)"
+    },
+    "awb": {
+      "pass": true,
+      "result": "PASS awb all-on_cycles=101986 identity_four_pixel_words=61440 nonunity_words=56320 early_tuser_preserved=1 delay_RAM_preserved=1\nD:\\FPGA\\codex\\_build\\20261029project\\six-switch-demo-20261101\\isp-tests\\awb\\tb.v:58: $finish called at 1019910000 (1ps)"
+    }
+  },
+  "archived_from": "D:/FPGA/codex/_build/20261029project/six-switch-demo-20261101/isp-tests/summary.json",
+  "archived_source_sha256": "0eade78b6bec26f8817cd8bfc57f708fbe4ede50d9ef314d60d58d8071b3c3d6"
+}

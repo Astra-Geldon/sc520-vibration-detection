@@ -1,0 +1,52 @@
+{
+  "hardware_accessed": false,
+  "real_bit_level_I2C_engine": true,
+  "source_sha256": {
+    "user_source/hdl_source/uiisp_beta/ae_set.v": "aca5e82588af27057e45df7e40d3ac8c2aff634b85db2ffdde332befc1dcdf28",
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "016be27b70c68c2cb09fca9df15bf24465105ed51df8ebc7bd3ced20019e36a3",
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+    "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+    "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+    "user_source/hdl_source/uics500_cfg/uii2c.v": "6eed54d134d70f043a50f4c94aded1be9706c1cf850bad3288dc8749fd918e14"
+  },
+  "cases": [
+    {
+      "case": "dynamic20",
+      "pass_": true,
+      "result": "PASS dynamic case20 requests3 groups3 completed3 rejected0 frames15\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\dynamic_sensor_tb.v:163: $finish called at 308955570000 (1ps)"
+    },
+    {
+      "case": "dynamic21",
+      "pass_": true,
+      "result": "PASS dynamic case21 requests1 groups1 completed1 rejected0 frames5\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\dynamic_sensor_tb.v:163: $finish called at 142288902000 (1ps)"
+    },
+    {
+      "case": "dynamic22",
+      "pass_": true,
+      "result": "PASS dynamic case22 requests3 groups3 completed3 rejected0 frames15\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\dynamic_sensor_tb.v:163: $finish called at 308955570000 (1ps)"
+    },
+    {
+      "case": "dynamic23",
+      "pass_": true,
+      "result": "PASS dynamic case23 requests1 groups1 completed1 rejected0 frames5\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\dynamic_sensor_tb.v:163: $finish called at 142288902000 (1ps)"
+    },
+    {
+      "case": "dynamic25",
+      "pass_": true,
+      "result": "NACK case25 group2 3e01=7c\nPASS dynamic case25 requests2 groups3 completed2 rejected1 frames11\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\dynamic_sensor_tb.v:163: $finish called at 242288928000 (1ps)"
+    },
+    {
+      "case": "dynamic26",
+      "pass_": true,
+      "result": "NACK case26 group2 3e01=7c\nNACK case26 group3 3e01=7c\nNACK case26 group4 3e01=7c\nPASS dynamic case26 requests2 groups4 completed1 rejected3 frames10\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\dynamic_sensor_tb.v:163: $finish called at 228896052000 (1ps)"
+    },
+    {
+      "case": "handshake",
+      "pass_": true,
+      "result": "PASS request handshake: initial/stuck-high rejection, busy/failure status, real low-high completion\nD:\\FPGA\\codex\\_build\\20261029project\\five-switch-demo-20261101\\sensor-tests\\dynamic-v2\\request_handshake_tb.v:35: $finish called at 2460000 (1ps)"
+    }
+  ],
+  "pass": true,
+  "archived_from": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/sensor-tests/dynamic-v2/summary.json",
+  "archived_source_sha256": "20f0e71d25a5fc93ac7959a9c1ed3796da518c74e557df35966177497c3cb9e1"
+}

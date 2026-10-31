@@ -1,0 +1,76 @@
+{
+  "source_commit": "85c7f7dd5f6eacd72b2879c589c8fb0e0e55476d",
+  "branch": "demo-five-switch-20261101",
+  "checks": {
+    "controls": {
+      "path": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/controls-tests-v2/summary.json",
+      "sha256": "19edf8970ffcd93c9e62052457acd51cd36115fbb4e1cd3614bf6eed98f20e6b",
+      "passed": true
+    },
+    "numeric": {
+      "path": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/numeric-checks/summary.json",
+      "sha256": "4ccafeddf044f2bfb10d0c236a8c7a7dd56b8cfc1a960b9fb3a9faf89b4d0449",
+      "passed": true
+    },
+    "pipeline": {
+      "path": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/pipeline-tests-final/summary.json",
+      "sha256": "8e8651c64637aab447f1b6f9021a692538b3511618d55575ac1df305e76eca74",
+      "passed": true
+    },
+    "startup": {
+      "path": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/sensor-tests/startup-final/summary.json",
+      "sha256": "ae27cae5c58b25d9b7fd473a3e04f4efd863254628be6c01ab0a2026efdab713",
+      "passed": true
+    },
+    "dynamic": {
+      "path": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/sensor-tests/dynamic-v2/summary.json",
+      "sha256": "20f0e71d25a5fc93ac7959a9c1ed3796da518c74e557df35966177497c3cb9e1",
+      "passed": true
+    },
+    "isp": {
+      "path": "D:/FPGA/codex/_build/20261029project/six-switch-demo-20261101/isp-tests/summary.json",
+      "sha256": "0eade78b6bec26f8817cd8bfc57f708fbe4ede50d9ef314d60d58d8071b3c3d6",
+      "passed": true
+    },
+    "osd": {
+      "path": "D:/FPGA/codex/_build/20261029project/six-switch-demo-20261101/osd-checks/summary.json",
+      "sha256": "eb7a5aac3c9433344cfa469dc05e74626d6340b1947df8ad1d25bf7b1cd51457",
+      "passed": true
+    }
+  },
+  "production_input_count": 260,
+  "all_test_sources_bound_to_frozen_inputs": true,
+  "bit_sha256": "4d3e193aa914d10deed1493e32bebb461fea994d957756b77819ecc7fe7ebcdb",
+  "bit_alias": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/bitstreams/五拨码画质演示版_85c7f7d.bit",
+  "resources": {
+    "LUT6": 9209,
+    "Slice": 10327,
+    "FF": 8972,
+    "ERAM20K": 39,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_accepted_baseline": {
+    "LUT6": 368,
+    "Slice": 486,
+    "FF": 296,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.123,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "baseline_reference_sha256": "49656553e454546ace5aeb81f3f605e4862d91d822bab2a970b07bd334352213",
+  "frame_processing": "single frame, no alternating exposure",
+  "source_manifest_sha256": "b81c1274454c84faea43b9ccad73c593673f72581e3d608dba6859dd4cdfca2b",
+  "archived_from": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/verification.json",
+  "archived_source_sha256": "c96b415e76ea6d862a9c8778f9551c39ccfa47ead77a1c195633a29808b2e71e"
+}

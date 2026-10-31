@@ -1,0 +1,74 @@
+{
+  "pass": true,
+  "reference": "f86bc17",
+  "source_sha256": {
+    "user_source/hdl_source/osd_overlay.v": "5234fb9a86747cf9f218e2a1c5de14fed0c73fbfb253382d10956a84b4949cf9",
+    "user_source/hdl_source/osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source/hdl_source/osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "raster": {
+    "pass": true,
+    "complete_720p_frames": 4,
+    "modes": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "panel_disabled_original_equivalence": true,
+    "outside_panel_original_equivalence": true,
+    "combinational_passthrough": true
+  },
+  "panels": [
+    {
+      "frame": 0,
+      "pass": true,
+      "labels": [
+        "S1 AWB ON",
+        "S2 GAM ON",
+        "S3 CSC ON",
+        "S2 N1  ON",
+        "S5 EXP ON",
+        "S4 DEM ON"
+      ]
+    },
+    {
+      "frame": 1,
+      "pass": true,
+      "labels": [
+        "S1 AWB OFF",
+        "S2 GAM OFF",
+        "S3 CSC OFF",
+        "S2 N1  OFF",
+        "S5 EXP OFF",
+        "S4 DEM OFF"
+      ]
+    },
+    {
+      "frame": 2,
+      "pass": true,
+      "labels": [
+        "S1 AWB WAIT",
+        "S2 GAM WAIT",
+        "S3 CSC WAIT",
+        "S2 N1  WAIT",
+        "S5 EXP WAIT",
+        "S4 DEM WAIT"
+      ]
+    },
+    {
+      "frame": 3,
+      "pass": true,
+      "labels": [
+        "S1 AWB WAIT",
+        "S2 GAM ON",
+        "S3 CSC OFF",
+        "S2 N1  WAIT",
+        "S5 EXP OFF",
+        "S4 DEM ON"
+      ]
+    }
+  ],
+  "archived_from": "D:/FPGA/codex/_build/20261029project/six-switch-demo-20261101/osd-checks/summary.json",
+  "archived_source_sha256": "eb7a5aac3c9433344cfa469dc05e74626d6340b1947df8ad1d25bf7b1cd51457"
+}

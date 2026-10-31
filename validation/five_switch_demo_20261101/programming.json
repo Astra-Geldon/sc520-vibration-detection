@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "source_commit": "85c7f7dd5f6eacd72b2879c589c8fb0e0e55476d",
+  "branch": "demo-five-switch-20261101",
+  "method": "JTAG SRAM download",
+  "flash_written": false,
+  "MCU_firmware_loaded": false,
+  "bit": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/compile-v6/camera_to_dsi_display.bit",
+  "bit_alias": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/bitstreams/五拨码画质演示版_85c7f7d.bit",
+  "sha256": "4d3e193aa914d10deed1493e32bebb461fea994d957756b77819ecc7fe7ebcdb",
+  "exit_code": 0,
+  "started_utc": "2026-10-31T18:51:21.536627+00:00",
+  "finished_local": "2026-11-01T02:51:30.966229+08:00",
+  "verification_sha256": "c96b415e76ea6d862a9c8778f9551c39ccfa47ead77a1c195633a29808b2e71e",
+  "visual_acceptance": "pending user observation",
+  "five_switches": "SW1 AWB; SW2 Gamma+N1; SW3 shading; SW4 demosaic/RAW; SW5 protection/reference",
+  "SW6": "unchanged, no rewiring",
+  "no_capture_device_opened": true,
+  "archived_from": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/burn-v1/programming.json",
+  "archived_source_sha256": "61cafb221b75b29f9a52be24e5f87675288111130d5706ce6957f4252f15c350"
+}

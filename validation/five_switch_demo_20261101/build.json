@@ -1,0 +1,73 @@
+{
+  "source_commit": "85c7f7dd5f6eacd72b2879c589c8fb0e0e55476d",
+  "branch": "demo-five-switch-20261101",
+  "scope": "Five switches: AWB, Gamma+N1, shading, demosaic/RAW, exposure protection; applied-state OSD; startup retries preserved",
+  "resources": {
+    "LUT6": 9209,
+    "Slice": 10327,
+    "FF": 8972,
+    "ERAM20K": 39,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_accepted_baseline": {
+    "LUT6": 368,
+    "Slice": 486,
+    "FF": 296,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "delta_vs_selected_n1_candidate": {
+    "LUT6": -833,
+    "Slice": -792,
+    "FF": -444,
+    "ERAM20K": -4,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.123,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "engineering_parameter_comparison_allowed": true,
+  "engineering_comparison_qualification": null,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD internal setup/hold; inherited external timing coverage limits retained",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "source_manifest_sha256": "b81c1274454c84faea43b9ccad73c593673f72581e3d608dba6859dd4cdfca2b",
+  "bit": {
+    "path": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/compile-v6/camera_to_dsi_display.bit",
+    "sha256": "4d3e193aa914d10deed1493e32bebb461fea994d957756b77819ecc7fe7ebcdb",
+    "bytes": 1789539
+  },
+  "all_ON_request": {
+    "exposure": 900,
+    "gain_code": 128,
+    "nominal_gain": 12
+  },
+  "protection_OFF_request": {
+    "exposure": 1991,
+    "gain_code": 160,
+    "nominal_gain": 24
+  },
+  "physical_inputs": 5,
+  "SW6": "not_used_no_wiring",
+  "board_programming": "not_run",
+  "visual_acceptance": "pending_user_observation",
+  "fixed_lift": "N1 unchanged from b8407f8",
+  "key3_key4": "unused; test selectors removed",
+  "frame_processing": "single-frame per-pixel; no alternating capture or extra frame buffer",
+  "generated_utc": "2026-10-31T18:51:21.155548+00:00",
+  "archived_from": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/compile-v6/build_manifest.json",
+  "archived_source_sha256": "5ff232c060814defdadf9fd08ca8db053c326446fd227063ef7732c97e20dbca"
+}

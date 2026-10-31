@@ -1,0 +1,182 @@
+{
+  "passed": true,
+  "source_commit": "85c7f7dd5f6eacd72b2879c589c8fb0e0e55476d",
+  "audit_in_separate_TD_process": true,
+  "paths": [
+    {
+      "label": "u_demo_mipi_controls_payload_all__O_dst_data_all_",
+      "source_count": 5,
+      "target_count": 5,
+      "max_data_delay_ns": 4.599,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_mipi_controls_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.495,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_mipi_controls_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.412,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_mipi_controls_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.612,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_mipi_controls_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.612,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_hdmi_controls_payload_all__O_dst_data_all_",
+      "source_count": 5,
+      "target_count": 5,
+      "max_data_delay_ns": 1.06,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_hdmi_controls_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.523,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_hdmi_controls_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.561,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_hdmi_controls_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.686,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_hdmi_controls_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.603,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_sensor_controls_payload_all__O_dst_data_all_",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.752,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_sensor_controls_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.632,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_sensor_controls_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.553,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_sensor_controls_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.805,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_sensor_controls_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.618,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_mipi_status_payload_all__O_dst_data_all_",
+      "source_count": 5,
+      "target_count": 4,
+      "max_data_delay_ns": 1.306,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_mipi_status_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.597,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_mipi_status_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.919,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_mipi_status_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.435,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_mipi_status_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.614,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_sensor_status_payload_all__O_dst_data_all_",
+      "source_count": 3,
+      "target_count": 3,
+      "max_data_delay_ns": 0.937,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_sensor_status_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.628,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_sensor_status_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.638,
+      "limit_ns": 8.0
+    },
+    {
+      "label": "u_demo_sensor_status_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.507,
+      "limit_ns": 4.0
+    },
+    {
+      "label": "u_demo_sensor_status_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.405,
+      "limit_ns": 4.0
+    }
+  ]
+}
