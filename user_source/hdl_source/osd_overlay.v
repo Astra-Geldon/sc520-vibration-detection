@@ -1,8 +1,10 @@
-// Production OSD: actual algorithm name and original Anlogic Logo.
-// Experimental labels removed; pixel overlay remains combinational.
+// Production OSD: actual mode, original Anlogic Logo, and applied enhancement
+// states.  The status panel uses a small 5x7 font; the pixel path stays purely
+// combinational, including the existing name/Logo priority outside the panel.
 module osd_overlay #(
     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
+    parameter integer STATUS_EN   = 1,
 
     // ---- 画面尺寸（与 VTC 一致）----
     parameter integer H_ACTIVE    = 1280,
@@ -24,6 +26,11 @@ module osd_overlay #(
     input  wire        I_de,        // 像素有效
     input  wire        I_vs,        // 场同步（用来清行计数）
     input  wire [ 2:0] I_mode,      // 当前算法（来自 img_mode_sel，3 bit）
+    // Applied states, not physical switch requests.  Bit 0..5:
+    // AWB, Gamma, Color Shading, N1, exposure protection, demosaic.
+    // SW2 jointly controls Gamma and N1; each still shows its effective state.
+    input  wire [ 5:0] I_alg_state,
+    input  wire [ 5:0] I_alg_pending,
     input  wire [23:0] I_data,      // 来自 img_proc
     output wire [23:0] O_data       // 送 hdmi_mixer
 );
@@ -138,6 +145,128 @@ module osd_overlay #(
     wire       S_text_bit1 = S_font_row1[S_bit_idx1];
 
     //------------------------------------------------------------------
+    // Lower-left applied-state panel.  3 columns x 2 rows, 192x32 per item.
+    // Each label identifies the physical switch, e.g. "S2 GAM ON" and
+    // "S2 N1 ON".  WAIT takes priority over the last confirmed ON/OFF state.
+    // Coordinates and font selection are shared across all six entries.
+    //------------------------------------------------------------------
+    localparam integer STATUS_X = 24;
+    localparam integer STATUS_Y = V_ACTIVE - 64;
+    localparam [23:0] C_ON   = 24'h50_FF_80;
+    localparam [23:0] C_OFF  = 24'hA0_A0_A0;
+    localparam [23:0] C_WAIT = 24'hFF_D0_40;
+
+    wire [10:0] S_status_dx = S_x - STATUS_X;
+    wire [ 9:0] S_status_dy = S_y - STATUS_Y;
+    wire S_in_status_box = (S_x >= STATUS_X - 8) && (S_x < STATUS_X + 584) &&
+                           (S_y >= STATUS_Y - 8) && (S_y < STATUS_Y + 56);
+    wire S_in_status_text = (S_x >= STATUS_X) && (S_x < STATUS_X + 576) &&
+                            (S_y >= STATUS_Y) && (S_y < STATUS_Y + 48) &&
+                            !S_status_dy[4];
+    reg [1:0] S_status_column;
+    reg [7:0] S_status_item_x;
+    always @(*) begin
+        if (S_status_dx < 11'd192) begin
+            S_status_column = 2'd0;
+            S_status_item_x = S_status_dx[7:0];
+        end else if (S_status_dx < 11'd384) begin
+            S_status_column = 2'd1;
+            S_status_item_x = S_status_dx - 11'd192;
+        end else begin
+            S_status_column = 2'd2;
+            S_status_item_x = S_status_dx - 11'd384;
+        end
+    end
+    wire [2:0] S_status_item = S_status_dy[5] ?
+                               (3'd3 + {1'b0, S_status_column}) :
+                               {1'b0, S_status_column};
+    wire [3:0] S_status_char = S_status_item_x[7:4];
+    wire [2:0] S_status_col = S_status_item_x[3:1];
+    wire [2:0] S_status_row = S_status_dy[3:1];
+    wire S_status_pending = I_alg_pending[S_status_item];
+    wire S_status_enabled = I_alg_state[S_status_item];
+
+    function [7:0] status_label;
+        input [2:0] item;
+        input [1:0] letter;
+        begin
+            status_label = " ";
+            case (item)
+                3'd0: case (letter) 0:status_label="A";1:status_label="W";2:status_label="B";endcase
+                3'd1: case (letter) 0:status_label="G";1:status_label="A";2:status_label="M";endcase
+                3'd2: case (letter) 0:status_label="C";1:status_label="S";2:status_label="C";endcase
+                3'd3: case (letter) 0:status_label="N";1:status_label="1";endcase
+                3'd4: case (letter) 0:status_label="E";1:status_label="X";2:status_label="P";endcase
+                3'd5: case (letter) 0:status_label="D";1:status_label="E";2:status_label="M";endcase
+                default: status_label=" ";
+            endcase
+        end
+    endfunction
+
+    reg [7:0] S_status_ascii;
+    always @(*) begin
+        S_status_ascii = " ";
+        case (S_status_char)
+            4'd0: S_status_ascii = "S";
+            4'd1: case (S_status_item)
+                3'd0:S_status_ascii="1";
+                3'd1,3'd3:S_status_ascii="2";
+                3'd2:S_status_ascii="3";
+                3'd4:S_status_ascii="5";
+                3'd5:S_status_ascii="4";
+                default:S_status_ascii=" ";
+            endcase
+            4'd3:S_status_ascii=status_label(S_status_item,2'd0);
+            4'd4:S_status_ascii=status_label(S_status_item,2'd1);
+            4'd5:S_status_ascii=status_label(S_status_item,2'd2);
+            4'd7:S_status_ascii=S_status_pending ? "W" : "O";
+            4'd8:S_status_ascii=S_status_pending ? "A" : (S_status_enabled ? "N" : "F");
+            4'd9:S_status_ascii=S_status_pending ? "I" : (S_status_enabled ? " " : "F");
+            4'd10:S_status_ascii=S_status_pending ? "T" : " ";
+            default:S_status_ascii=" ";
+        endcase
+    end
+
+    function [34:0] status_glyph;
+        input [7:0] ascii;
+        begin
+            case (ascii)
+                "A":status_glyph=35'b01110_10001_10001_11111_10001_10001_10001;
+                "B":status_glyph=35'b11110_10001_10001_11110_10001_10001_11110;
+                "C":status_glyph=35'b01111_10000_10000_10000_10000_10000_01111;
+                "D":status_glyph=35'b11110_10001_10001_10001_10001_10001_11110;
+                "E":status_glyph=35'b11111_10000_10000_11110_10000_10000_11111;
+                "F":status_glyph=35'b11111_10000_10000_11110_10000_10000_10000;
+                "G":status_glyph=35'b01111_10000_10000_10111_10001_10001_01111;
+                "I":status_glyph=35'b11111_00100_00100_00100_00100_00100_11111;
+                "M":status_glyph=35'b10001_11011_10101_10101_10001_10001_10001;
+                "N":status_glyph=35'b10001_11001_10101_10011_10001_10001_10001;
+                "O":status_glyph=35'b01110_10001_10001_10001_10001_10001_01110;
+                "P":status_glyph=35'b11110_10001_10001_11110_10000_10000_10000;
+                "S":status_glyph=35'b01111_10000_10000_01110_00001_00001_11110;
+                "T":status_glyph=35'b11111_00100_00100_00100_00100_00100_00100;
+                "W":status_glyph=35'b10001_10001_10001_10101_10101_11011_10001;
+                "X":status_glyph=35'b10001_10001_01010_00100_01010_10001_10001;
+                "1":status_glyph=35'b00100_01100_00100_00100_00100_00100_01110;
+                "2":status_glyph=35'b01110_10001_00001_00010_00100_01000_11111;
+                "3":status_glyph=35'b11110_00001_00001_01110_00001_00001_11110;
+                "4":status_glyph=35'b00010_00110_01010_10010_11111_00010_00010;
+                "5":status_glyph=35'b11111_10000_10000_11110_00001_00001_11110;
+                default:status_glyph=35'd0;
+            endcase
+        end
+    endfunction
+    wire [34:0] S_status_glyph = status_glyph(S_status_ascii);
+    // Five bits per row: shift/add is explicit, with no multiplier or DSP.
+    wire [5:0] S_status_bit_index = 6'd34 -
+                       {1'b0,S_status_row,2'b00} - {3'b000,S_status_row} -
+                       {3'b000,S_status_col};
+    wire S_status_ink = (S_status_col < 3'd5) && (S_status_row < 3'd7) &&
+                        S_status_glyph[S_status_bit_index];
+    wire [23:0] S_status_rgb = S_status_pending ? C_WAIT :
+                               (S_status_enabled ? C_ON : C_OFF);
+
+    //------------------------------------------------------------------
     //  叠加（纯组合 3 选 1）
     //     Logo 不透明像素 > 文字框（黑底/白字） > 原视频
     //------------------------------------------------------------------
@@ -151,6 +280,9 @@ module osd_overlay #(
             assign O_data = S_logo_opaque ? S_logo_rgb  :
                             S_in_text1    ? (S_text_bit1 ? C_WHITE : C_BLACK) :
                             S_in_box1     ? C_BLACK :
+                            ((STATUS_EN != 0) && S_in_status_text) ?
+                                (S_status_ink ? S_status_rgb : C_BLACK) :
+                            ((STATUS_EN != 0) && S_in_status_box) ? C_BLACK :
                                             I_data;
         end
         else begin : g_osd_off

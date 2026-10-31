@@ -24,6 +24,7 @@ module bilinear_interpolation #(
 )(
     input             I_clk            ,
     input             I_rst_n          ,
+    input             I_enable         , // frame-stable, latency-preserving raw grey
 
     //input
     input             I_tlast          ,
@@ -870,6 +871,24 @@ endgenerate
         end
     end
 
+    // Four centre Bayer samples follow exactly the existing four pre-output
+    // stages. Do not bypass the line buffers, valid pipeline or image borders.
+    reg [31:0] raw_center_d0, raw_center_d1, raw_center_d2, raw_center_d3;
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            raw_center_d0 <= 32'd0;
+            raw_center_d1 <= 32'd0;
+            raw_center_d2 <= 32'd0;
+            raw_center_d3 <= 32'd0;
+        end else begin
+            if (I_tvalid)
+                raw_center_d0 <= {matrix17, matrix16, matrix15, matrix14};
+            if (I_tvalid_r[0]) raw_center_d1 <= raw_center_d0;
+            if (I_tvalid_r[1]) raw_center_d2 <= raw_center_d1;
+            if (I_tvalid_r[2]) raw_center_d3 <= raw_center_d2;
+        end
+    end
+
     // pipleline 3
     always @(posedge I_clk or negedge I_rst_n) begin
         if(!I_rst_n) begin
@@ -879,10 +898,14 @@ endgenerate
             rgb_data3 <= 'd0 ;
         end
         else if(I_tvalid_r[3])begin
-            rgb_data0 <= {8'b0, r0_mean_d, g0_mean_d, b0_mean_d};
-            rgb_data1 <= {8'b0, r1_mean_d, g1_mean_d, b1_mean_d};
-            rgb_data2 <= {8'b0, r2_mean_d, g2_mean_d, b2_mean_d};
-            rgb_data3 <= {8'b0, r3_mean_d, g3_mean_d, b3_mean_d};
+            rgb_data0 <= I_enable ? {8'b0, r0_mean_d, g0_mean_d, b0_mean_d} :
+                          {8'b0, {3{raw_center_d3[0+:8]}}};
+            rgb_data1 <= I_enable ? {8'b0, r1_mean_d, g1_mean_d, b1_mean_d} :
+                          {8'b0, {3{raw_center_d3[8+:8]}}};
+            rgb_data2 <= I_enable ? {8'b0, r2_mean_d, g2_mean_d, b2_mean_d} :
+                          {8'b0, {3{raw_center_d3[16+:8]}}};
+            rgb_data3 <= I_enable ? {8'b0, r3_mean_d, g3_mean_d, b3_mean_d} :
+                          {8'b0, {3{raw_center_d3[24+:8]}}};
         end
     end
 

@@ -17,6 +17,10 @@ rename_clock -name {MIPI_RX_BYTE_CLK} [get_clocks {u_mipi_dphy_rx_ph1p_mipiio_wr
 # 复位是纯异步复位，不参与时序（与队友 timing.sdc 一致）
 set_false_path -from [get_ports {I_rst_n}]
 
+# Mechanical switch inputs are asynchronous and feed only the first stage of
+# u_demo_switches; subsequent synchronizer/mailbox paths keep their constraints.
+set_false_path -from [get_ports {I_sw[*]}]
+
 
 set_clock_groups -asynchronous \
     -group [get_clocks {mipi_rx_ck_pad MIPI_RX_BYTE_CLK}] \

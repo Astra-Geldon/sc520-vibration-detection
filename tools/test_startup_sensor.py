@@ -19,7 +19,7 @@ parameter integer CASE=0;
 reg clk=0,rst_n=0,byteclk=0;
 always #21 clk=~clk;
 always #5 byteclk=~byteclk;
-wire req;wire[15:0] ae,ag;
+wire req,protect_applied,protect_pending,protect_valid;wire[15:0] ae,ag;
 wire scl,cfg,ae_done,error;wire[15:0] id;
 tri1 sda;
 reg slave_low=0;
@@ -27,8 +27,9 @@ assign sda=slave_low?1'b0:1'bz;
 wire S_csi_rx_clk=byteclk,S_24m_clk=clk,S_rst_n=rst_n,S_cam_i2c_ready=rst_n;
 reg S_csi_frame_start=0;
 __REAL_FRAME_CDC__
-ae_set control(.I_clk(clk),.I_rst(!rst_n),.I_ae_cfg_done(ae_done),
- .I_cam_cfg_done(cfg),.O_ae_req(req),.O_ae(ae),.O_ag(ag));
+ae_set control(.I_clk(clk),.I_rst(!rst_n),.I_protect_en(1'b1),.I_ae_cfg_done(ae_done),
+ .I_cam_cfg_done(cfg),.O_ae_req(req),.O_ae(ae),.O_ag(ag),
+ .O_protect_applied(protect_applied),.O_pending(protect_pending),.O_valid(protect_valid));
 uicfgcs520 #(.CLK_DIV(237)) dut(
  .I_clk(clk),.I_rst_n(rst_n),.I_frame_tick(S_cam_frame_tick),
  .I_ae_req(req),.I_ae(ae),.I_ag(ag),.O_cam_scl(scl),.IO_cam_sda(sda),
@@ -77,12 +78,15 @@ initial begin
  if(CASE==10)begin
   wait(dut.state==11);repeat(1000)@(negedge clk);
   if(cfg||ae_done||groups!=3||rejected!=3||!error)$fatal(1,"permanent fault not bounded");
+  if(protect_valid||!protect_pending)$fatal(1,"failed group reported applied");
  end else if(CASE==11)begin
   #100000000;
   if(groups||ae_done||frames||ticks)$fatal(1,"wrote without a real frame");
+  if(protect_valid||!protect_pending)$fatal(1,"unsettled request reported applied");
  end else begin
   wait(ae_done);repeat(30)@(negedge clk);
   if(id!==16'hee4b||ae!==900||ag!==128||!cfg)$fatal(1,"bad requested parameters");
+  if(!protect_applied||!protect_valid||protect_pending)$fatal(1,"settled protection status missing");
   if(mem[16'h3e00]!==0||mem[16'h3e01]!==8'h38||mem[16'h3e02]!==8'h40||
      mem[16'h3e09]!==8'h0b||mem[16'h3e06]!==0||mem[16'h3e07]!==8'hc0||
      mem[16'h3812]!==8'h30)$fatal(1,"wrong actual register map");

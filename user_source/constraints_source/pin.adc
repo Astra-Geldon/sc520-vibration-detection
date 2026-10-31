@@ -3,6 +3,12 @@ set_pin_assignment	{ I_key[1] }			{ LOCATION = A9;  IOSTANDARD = LVCMOS33; PULLT
 set_pin_assignment	{ I_key[2] }			{ LOCATION = B9;  IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
 set_pin_assignment	{ I_key[3] }			{ LOCATION = C7;  IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
 
+set_pin_assignment { I_sw[0] } { LOCATION = A4; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment { I_sw[1] } { LOCATION = B4; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment { I_sw[2] } { LOCATION = E11; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment { I_sw[3] } { LOCATION = D11; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment { I_sw[4] } { LOCATION = C12; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+
 set_pin_assignment	{ I_sys_clk }			{ LOCATION = C4; IOSTANDARD  = LVCMOS33; PULLTYPE = PULLUP; }
 set_pin_assignment	{ I_rst_n }				{ LOCATION = R10; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
 

@@ -36,6 +36,7 @@ module awb  #(
 (
     input                   I_clk  ,
     input                   I_rst_n,
+    input                   I_enable, // unity gain bypass keeps the delay RAM and sync
 
 
     input                   I_tlast  ,
@@ -235,8 +236,8 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
   wire [19:0] S_gain_r_mux = 20'h10000;
   wire [19:0] S_gain_b_mux = 20'h10000;
 `else
-  wire [19:0] S_gain_r_mux = in_r_r1;
-  wire [19:0] S_gain_b_mux = in_b_r1;
+  wire [19:0] S_gain_r_mux = I_enable ? in_r_r1 : 20'h10000;
+  wire [19:0] S_gain_b_mux = I_enable ? in_b_r1 : 20'h10000;
 `endif
 
   localparam [1:0] DIV_IDLE = 2'd0,

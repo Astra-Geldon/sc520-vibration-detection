@@ -20,6 +20,10 @@
 `endif
 
 module isp_top (
+    // Frame-stable demo controls. Preserve every original data/sync stage.
+    input           I_demosaic_en,
+    input           I_awb_en,
+    input           I_gamma_en,
     input 			axi4s_video_aclk,
     input 			I_rst_n			,
     input 			I_tlast			,
@@ -75,6 +79,7 @@ demosaic #(
 )
 u_demosaic
 (
+    .I_enable             (I_demosaic_en),
     .I_clk   			(axi4s_video_aclk)	,   // 时钟信号
     .I_rst_n 			(I_rst_n)	,   // 复位信号，低有效
     .axi4s_video_tdata 	(I_tdata)	,  // AXI4-Stream视频数据
@@ -120,6 +125,7 @@ awb #(
     .IMG_HEIGHT(720 ),
     .IMG_WIDTH (1280)
 ) u_awb (
+    .I_enable(I_awb_en && I_demosaic_en),
     .I_clk   (axi4s_video_aclk),
     .I_rst_n (I_rst_n),
     .I_tlast (m_aixs_tlast),
@@ -152,6 +158,7 @@ awb #(
     wire [95:0] gam_O_tdata;
 
     axis_gamma_rgb96 u_gamma (
+        .I_enable( I_gamma_en       ),
         .I_clk   ( axi4s_video_aclk ),
         .I_rst_n ( I_rst_n           ),
         .I_tlast ( awb_O_tlast       ),
@@ -192,6 +199,7 @@ endmodule
 // so the sensor black-level noise is NOT amplified (no grey veil).
 // Adds one registered pipeline cycle.
 module axis_gamma_rgb96 (
+    input  wire        I_enable,
     input  wire        I_clk,
     input  wire        I_rst_n,
     input  wire        I_tlast,
@@ -260,7 +268,7 @@ module axis_gamma_rgb96 (
             O_tuser  <= I_tuser;
             O_tvalid <= I_tvalid;
             if (I_tvalid) begin
-                O_tdata <= {
+                O_tdata <= !I_enable ? I_tdata : {
                     gamma07(I_tdata[95:88]), gamma07(I_tdata[87:80]), gamma07(I_tdata[79:72]),
                     gamma07(I_tdata[71:64]), gamma07(I_tdata[63:56]), gamma07(I_tdata[55:48]),
                     gamma07(I_tdata[47:40]), gamma07(I_tdata[39:32]), gamma07(I_tdata[31:24]),

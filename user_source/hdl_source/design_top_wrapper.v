@@ -1,7 +1,9 @@
-// Fixed E900/G12/N1 release. KEY1/KEY2 retain colour/gray/binary/Sobel.
+// Five-switch demo built on the accepted E900/G12/N1 startup fix.
+// KEY1/KEY2 retain colour/gray/binary/Sobel; SW6 is not connected or modified.
 // Camera power-up, ISP, DDR and HDMI clocks/wiring preserve b8407f8.
-// Candidate menus, diagnostic overlay, statistics tap and UART are removed.
+// No parameter menus, statistics tap or UART; only compact applied-state OSD.
 `include "fixed_n1_lift.v"
+`include "demo_switch_control.v"
 
 module design_top_wrapper (
     input wire        I_sys_clk,
@@ -16,6 +18,8 @@ module design_top_wrapper (
 
     // Active-low KEY1/KEY2 select image modes; KEY3/KEY4 are unused.
     input wire [3:0]  I_key,
+    // SW1 AWB, SW2 Gamma+N1, SW3 shading, SW4 demosaic, SW5 exposure.
+    input wire [4:0]  I_sw,
 
     output wire       O_screen_pwm,
     output wire       O_tmds_ch0_p,
@@ -192,7 +196,7 @@ module design_top_wrapper (
 
     // Original four image modes; fixed N1 is applied only to colour.
     localparam integer IMG_MODE = 0;
-    wire [23:0] S_imgp_data, S_awb_data, S_csc_data, S_osd_mix;
+    wire [23:0] S_imgp_data, S_awb_data, S_csc_data, S_csc_corrected, S_osd_mix;
     wire [2:0] S_img_mode;
     wire [23:0] S_lift_data, S_tone_stage_data;
     wire S_tone_stage_de, S_tone_stage_vs;
@@ -205,6 +209,75 @@ module design_top_wrapper (
 
     assign O_screen_pwm = 1'b1;
     assign S_video_out_vsync = ~S_hdmi_vsync;
+
+    wire [4:0] S_demo_switches, S_demo_mipi, S_demo_hdmi, S_demo_mipi_status;
+    wire S_demo_switch_valid, S_demo_mipi_valid, S_demo_hdmi_valid, S_demo_mipi_status_valid;
+    wire S_demo_protect, S_demo_protect_valid;
+    wire S_protect_applied, S_protect_pending, S_protect_valid;
+    wire [2:0] S_demo_sensor_status;
+    wire S_demo_sensor_status_valid;
+    reg S_demo_vs_d;
+    wire S_demo_frame_apply = S_hdmi_vsync && !S_demo_vs_d;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n)
+        if (!S_hdmi_rst_n) S_demo_vs_d <= 1'b0;
+        else S_demo_vs_d <= S_hdmi_vsync;
+
+    demo_switch_debounce u_demo_switches (
+        .I_clk(I_sys_clk), .I_rst_n(S_rst_n), .I_async(I_sw),
+        .O_state(S_demo_switches), .O_valid(S_demo_switch_valid)
+    );
+    demo_control_cdc u_demo_mipi_controls (
+        .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
+        .I_src_data(S_demo_switches), .I_src_valid(S_demo_switch_valid),
+        .I_dst_clk(S_csi_rx_clk), .I_dst_rst_n(S_rst_n), .I_dst_apply(S_raw_tuser),
+        .O_dst_data(S_demo_mipi), .O_dst_valid(S_demo_mipi_valid)
+    );
+    demo_control_cdc u_demo_hdmi_controls (
+        .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
+        .I_src_data(S_demo_switches), .I_src_valid(S_demo_switch_valid),
+        .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
+        .O_dst_data(S_demo_hdmi), .O_dst_valid(S_demo_hdmi_valid)
+    );
+    demo_control_cdc #(.WIDTH(1), .INITIAL(1'b1)) u_demo_sensor_controls (
+        .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
+        .I_src_data(S_demo_switches[4]), .I_src_valid(S_demo_switch_valid),
+        .I_dst_clk(S_24m_clk), .I_dst_rst_n(S_rst_n), .I_dst_apply(1'b1),
+        .O_dst_data(S_demo_protect), .O_dst_valid(S_demo_protect_valid)
+    );
+    // Return committed states, not the mechanical switch request, to the OSD.
+    demo_control_cdc u_demo_mipi_status (
+        .I_src_clk(S_csi_rx_clk), .I_src_rst_n(S_rst_n),
+        .I_src_data(S_demo_mipi), .I_src_valid(S_demo_mipi_valid),
+        .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
+        .O_dst_data(S_demo_mipi_status), .O_dst_valid(S_demo_mipi_status_valid)
+    );
+    demo_control_cdc #(.WIDTH(3), .INITIAL(3'b101)) u_demo_sensor_status (
+        .I_src_clk(S_24m_clk), .I_src_rst_n(S_rst_n),
+        .I_src_data({S_protect_applied, S_protect_pending, S_protect_valid}), .I_src_valid(1'b1),
+        .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
+        .O_dst_data(S_demo_sensor_status), .O_dst_valid(S_demo_sensor_status_valid)
+    );
+    wire S_demo_raw = !S_demo_mipi_status[3];
+    wire [5:0] S_demo_alg_state = {
+        S_demo_mipi_status[3],
+        S_demo_sensor_status[2],
+        S_demo_hdmi[1] && !S_demo_raw && (S_tone_stage_mode == 0),
+        S_demo_hdmi[2] && !S_demo_raw && ((S_tone_stage_mode == 0) || (S_tone_stage_mode == 2)),
+        S_demo_mipi_status[1],
+        S_demo_mipi_status[0] && !S_demo_raw
+    };
+    wire [5:0] S_demo_alg_pending = {
+        !S_demo_mipi_status_valid || (S_demo_mipi_status[3] != S_demo_hdmi[3]),
+        !S_demo_sensor_status_valid || !S_demo_sensor_status[0] || S_demo_sensor_status[1] ||
+            (S_demo_sensor_status[2] != S_demo_hdmi[4]),
+        !S_demo_hdmi_valid || !S_demo_mipi_status_valid ||
+            (S_demo_mipi_status[3:1] != S_demo_hdmi[3:1]),
+        !S_demo_hdmi_valid || !S_demo_mipi_status_valid ||
+            (S_demo_mipi_status[3] != S_demo_hdmi[3]),
+        !S_demo_mipi_status_valid || (S_demo_mipi_status[1] != S_demo_hdmi[1]),
+        !S_demo_mipi_status_valid ||
+            ({S_demo_mipi_status[3], S_demo_mipi_status[0]} != {S_demo_hdmi[3], S_demo_hdmi[0]})
+    };
 	
 	
     assign S_rst_n 		= S_pll_lock;
@@ -265,9 +338,11 @@ module design_top_wrapper (
       .I_rst(~S_rst_n),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
+      .I_protect_en(S_demo_protect),
       .O_ae_req(S_ae_req),
       .O_ae(S_ae),
-      .O_ag(S_ag)
+      .O_ag(S_ag),
+      .O_protect_applied(S_protect_applied), .O_pending(S_protect_pending), .O_valid(S_protect_valid)
   );
   
     uicfgcs520 #(
@@ -441,6 +516,9 @@ assign S_raw_tuser  = S_axis_tuser;
 wire [1:0] S_k_sel = 2'd2;
 
 isp_top u_isp_top (
+.I_demosaic_en(S_demo_mipi[3]),
+.I_awb_en(S_demo_mipi[0]),
+.I_gamma_en(S_demo_mipi[1]),
 .axi4s_video_aclk(S_csi_rx_clk),
 .I_rst_n         (S_rst_n),
 .I_tlast         (S_raw_tlast	),
@@ -652,8 +730,11 @@ isp_top u_isp_top (
         .I_de       ( S_hdmi_de        ),
         .I_data     ( S_awb_data       ),
         .I_k_sel   ( S_k_sel         ),
-        .O_data     ( S_csc_data       )
+        .O_data     ( S_csc_corrected  )
     );
+    // Keep the original constant k arithmetic and DSP mapping. Switching only
+    // selects the zero-latency result, rather than making k a new multiplier.
+    assign S_csc_data = (S_demo_hdmi[2] && !S_demo_raw) ? S_csc_corrected : S_awb_data;
 
     //------------------------------------------------------------------
     //  基础图像处理：video_out -> color_shading -> img_proc
@@ -698,7 +779,7 @@ isp_top u_isp_top (
         end
     end
     fixed_n1_lift u_n1_lift (
-        .I_de(S_tone_stage_de), .I_enable(S_tone_stage_mode == 3'd0),
+        .I_de(S_tone_stage_de), .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
         .I_data(S_tone_stage_data), .I_peak(S_tone_stage_peak), .O_data(S_lift_data)
     );
     osd_overlay #(
@@ -708,6 +789,7 @@ isp_top u_isp_top (
     )u_osd_overlay(
         .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
         .I_de(S_tone_stage_de), .I_vs(S_tone_stage_vs), .I_mode(S_tone_stage_mode),
+        .I_alg_state(S_demo_alg_state), .I_alg_pending(S_demo_alg_pending),
         .I_data(S_lift_data), .O_data(S_osd_mix)
     );
 

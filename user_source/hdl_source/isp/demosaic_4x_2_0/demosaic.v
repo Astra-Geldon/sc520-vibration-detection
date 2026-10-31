@@ -25,6 +25,7 @@ module demosaic #(
 )
 (
     input           I_clk   ,   // 时钟信号
+    input           I_enable, // runtime colour reconstruction / aligned Bayer grey
     input           I_rst_n ,   // 复位信号，低有效
 
     input [39:0]            axi4s_video_tdata ,  // AXI4-Stream视频数据
@@ -82,6 +83,7 @@ raw_matrix_3x3_buffer #(
 bilinear_interpolation #(
     .BAYER_MODE (BAYER_MODE)
 )bilinear_interpolation_d(
+    .I_enable(I_enable),
     /*input            */.I_clk            (I_clk   ),
     /*input            */.I_rst_n          (I_rst_n ),
 
