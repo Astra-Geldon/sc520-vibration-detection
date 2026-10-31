@@ -1,5 +1,8 @@
 # 近白高光颜色保护：验证与交付记录
 
+> **历史记录，不作为当前版本操作说明**：本文保留当时实验、测量及计划；其中“当前/已烧录/下一步”、算法开关、资源和本机路径仅适用于文内历史版本。当前五拨码最终版以[README](../../README.md)及[算法说明](../../CURRENT_ALGORITHMS.md)为准。
+
+
 生产源码`a7a12be`，分支`image-highlight-white-protect-20261031`。实现和菜单见根目录`HIGHLIGHT_WHITE_PROTECTION_20261031.md`。
 
 | 文件 | 内容 |

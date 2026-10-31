@@ -1,0 +1,43 @@
+{
+  "source_commit": "85c7f7dd5f6eacd72b2879c589c8fb0e0e55476d",
+  "branch": "demo-five-switch-20261101",
+  "downloaded_local": "2026-11-01T02:51:30.966229+08:00",
+  "resources": {
+    "LUT6": 9209,
+    "Slice": 10327,
+    "FF": 8972,
+    "ERAM20K": 39,
+    "DSP": 31,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_accepted_baseline": {
+    "LUT6": 368,
+    "Slice": 486,
+    "FF": 296,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.123,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "bit": "D:/FPGA/codex/_build/20261029project/five-switch-demo-20261101/bitstreams/五拨码画质演示版_85c7f7d.bit",
+  "sha256": "4d3e193aa914d10deed1493e32bebb461fea994d957756b77819ecc7fe7ebcdb",
+  "visual_acceptance": "user accepted current version for final release",
+  "no_SW6_wiring": true,
+  "single_frame_processing": true,
+  "DSP_limit": 31,
+  "MCU_role": "passive hard core; no firmware loaded",
+  "release_name": "最终版",
+  "snapshot_commit": "5abdac41436221326b0589cf307aff8ed3230f8c",
+  "stable_bit_path": "D:/FPGA/codex/_build/20261029project/final-20261101/SC520_final_five_switch_20261101.bit",
+  "user_acceptance": "User replied OK and requested final release on 2026-11-01; no new instrumented electrical or cold-boot measurements",
+  "cloud_repository": "https://gitee.com/wang-zhanheng/sc520-vibration-detection",
+  "cloud_branch": "demo-five-switch-20261101",
+  "source_unchanged_by_documentation_release": true
+}

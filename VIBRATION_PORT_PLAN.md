@@ -1,5 +1,8 @@
 # 振动识别算法移植规划
 
+> **历史记录，不作为当前版本操作说明**：本文保留当时实验、测量及计划；其中“当前/已烧录/下一步”、算法开关、资源和本机路径仅适用于文内历史版本。当前五拨码最终版以[README](README.md)及[算法说明](CURRENT_ALGORITHMS.md)为准。
+
+
 > ⚠️ **阅读前必看（2026-10-24 交接时补）**
 > 1. **本文是「规划」，不是已完成的功能**。文中提到的 `vib_cluster.v` / `vib_corr1d.v` /
 >    `vib_frame_store.v` / `vib_global_motion.v` / `vib_grad3x3.v` / `vib_grid_lk.v` /

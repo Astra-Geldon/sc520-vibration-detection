@@ -1,5 +1,8 @@
 # SC520 振动链接入第一步（2026-10-28）
 
+> **历史记录，不作为当前版本操作说明**：本文保留当时实验、测量及计划；其中“当前/已烧录/下一步”、算法开关、资源和本机路径仅适用于文内历史版本。当前五拨码最终版以[README](README.md)及[算法说明](CURRENT_ALGORITHMS.md)为准。
+
+
 > 历史记录：此第一步版本经用户上板未能识别3/8/10Hz。当前代码已经修复后处理，实际配置与日志字段以 [VIBRATION_RECOVERY_20261028.md](VIBRATION_RECOVERY_20261028.md) 为准；下文PN门限、排名确认和“尚未编译”只描述修复前状态。
 
 修改目录：`D:\workplace\anlogic\sc520-vibration-detection-fix-hdmi-tx-valid`。

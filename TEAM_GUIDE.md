@@ -1,137 +1,42 @@
-# 队友上手指南
+# 队友上手指南 · 当前最终版
 
-> 更新日期：2026-10-26。先确定分支，再按对应README操作。
-> 本文件随Git提交和Gitee推送；本机`docs/`是补充笔记，不是使用工程的前提。
+适用分支 `demo-five-switch-20261101`，更新日期2026-11-01。旧图像分支、微振动分支和历史参数菜单不适用于本说明。
 
-## 1. 先选择要用的版本
+## 先把画面跑起来
 
-|用途|分支|功能与状态|
+1. 按 [README](README.md) 获取指定分支。连接SC520CS、开发板电源、USB/JTAG、HDMI显示器或UGREEN采集卡。
+2. 使用 [已归档bit及烧录步骤](BUILD_AND_PROGRAM.md)，不需要每次重新编译。下载后等待摄像头初始化。
+3. 按KEY1回到彩色，将左下六项调为绿色ON。开关方向以屏幕为准，SW6不用，不焊线。
+4. 移动物体确认实时视频；右上显示安路Logo，左上显示模式，左下显示增强算法状态。
+
+## 演示方法
+
+| 开关 | 对比项 | 观察方法 |
 |---|---|---|
-|本次 MCU + 原图像链交接|`A-original-reuse`|提交 `ee675b6`，右上角安路 Logo 已启用；MCU 仅被动接入，详见 `MCU_USAGE.md`|
-|使用已认可的普通光照图像版本|`fix/hdmi-tx-valid`|源码基线`73c0f35`，加入文档澄清；没有高光自动曝光保护|
-|继续高光保护实验|`codex/highlight-protection-test`|保留`6662832`测试代码，合入稳定版文档；尚未完成板上效果验证|
+| SW1 | AWB白平衡 | 对准有白纸和彩色物体的场景，切换后等待色彩稳定 |
+| SW2 | Gamma＋N1 | 两项一起改变，比较中暗部亮度与层次 |
+| SW3 | 水平颜色校正 | 固定构图，对比左右颜色均匀性 |
+| SW4 | 去马赛克／RAW样本灰度 | OFF为Bayer样本演示，非正常彩色转灰度 |
+| SW5 | 低曝光低增益／旧参数 | 比较亮部与暗部，等待EXP从WAIT转成ON/OFF |
 
-本仓库的`main`另有队友维护的振动工作。本文交接的是上表两条图像分支，不要只下载默认分支就认为拿到了这里的图像版本。
+SW4关闭时AWB/CSC/N1会自动OFF；不是三只开关失灵。KEY2循环灰度/二值化/Sobel，KEY1随时回彩色。KEY3/KEY4无调参功能。左下不再显示旧k档位、C/D/P/W/G/N候选编号。
 
-首次获取稳定版：
+EXP显示已完成控制器ACK及生效等待；没有实时寄存器读回。其他状态也不是DDR中每个像素的逐帧标签，切换稳定数帧后再比较。
 
-```powershell
-git clone git@gitee.com:wang-zhanheng/sc520-vibration-detection.git
-cd sc520-vibration-detection
-git switch --track origin/fix/hdmi-tx-valid
-git log -1 --oneline
-```
+## 要改代码时
 
-已有本地仓库且工作区干净时，更新稳定分支：
+当前链路、表和参数见 [CURRENT_ALGORITHMS](CURRENT_ALGORITHMS.md)，资源预算见 [RESOURCE_USAGE](RESOURCE_USAGE.md)。真正使用的AWB是 `user_source/hdl_source/awb.v`，不是同名备份。`img_proc`默认参数不代表顶层实例配置，当前多数滤波/高斯/阈值锁定都关闭。
 
-```powershell
-git fetch origin
-git switch fix/hdmi-tx-valid
-git pull --ff-only origin fix/hdmi-tx-valid
-git status --short --branch
-```
+修改RTL后要完整A→B→C构建，不直接用GUI Run或旧flow脚本替代；加密HDMI核必须保留12处计数器选择补丁。编译输出都放 `_build`，操作步骤见 [BUILD_AND_PROGRAM](BUILD_AND_PROGRAM.md)。本次文档整理不改变已烧录bit。
 
-要做高光实验，在干净工作区执行`git switch codex/highlight-protection-test`；首次切换时Git可从对应远端分支建立本地分支。切换前先提交自己的修改；命令提示有冲突或本地修改时，先处理具体问题，不要直接强制覆盖。
+## MCU和采集
 
-切完后读**当前分支**的[README](README.md)，尤其是开头的版本状态与资源表。
+当前MCU没有运行项目固件，也不控制曝光或拨码。需要扩展时先看 [MCU现状](MCU_USAGE.md) 和 [MCU经验](MCU_LESSONS.md)，不要把其他历史迁移工程的板测结论套到本版本。
 
-## 2. 工程默认做什么
-
-SC520CS摄像头采集RAW10，经去马赛克、AWB、Gamma、DDR、空间颜色校正后，输出1280×720的HDMI图像。像素时钟75MHz，1650×750时序约60.606Hz；UGREEN 25854采集卡已验证能锁定。
-
-两条图像分支默认均关闭`VIB_ON`，因此没有振动测频输出。历史振动规划和历史验证记录不能据此当作当前默认功能。
-
-“原图”表示不做`img_proc`中的灰度、二值化或边缘处理，**仍然经过AWB、Gamma和空间颜色校正**。它不是传感器未经处理的原始数据。
-
-## 3. 按键按一下即可，不用长按
-
-|按键|引脚|稳定版|高光测试版|
-|---|---|---|---|
-|KEY1|D5|原图|原图|
-|KEY2|A9|灰度→二值化→Sobel→灰度|相同|
-|KEY3|B9|扩展算法组；当前`EXT_N=0`，无效果|临时开/关高光曝光保护，上电默认关闭|
-|KEY4|C7|颜色校正档位0→1→2→3→0|相同|
-
-KEY4四档对应k=0/0.5/0.75/1.0，上电默认档位2。左上OSD显示算法名，左下数字只显示KEY4档位，右上为固定安路Logo。
-
-KEY4切到0仅关闭空间颜色校正，不关闭AWB或Gamma。旧`I_button`的N2/J14不是上述板载键。
-
-测试版目前**没有高光开关状态OSD**，左下数字不能判断高光开关；复位可回到默认关闭状态。KEY3的临时用途只限这次测试，转正式版时必须恢复扩展算法组。
-
-## 4. 编译必须保留HDMI数据库补丁
-
-使用安路TD 6.2.168116，器件PH1P35MDG324、-3速级。在仓库根目录运行：
+抓图前关闭占用UGREEN的预览程序，显式选择 `UGREEN 25854`；不要误选电脑摄像头。新打开采集卡可能先有数秒黑帧/启动画面，稳定后再评价；黑场或完全遮挡本来就可能接近黑色。
 
 ```powershell
-Get-Process hwserver -ErrorAction SilentlyContinue | Stop-Process -Force
-Remove-Item td_project\baseline_rtl.db,td_project\patched_rtl.db,td_project\pA.log,td_project\pB.log,td_project\pC.log -ErrorAction SilentlyContinue
-.\td_project\patch\build_all.ps1
+.\tools\capture.ps1 -Device 'UGREEN 25854' -Count 2 -Warmup 120 -OutDir 'D:\FPGA\codex\_build\20261029project\manual-capture'
 ```
 
-三阶段分别是A综合、B修复12处HDMI加密核计数器选择信号、C布局布线和bitgen。不要直接用GUI的Run或旧`flow_build.tcl`代替完整流程，否则会遗漏补丁。
-
-构建脚本默认TD入口为`F:\Anlogic\bin\td_commands_prompt.exe`。队友的安装位置不同时，传入自己的实际路径：
-
-```powershell
-.\td_project\patch\build_all.ps1 -TdExe 'D:\实际安装目录\bin\td_commands_prompt.exe'
-```
-
-不要把器件速级`set speed 3`改成4。
-
-|验收项|需要看到什么|
-|---|---|
-|A/C日志|`PHASE_A_DONE ERR=0`、`PHASE_C_DONE ERR=0`|
-|B日志|`PATCH_FINISHED`和`VERIFIED_COUNTER_SELECTORS12`|
-|时序与布线|SWNS/HWNS为正、STNS/HTNS为0，未布线端点为0|
-|产物|`td_project/camera_to_dsi_display.bit`的生成时间符合本次构建|
-
-bit存在、bitgen完成或脚本退出成功，都不能单独证明画面或算法正确。一次完整编译约15分钟；文档修改不需要编译，参数实验优先用一次固件内的按键对照。
-
-## 5. Git版本、磁盘bit和板上版本是三件事
-
-Git不跟踪bit、综合数据库、资源报告和运行日志。拉代码或切分支不会更新这些文件，也不会改变FPGA当前配置。资源只能引用与源码匹配的报告。
-
-每次构建保留对应的源码提交、bit生成时间、SHA256和构建日志，例如：
-
-```powershell
-git rev-parse HEAD
-git status --short
-Get-Item td_project\camera_to_dsi_display.bit | Select-Object Name,Length,LastWriteTime
-Get-FileHash td_project\camera_to_dsi_display.bit -Algorithm SHA256
-```
-
-接手者从Git获取的是源码；没有与目标版本对应的bit时需要构建。不要借用文件名相同的旧bit，也不要把本机旧实验备份当作当前基线。
-
-## 6. 烧录与采集
-
-确认板子上电、FTDI/JTAG接好，并核对目标bit后，在仓库根目录执行：
-
-```powershell
-.\tools\burn.ps1 -Bit 'td_project\camera_to_dsi_display.bit'
-```
-
-TD安装路径不同时，烧录脚本也支持`-TdExe`参数。它会复制bit到临时路径、清理残留hwserver、执行下载，并检查`PRG-2014 Chip validation success: PH1P35MDG324`。FTDI设备未找到、连接失败或芯片校验失败都不算烧录成功。
-
-JTAG配置掉电丢失，每次重新上电都需要烧录。
-
-采集卡抓帧先关闭Windows相机、OBS等可能占用设备的软件，再执行暖机抓帧：
-
-```powershell
-.\tools\capture.ps1 -Count 2 -Warmup 120 -OutDir 'capture_check'
-```
-
-抓帧脚本需要PATH中有ffmpeg、Python3，且该Python环境安装了numpy和Pillow。缺少图像分析依赖时，在使用的Python环境中执行`python -m pip install numpy pillow`。
-
-暖机初期的黑帧不能直接证明HDMI坏了；录像软件的30fps也不代表FPGA输出30Hz。用户的视频是FPGA的HDMI直接采集，不是手机拍屏。
-
-## 7. 资源看哪里
-
-完整资源类型、总量、占用率、余量及DSP分配见当前分支的[README资源表](README.md#baseline-resources)。稳定版与测试版构建数字不同，不能混用。
-
-两版DSP均为31/40：AWB11、Gamma12、空间颜色校正8，剩9个。扩展算法不能按“还有40个DSP”预算。真正参与编译的AWB文件是`user_source/hdl_source/awb.v`，工程中有同名备份目录，不要改错。
-
-## 8. 高光测试版的边界
-
-该测试版来自`6662832`，本次合并只同步文档，不代表算法修复完成。已完成过三阶段构建，但此前下载失败，未完成板上效果验证。高光计数位宽/阈值分母、持续补光时曝光恢复策略等仍有已知问题需要修正；静态检查通过不能替代行为验证。
-
-KEY3关闭时恢复曝光1991，但测试版Gamma末段也有修改，所以“关闭高光保护”不等于恢复稳定版的全部像素映射。普通光照不受影响仍需实测，不能提前写成验收结论。
+需要ffmpeg及Python的numpy/Pillow。采集的30fps是采集设置，FPGA HDMI输出约60.606Hz。历史MD和旧validation记录只用于追溯，[索引](DOCUMENTATION_INDEX.md) 给出了适用范围。

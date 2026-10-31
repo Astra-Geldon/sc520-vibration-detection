@@ -1,5 +1,8 @@
 # Exposure chain findings
 
+> **历史记录，不作为当前版本操作说明**：本文保留当时实验、测量及计划；其中“当前/已烧录/下一步”、算法开关、资源和本机路径仅适用于文内历史版本。当前五拨码最终版以[README](README.md)及[算法说明](CURRENT_ALGORITHMS.md)为准。
+
+
 Current branch stage1. Real HDMI samples: face ROI (x500:1400,y200:950) RGB means: orig1 [65.5,62.3,63.4], orig2 [61.6,58.5,59.6], orig3 [56.2,53.8,55.1]. Ratios stable; issue is luminance from exposure, not AWB hue.
 
 Current chain: ae_set.v r_ae_set 1600/1200/900, r_ag=160 -> sensor exposure; isp_top axis_gamma_rgb96 after vendor awb; design_top SHADING_ON, AWB_SIMPLE off. Vendor AWB preserves chroma. color_shading modifies only R/B, G pass-through.
