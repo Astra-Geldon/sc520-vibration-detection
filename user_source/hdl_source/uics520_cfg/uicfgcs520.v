@@ -38,6 +38,9 @@ module uicfgcs520 #(
     localparam [3:0] ST_AE_RD_BUSY = 4'd14;
     localparam [3:0] ST_AE_RD_DONE = 4'd15;
     localparam integer RESET_WAIT_CYCLES = 119048; // 5 ms at 23.809524 MHz
+    // SC520CS: a group written in frameN affects frameN+2.  At60fps,
+    // 50ms spans at least that update window before verification.
+    localparam integer AE_SETTLE_CYCLES = 1190477;
 
     reg  [3:0]  state;
     reg         iic_req;
@@ -46,7 +49,7 @@ module uicfgcs520 #(
     reg  [7:0]  rd_cnt;
     reg  [31:0] wr_data;
     reg  [8:0]  reg_index;
-    reg  [16:0] reset_wait_cnt;
+    reg  [20:0] reset_wait_cnt;
     reg         ae_table_active;
     wire        iic_busy;
     wire        iic_bus_error;
@@ -59,6 +62,10 @@ module uicfgcs520 #(
     wire [23:0] gain_value;
     wire [23:0] selected_reg_data = ae_table_active ? ae_reg_data : init_reg_data;
     wire [8:0]  selected_reg_size = ae_table_active ? ae_reg_size : init_reg_size;
+    // Datasheet-defined exposure fields; reserved bits are not requested data.
+    wire [7:0] verify_mask = (reg_index == 9'd1) ? 8'h0f :
+                             (reg_index == 9'd3) ? 8'hf0 : 8'hff;
+    wire verify_match = ((rd_data & verify_mask) == (ae_reg_data[7:0] & verify_mask));
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -69,7 +76,7 @@ module uicfgcs520 #(
             rd_cnt           <= 8'd1;
             wr_data          <= 32'd0;
             reg_index        <= 9'd0;
-            reset_wait_cnt   <= 17'd0;
+            reset_wait_cnt   <= 21'd0;
             ae_table_active  <= 1'b0;
             O_cfg_done       <= 1'b0;
             O_ae_cfg_done    <= 1'b0;
@@ -142,7 +149,8 @@ module uicfgcs520 #(
                                 // Reuse entries1..6 for addresses and expected data.
                                 // Keep the request held until all reads complete.
                                 reg_index <= 9'd1;
-                                state <= ST_AE_RD_REQ;
+                                reset_wait_cnt <= 21'd0;
+                                state <= ST_RESET_WAIT;
                             end else begin
                                 ae_table_active <= 1'b0;
                                 O_ae_cfg_done <= 1'b1;
@@ -187,15 +195,16 @@ module uicfgcs520 #(
                 ST_WR_DONE: if (!iic_busy) begin
                     reg_index <= reg_index + 1'b1;
                     if (!ae_table_active && (reg_index == 9'd0)) begin
-                        reset_wait_cnt <= 17'd0;
+                        reset_wait_cnt <= 21'd0;
                         state <= ST_RESET_WAIT;
                     end else begin
                         state <= ST_IDLE;
                     end
                 end
                 ST_RESET_WAIT: begin
-                    if (reset_wait_cnt == RESET_WAIT_CYCLES - 1) begin
-                        state <= ST_IDLE;
+                    if (reset_wait_cnt == ((ae_table_active && (AE_VERIFY_EN != 0)) ?
+                                           AE_SETTLE_CYCLES - 1 : RESET_WAIT_CYCLES - 1)) begin
+                        state <= (ae_table_active && (AE_VERIFY_EN != 0)) ? ST_AE_RD_REQ : ST_IDLE;
                     end else begin
                         reset_wait_cnt <= reset_wait_cnt + 1'b1;
                     end
@@ -214,13 +223,13 @@ module uicfgcs520 #(
                     state <= ST_AE_RD_DONE;
                 end
                 ST_AE_RD_DONE: if (!iic_busy) begin
-                    if (rd_data != ae_reg_data[7:0])
+                    if (!verify_match)
                         O_iic_error <= 1'b1;
                     if (reg_index == 9'd6) begin
                         ae_table_active <= 1'b0;
                         O_ae_cfg_done <= 1'b1;
                         O_gain_verified <= !O_iic_error && !iic_bus_error &&
-                                           (rd_data == ae_reg_data[7:0]);
+                                           verify_match;
                         state <= ST_IDLE;
                     end else begin
                         reg_index <= reg_index + 1'b1;

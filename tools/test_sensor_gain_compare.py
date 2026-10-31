@@ -27,6 +27,8 @@ module uii2c #(parameter WMEN_LEN=4, RMEN_LEN=1, CLK_DIV=239)(
  integer ae_write_index=-1,ae_read_index=-1,delay_once=0;
  integer corrupt_index=-1,error_index=-1;
  integer transaction_read_index=-1;
+ integer cycle_count=0,release_cycle=0;
+ reg check_settle=0,reserved_noise=0;
  reg enforce_gain=1;
  reg [15:0] address;
  reg [7:0] value;
@@ -47,8 +49,10 @@ module uii2c #(parameter WMEN_LEN=4, RMEN_LEN=1, CLK_DIV=239)(
    O_iic_busy<=0;O_iic_bus_error<=0;O_rd_data<=0;cycles_left<=0;
    write_count<=0;read_count<=0;groups<=0;completed_reads<=0;
    ae_write_index<=-1;ae_read_index<=-1;transaction_read_index<=-1;
+   cycle_count<=0;release_cycle<=0;
    mem[16'h3107]<=8'hee;mem[16'h3108]<=8'h4b;
   end else begin
+   cycle_count<=cycle_count+1;
    O_iic_bus_error<=0;
    if(!O_iic_busy && I_iic_req) begin
     if(I_wr_data[7:0]!==8'h6c) $fatal(1,"Wrong sensor address");
@@ -80,6 +84,8 @@ module uii2c #(parameter WMEN_LEN=4, RMEN_LEN=1, CLK_DIV=239)(
     end else begin
      read_count<=read_count+1;
      if(ae_read_index>=0 && ae_read_index<6) begin
+      if(check_settle && ae_read_index==0 && cycle_count-release_cycle<1190477)
+       $fatal(1,"Readback began before50ms sensor settling interval");
       if(address!==expected_address(ae_read_index+1))
        $fatal(1,"AE read order index%0d address%04x",ae_read_index,address);
       transaction_read_index<=ae_read_index;
@@ -90,10 +96,16 @@ module uii2c #(parameter WMEN_LEN=4, RMEN_LEN=1, CLK_DIV=239)(
     if(cycles_left==0) begin
      O_iic_busy<=0;
      if(mode) begin
-      O_rd_data<=mem[address] ^ ((transaction_read_index==corrupt_index && transaction_read_index>=0)?8'h01:8'h00);
+      O_rd_data<=mem[address] ^
+       ((transaction_read_index==corrupt_index && transaction_read_index>=0)?
+         ((transaction_read_index==2)?8'h10:8'h01):8'h00) ^
+       (reserved_noise?((address==16'h3e00)?8'hf0:(address==16'h3e02)?8'h0f:8'h00):8'h00);
       if(transaction_read_index==error_index && transaction_read_index>=0) O_iic_bus_error<=1;
       if(transaction_read_index>=0) completed_reads<=completed_reads+1;
-     end else mem[address]<=value;
+     end else begin
+      mem[address]<=value;
+      if(address==16'h3812 && value==8'h30) release_cycle<=cycle_count;
+     end
     end else cycles_left<=cycles_left-1;
    end
   end
@@ -128,7 +140,7 @@ module tb_sensor_gain_compare;
   .O_gain_sel_gray(gray),.O_gain_verified(verified));
  always @(posedge clk) begin
   clock_count=clock_count+1;
-  if(clock_count>18000000) $fatal(1,"Watchdog case%0d",TEST_CASE);
+  if(clock_count>30000000) $fatal(1,"Watchdog case%0d",TEST_CASE);
   if(!rst_n) begin req_count=0;verified_count=0;was_busy=0;verified_prev=0;end
   else begin
    if(req) begin
@@ -159,7 +171,7 @@ module tb_sensor_gain_compare;
   begin
    guard=0;
    while(!(verified && done && ag==gain && gray==expected_gray)) begin
-    tick(1);guard=guard+1;if(guard>2500000) $fatal(1,"No verified gain%0d gray%0d ae%0d ag%0d state%0d err%0d",gain,gray,ae,ag,camera.state,error);
+    tick(1);guard=guard+1;if(guard>5000000) $fatal(1,"No verified gain%0d gray%0d ae%0d ag%0d state%0d err%0d",gain,gray,ae,ag,camera.state,error);
    end
    tick(16);
    if(ae!==900 || camera.u_i2c.mem[16'h3e00]!==0 || camera.u_i2c.mem[16'h3e01]!==8'h38 || camera.u_i2c.mem[16'h3e02]!==8'h40)
@@ -178,17 +190,23 @@ module tb_sensor_gain_compare;
   #1 rst_n=1;#1 rst_n=0;
   if(TEST_CASE>=1 && TEST_CASE<=6) camera.u_i2c.corrupt_index=TEST_CASE-1;
   if(TEST_CASE==7) camera.u_i2c.error_index=5;
+  camera.u_i2c.check_settle=1;
+  if(TEST_CASE==8) camera.u_i2c.reserved_noise=1;
   reset_all;
-  if(TEST_CASE!=0) begin
+  if(TEST_CASE>=1 && TEST_CASE<=7) begin
    wait(cfg);wait(req);wait(!done);wait(done);tick(20);
    if(!error || verified || camera.u_i2c.completed_reads!==6)
     $fatal(1,"Readback error case%0d not detected err%0d verified%0d reads%0d",TEST_CASE,error,verified,camera.u_i2c.completed_reads);
    $display("PASS negative case%0d: corrupt/readbuserror blocks verification",TEST_CASE);
    // The old error latch is deliberately sticky across later good transactions.
    camera.u_i2c.corrupt_index=-1;camera.u_i2c.error_index=-1;
-   press;tick(1000);
+   press;wait(done);tick(1000);
    if(verified || !error) $fatal(1,"Sticky failure falsely cleared");
    $display("PASS sticky failure case%0d",TEST_CASE);
+  end else if(TEST_CASE==8) begin
+   wait_complete(160,0);
+   if(error)$fatal(1,"Reserved exposure bits incorrectly treated as requested data");
+   $display("PASS exposure reserved-bit differences accepted; valid-field corruptions tested separately");
   end else begin
    wait_complete(160,0);
    previous_req_count=req_count;
@@ -322,7 +340,7 @@ def main():
             summary['pass'] = True
             return 0
         (out / 'i2c_register_model.v').write_text(MODEL, encoding='utf-8')
-        for case in range(8):
+        for case in range(9):
             log = run_tb('sensor_case' + str(case), 'tb_sensor_gain_compare', SENSOR_TB, parameter='TEST_CASE=' + str(case))
             m = re.search(r'PASS sensor_gain_compare case\d+ cycles(\d+) requests(\d+)', log)
             assert m, log
