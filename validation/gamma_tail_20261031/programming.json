@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "method": "JTAG SRAM download",
+  "source_commit": "d5fb8a934dffbcf78808696dceafd88f99d7e2a7",
+  "branch": "image-gamma-tail-only-20261031",
+  "bit": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\compile-v1\\camera_to_dsi_display.bit",
+  "sha256": "e476e93975697080af1b3f52c6214d46e4ea811e7366c6041e9d1438781037b8",
+  "started_utc": "2026-10-31T10:18:42.729696+00:00",
+  "finished_utc": "2026-10-31T10:18:52.674038+00:00",
+  "exit_code": 0,
+  "chip": "PH1P35MDG324",
+  "default_exposure": 900,
+  "default_candidate": "C2",
+  "visual_acceptance": "pending_user_observation",
+  "scope": "Gamma tail-only candidate; exposure comparison menu; user confirmed power/connection",
+  "log_sha256": "9be7deb099cf7fb097d59f0fbbdde5513c0f3a08d9b824aaefe8f8e1b162539c",
+  "prior_attempt": "burn-v1: Tcl script argument used backslashes; script was not read, no download attempted"
+}

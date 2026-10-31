@@ -1,0 +1,39 @@
+{
+  "source_commit": "d5fb8a934dffbcf78808696dceafd88f99d7e2a7",
+  "branch": "image-gamma-tail-only-20261031",
+  "bit": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\compile-v1\\camera_to_dsi_display.bit",
+    "sha256": "e476e93975697080af1b3f52c6214d46e4ea811e7366c6041e9d1438781037b8"
+  },
+  "compiled_resources": {
+    "LUT6": 9833,
+    "Slice": 10962,
+    "FF": 9458,
+    "ERAM20K": 43,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "timing": {
+    "SWNS_ns": 0.103,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "full_A_B_C": true,
+  "DSP_limit_pass": true,
+  "gamma_verification": "verification.json",
+  "build_record": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\compile-v1\\build_manifest.json",
+    "sha256": "a12ac692cd6a8111f0da11dd34f5c319ebcaf737beca3a48f6cf497f25d13d34"
+  },
+  "programming_record": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\burn-v2\\programming.json",
+    "sha256": "b3beb13fc7bd0b5b3755be57c3285a0fca2ab0146ac804662ea94c3ef49f13e1"
+  },
+  "board_programming": "success",
+  "board_programming_finished_utc": "2026-10-31T10:18:52.674038+00:00",
+  "visual_acceptance": "screenshots_received_residual_highlight_white_region_subjective_comparison_pending",
+  "next_action": "User selects original3/C0; compare same scene normal brightness/color and highlight detail. No common shoulder yet.",
+  "visual_feedback": "validation/gamma_tail_20261031/visual_feedback.json"
+}

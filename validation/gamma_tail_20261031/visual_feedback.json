@@ -1,0 +1,89 @@
+{
+  "scope": "Post-program JPEG observations only. C2/C3/M/C0 from user; source setup and sensor readback not measured. Different composition from pre-program screenshots; cannot quantify Gamma improvement or identify clipping stage.",
+  "observations": [
+    "Video/OSD/Logo image received after programming. Still-image input alone cannot certify continuous live video.",
+    "Original3/C0 still contains a large pure-white highlight region.",
+    "C2/C3 lift non-highlight areas; M is the expected region marker, not an image defect.",
+    "Subjective before/after improvement and normal-region fidelity await user observation."
+  ],
+  "records": [
+    {
+      "OSD_exposure": 3,
+      "C": "C2",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-4eb823c3-28d7-40ba-a904-bddf6b40b409.jpg",
+      "saved": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\visual-feedback-v1\\C2.jpg",
+      "sha256": "e1391f9f04ea807ae9f26325dd1dc262c9805d6487b87e467d0f2435b986f622",
+      "size_wh": [
+        1920,
+        1080
+      ],
+      "roi_xyxy": [
+        10,
+        160,
+        1660,
+        1000
+      ],
+      "all_RGB_equal_255_pct": 12.15880230880231,
+      "all_RGB_ge_250_pct": 14.533116883116884,
+      "any_RGB_equal_255_pct": 21.624098124098122
+    },
+    {
+      "OSD_exposure": 3,
+      "C": "C3",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-d197d828-1b56-45ff-be30-a9b506d92b3e.jpg",
+      "saved": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\visual-feedback-v1\\C3.jpg",
+      "sha256": "b060dce1e33d3002c317185e9b3321b4f16d69bee1e72210f9dbd930fd1598a5",
+      "size_wh": [
+        1920,
+        1080
+      ],
+      "roi_xyxy": [
+        10,
+        160,
+        1660,
+        1000
+      ],
+      "all_RGB_equal_255_pct": 12.144444444444444,
+      "all_RGB_ge_250_pct": 14.552741702741704,
+      "any_RGB_equal_255_pct": 22.106709956709956
+    },
+    {
+      "OSD_exposure": 3,
+      "C": "M",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-ef6e2b77-c6c0-4a9a-9124-c16d677c6cff.jpg",
+      "saved": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\visual-feedback-v1\\M.jpg",
+      "sha256": "c4df6c70ae8313f15b74ef3e9d50df6c82976d54648f84d0f02f8d496ce68aec",
+      "size_wh": [
+        1920,
+        1080
+      ],
+      "roi_xyxy": [
+        10,
+        160,
+        1660,
+        1000
+      ],
+      "scope": "Expected H1 high-region magenta display; not a colour failure or photometric sample."
+    },
+    {
+      "OSD_exposure": 3,
+      "C": "C0",
+      "source": "C:\\Users\\27525\\AppData\\Local\\Temp\\codex-clipboard-ebfcc671-89be-4e40-be0d-e2213d22eb7a.jpg",
+      "saved": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\visual-feedback-v1\\C0.jpg",
+      "sha256": "59e6c7dc037372ed5d6d6b1dcad1d4195b2671169198131f3bc51f1f2f2e1e35",
+      "size_wh": [
+        1920,
+        1080
+      ],
+      "roi_xyxy": [
+        10,
+        160,
+        1660,
+        1000
+      ],
+      "all_RGB_equal_255_pct": 13.638023088023088,
+      "all_RGB_ge_250_pct": 15.38773448773449,
+      "any_RGB_equal_255_pct": 23.093362193362193
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "pass": true,
+  "scope": "Real extracted axis_gamma_rgb96 versus pinned d75dc8e; no full image/key regression; no board access",
+  "reference_commit": "d75dc8e",
+  "source_sha256": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df",
+  "current_module_sha256": "c8eecf917512e4448db852c906597b8bbdc5e1042641bf6815c2a8b455a5bd70",
+  "reference_module_sha256": "4775831d07b55d3a2c668f4c21d130f2b16d30c5a81e8facd7f2dcdc30cf4610",
+  "semantic_change_only_default_gamma_segment": true,
+  "project_input_changes": [
+    {
+      "file": "user_source/hdl_source/chroma_denoise_stream.v",
+      "kind": "additional_file",
+      "current_sha256": "7058b3fd3b37ce41c8ad36e02f36c8043407d18173372030144efa721d202d0a",
+      "compiled_or_instantiated": false
+    },
+    {
+      "file": "user_source/hdl_source/isp/isp_top.v",
+      "kind": "content_change",
+      "old_sha256": "1e44093a1c18dc2031307ce0c87df668638e84e3b39f40845a5eeee327644557",
+      "current_sha256": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df"
+    }
+  ],
+  "coverage": {
+    "all_12_lanes_all_256_codes": true,
+    "input_0_to_239_bit_exact_to_original": true,
+    "highlight_240_to_255_explicit_expected_table": [
+      244,
+      245,
+      245,
+      246,
+      247,
+      247,
+      248,
+      249,
+      250,
+      250,
+      251,
+      252,
+      252,
+      253,
+      254,
+      255
+    ],
+    "all_256_monotone": true,
+    "white_endpoint_255": true,
+    "raw_pass_identity": true,
+    "asynchronous_reset": true,
+    "registered_single_cycle_latency_and_sync": true,
+    "invalid_data_zero": true
+  },
+  "runs": {
+    "normal": {
+      "channel_checks": 10968,
+      "valid_cycles": 914,
+      "low_code_equal_old_checks": 10282,
+      "tail_checks": 686,
+      "reset_checks": 2
+    },
+    "raw_pass": {
+      "channel_checks": 10968,
+      "valid_cycles": 914,
+      "low_code_equal_old_checks": 0,
+      "tail_checks": 0,
+      "reset_checks": 2
+    }
+  },
+  "commands": [
+    [
+      "D:\\FPGA\\codex\\slice_budget_20261026\\tooling\\iverilog\\app\\bin\\iverilog.exe",
+      "-g2012",
+      "-s",
+      "tb_gamma_tail",
+      "-o",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\normal.vvp",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\gamma_current.v",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\gamma_reference_d75.v",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\tb_gamma_tail.v"
+    ],
+    [
+      "D:\\FPGA\\codex\\slice_budget_20261026\\tooling\\iverilog\\app\\bin\\vvp.exe",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\normal.vvp"
+    ],
+    [
+      "D:\\FPGA\\codex\\slice_budget_20261026\\tooling\\iverilog\\app\\bin\\iverilog.exe",
+      "-g2012",
+      "-s",
+      "tb_gamma_tail",
+      "-DRAW_PASS",
+      "-o",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\raw_pass.vvp",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\gamma_current.v",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\gamma_reference_d75.v",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\tb_gamma_tail.v"
+    ],
+    [
+      "D:\\FPGA\\codex\\slice_budget_20261026\\tooling\\iverilog\\app\\bin\\vvp.exe",
+      "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\raw_pass.vvp"
+    ]
+  ],
+  "artifacts_sha256": {
+    "gamma_current.v": "191628fd92076a312b7fb5ab387a9950142b517d078714d84fa084dd9f71bac7",
+    "gamma_reference_d75.v": "3e1be1acdeb26b9ec29b148cc13cadc44b9e7bd86cebead5288813899997dcef",
+    "normal_compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "normal_simulation.log": "5f353f6d8cc2371b1f082515feee4b5791724bd6bcf97a78997d52bc207f8520",
+    "raw_pass_compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "raw_pass_simulation.log": "d43be74016666d0a33b3443483918f0e17b7a3d163034c0206f5b7e5a2e41710",
+    "tb_gamma_tail.v": "813d707c123da377781f107d110b422316cf7febf12dee79ed9fa574497733a3"
+  },
+  "board_validation": "not_run",
+  "physical_resource_validation": "not_run"
+}

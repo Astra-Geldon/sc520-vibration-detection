@@ -1,16 +1,10 @@
 # SC520 MIPI → HDMI 振动频率检测系统
-> 当前实施分支`image-gamma-tail-only-20261031`：以当前认可的`d75dc8e`曝光参数对照镜像为单因素基线，先只修Gamma最高段，保留C0～C3/M菜单。默认900/C2，比较此前截图须切C0。实现/编译/烧录状态见 [Gamma单项候选](GAMMA_TAIL_CANDIDATE_20261031.md)；下方E1/降噪条目是保留的历史研究，不是本分支运行菜单。
 
-> 最新高光反馈：用户认可当前观感，但原图0～3/C0的亮部仍有大片纯白。已完成 [保留观感的高光余量研究](HIGHLIGHT_HEADROOM_REVIEW_20261031.md)：Gamma旧尾段平台、AWB/shading提前裁剪分别核查；建议先修尾段，再评估裁剪前共同RGB压缩，保留shading及正常区域亮度。当前只读研究，未改RTL、编译或烧录；旧同场景C3采样暂缓，DSP≤34不变。
+> 当前分支`image-gamma-tail-only-20261031`：Gamma尾段单项候选已完整编译并于2026-10-31 18:18:52烧录。用户已提供原图3/C2/C3/M/C0截图，C0亮区仍有大片纯白，尚不能宣布画质通过。以当前实拍`d75dc8e`参数对照镜像为基线，仅修Gamma最高段，保留C0～C3/M菜单；默认原图3/曝光900、C2。LUT6 9833、Slice 10962、FF 9458、ERAM43、DSP34；SWNS/HWNS +0.103/+0.020ns。bit路径、哈希及证据见 [Gamma单项候选](GAMMA_TAIL_CANDIDATE_20261031.md)。
 
-> 当前本地实验分支`image-shading-on-baseline-20261031`：生产源码保持shading开启的E1恢复版，用户确认之前观感恢复，但原图3/C3/D3的画质问题仍在。D数值核符合设计，固定每像素Y及3×3尺度不足以处理现有质感问题；源码/数值研究、已撤销判断及Q0～Q4见 [C3质感复核](IMAGE_QUALITY_REASSESSMENT_20261031.md)，总安排见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。研究未改生产RTL；板上临时测量镜像与最新采样状态见下方更新。D候选见 [C3保亮降噪说明](C3_CHROMA_DENOISE_20261031.md)，此前保存点见 [强补偿记录](H1_STRONG_COMPENSATION_20261031.md)。以下A版发布信息用于追溯稳定基线。
+> 用户要求DSP不增加，总数≤34。正常区域亮度和现有shading观感是本轮重点；[高光余量研究](HIGHLIGHT_HEADROOM_REVIEW_20261031.md)确认Gamma旧尾段和AWB/shading裁剪分别存在。当前只完成尾段候选，共同RGB高光压缩尚未实施；板上画质尚未验收。
 
-> 用户新增硬约束：DSP总数≤34，研究充分后再动工。两轮合成对照、120张正确UGREEN旧帧审计、候选反例和缓存复核见 [零新增DSP研究](ZERO_DSP_IMAGE_QUALITY_STUDY_20261031.md)；优先继续验证复用两行窗口的前置Y/色差处理，大基底只保留作效果对照。当前没有新RTL或新bit。
-
-> 后续复核已修正离线模型的恒色舍入偏置和肩部过冲，见 [修正研究与真实900采样安排](PRE_C3_RESEARCH_FOLLOWUP_20261031.md)。本机板卡已临时加载既有`d75dc8e`测量镜像用于C0/C3采样。产品源码仍保持恢复版，新降噪算法尚未实现。
-
-> 最新采样：已确认原图3/C0并保存120帧，实际为静态混合场景。修正候选的离线噪声/亮度结果、YUY2及读速限制见 [真实900静态对照](REAL900_STATIC_RESEARCH_20261031.md)；等待同场景板上C3对照。P2/P4/P8尚未烧录，生产RTL保持不变。
-
+> E1/D与shading恢复研究保存在`image-shading-on-baseline-20261031`分支。此前 [900静态场景研究](REAL900_STATIC_RESEARCH_20261031.md)、[离线降噪筛选](ZERO_DSP_IMAGE_QUALITY_STUDY_20261031.md)和 [共享窗口修正](PRE_C3_RESEARCH_FOLLOWUP_20261031.md)作为历史研究保留；P2/P4/P8没有上板，旧同场景C3采样暂缓。本分支运行参数对照菜单，不含D流水或E1切档快速收敛。总进度见 [图像增强计划](IMAGE_ENHANCEMENT_PLAN_20261030.md)。
 
 ## 当前交接版本：A-original-reuse + Logo
 

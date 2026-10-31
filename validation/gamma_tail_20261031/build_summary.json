@@ -1,0 +1,95 @@
+{
+  "source_commit": "d5fb8a934dffbcf78808696dceafd88f99d7e2a7",
+  "reference_commit": "d75dc8eeb42f115543006bc4a645b20c9b7750ec",
+  "scope": "Only Gamma F segment changed; current exposure comparison topology, C0/C1/C2/C3/M; no D or E1 transition changes",
+  "default_exposure": 900,
+  "default_C": 2,
+  "resources": {
+    "LUT6": 9833,
+    "Slice": 10962,
+    "FF": 9458,
+    "ERAM20K": 43,
+    "DSP": 34,
+    "PLL": 3,
+    "MCU": 1
+  },
+  "delta_vs_current_measurement_image": {
+    "LUT6": -13,
+    "Slice": -51,
+    "FF": -22,
+    "ERAM20K": 0,
+    "DSP": 0,
+    "PLL": 0,
+    "MCU": 0
+  },
+  "timing": {
+    "SWNS_ns": 0.103,
+    "STNS_ns": 0.0,
+    "HWNS_ns": 0.02,
+    "HTNS_ns": 0.0
+  },
+  "reported_setup_hold_pass": true,
+  "DSP_limit_pass": true,
+  "whole_design_timing_signoff": false,
+  "signoff_scope": "TD setup/hold reports; inherited external timing coverage limits remain, not a complete board timing signoff",
+  "full_A_B_C": true,
+  "hdmi_counter_selectors_patched": 12,
+  "frozen_inputs_unchanged": true,
+  "gamma_source_sha256": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df",
+  "source_manifest_sha256": "fed55e781679a56b0fa9317c62a477cb1dbcd6426f2ea5471a4264a7b2be5aff",
+  "gamma_verification": {
+    "pass": true,
+    "summary": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\verification\\summary.json",
+    "runs": {
+      "normal": {
+        "channel_checks": 10968,
+        "valid_cycles": 914,
+        "low_code_equal_old_checks": 10282,
+        "tail_checks": 686,
+        "reset_checks": 2
+      },
+      "raw_pass": {
+        "channel_checks": 10968,
+        "valid_cycles": 914,
+        "low_code_equal_old_checks": 0,
+        "tail_checks": 0,
+        "reset_checks": 2
+      }
+    },
+    "coverage": {
+      "all_12_lanes_all_256_codes": true,
+      "input_0_to_239_bit_exact_to_original": true,
+      "highlight_240_to_255_explicit_expected_table": [
+        244,
+        245,
+        245,
+        246,
+        247,
+        247,
+        248,
+        249,
+        250,
+        250,
+        251,
+        252,
+        252,
+        253,
+        254,
+        255
+      ],
+      "all_256_monotone": true,
+      "white_endpoint_255": true,
+      "raw_pass_identity": true,
+      "asynchronous_reset": true,
+      "registered_single_cycle_latency_and_sync": true,
+      "invalid_data_zero": true
+    }
+  },
+  "generated_utc": "2026-10-31T10:17:32.657518+00:00",
+  "bit": {
+    "path": "D:\\FPGA\\codex\\_build\\20261029project\\gamma-tail-only-20261031\\compile-v1\\camera_to_dsi_display.bit",
+    "sha256": "e476e93975697080af1b3f52c6214d46e4ea811e7366c6041e9d1438781037b8"
+  },
+  "current_delivery_record": "delivery_manifest.json",
+  "note": "This file records compilation; current programming/visual status is recorded separately."
+}
