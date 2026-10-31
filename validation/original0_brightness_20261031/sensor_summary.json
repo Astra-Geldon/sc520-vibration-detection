@@ -1,0 +1,74 @@
+{
+  "scope": "read_only_sensor_code_history_datasheet_audit",
+  "repository": "D:/FPGA/codex/20261029project",
+  "head": "cc91060257e19488e9ad89cc8a6f7ae1d1eceb85",
+  "recent_sensor_brightness_increase_found": false,
+  "compared_versions": [
+    "ed7b8a1",
+    "ee675b6",
+    "f4ca7a2",
+    "d75dc8e",
+    "cc91060"
+  ],
+  "exposure0_requested_all_versions": 1991,
+  "default_gain_index_all_versions": 160,
+  "gain160_requested_registers": {
+    "3e09": "0f",
+    "3e06": "00",
+    "3e07": "c0"
+  },
+  "gain160_datasheet_nominal": {
+    "analog": 16,
+    "digital": 1.5,
+    "total": 24
+  },
+  "actual_hardware_gain_verified": false,
+  "sensor_internal_auto_aec_agc": false,
+  "exposure_presets": {
+    "0": {
+      "half_rows": 1991,
+      "3e00": "00",
+      "3e01": "7c",
+      "3e02": "70"
+    },
+    "1": {
+      "half_rows": 1600,
+      "3e00": "00",
+      "3e01": "64",
+      "3e02": "00"
+    },
+    "2": {
+      "half_rows": 1200,
+      "3e00": "00",
+      "3e01": "4b",
+      "3e02": "00"
+    },
+    "3": {
+      "half_rows": 900,
+      "3e00": "00",
+      "3e01": "38",
+      "3e02": "40"
+    }
+  },
+  "unchanged_initialization_priority": "init_table_then_one_grouped_ae_ag_request",
+  "sensor_applied_state_readback_present": false,
+  "osd_sensor_selectors_common_applied_ack": false,
+  "key3_dual_domain_divergence": "architectural_risk_not_observed_current_failure",
+  "datasheet": "D:/Glasgow/FPGA/SC520CS/SC520CS-03_数据手册_V1.6.pdf",
+  "datasheet_pages": [
+    19,
+    20,
+    21
+  ],
+  "conclusion": "Exposure0/C0 remains overbright; C3 excluded. Fixed1991/high nominal gain160 has no automatic AE/AGC. Historical144->160 change located on Oct24, not a proven recent regression.",
+  "historical_gain_increase": {
+    "repository": "D:/FPGA/Codex Recorrect",
+    "commit": "0f3a8f5e2219cbe48ed7565290093fcabd4fff6c",
+    "date": "2026-10-24",
+    "old_control": 144,
+    "new_control": 160,
+    "old_nominal_gain": 16,
+    "new_nominal_gain": 24,
+    "predates_mcu_migration": true
+  }
+}

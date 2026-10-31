@@ -1,0 +1,317 @@
+{
+  "repository": "D:/FPGA/Codex Recorrect",
+  "versions": {
+    "022ab99": {
+      "commit": "022ab9909e03b696740940402321c6a3919189d8",
+      "files": {
+        "user_source/hdl_source/uiisp_beta/ae_set.v": {
+          "sha256": "d28dc444e03a2d412e0ec41b2a36cda034fe59135b41e09f86e9ea06bdafc2f6",
+          "relevant_lines": [
+            "73: // 原厂720p60模式VTS=1000，曝光以半行计，最大值为2*VTS-9=1991。",
+            "74: // 默认使用最大安全曝光1991；增益控制144映射为0x3e09=0x0f、",
+            "75: // 0x3e06=0x00、0x3e07=0x80，即16倍模拟增益、1倍数字增益。",
+            "76: reg \t[15:0] \tr_ae_set = 1991, r_ag_set = 144; ",
+            "81: \t\tr_ae_set <= 1991; ",
+            "82: \t\tr_ag_set <= 144; ",
+            "89: \t\t\tr_ae_set <= (r_ae_set > 2) ? r_ae_set - r_ae_tick : r_ae_set; ",
+            "91: \t\t\tr_ae_set <= (r_ae_set < 1991) ? r_ae_set + r_ae_tick : r_ae_set; ",
+            "94: \t\t\t\tr_ag_set <= (r_ag_set > 16) ? r_ag_set - r_ag_tick : r_ag_set; ",
+            "96: \t\t\t\tr_ag_set <= (r_ag_set < 176) ? r_ag_set + r_ag_tick : r_ag_set; ",
+            "112: \t\tr_ae     <= 1990; ",
+            "113: \t\t// Start from a value different from r_ag_set.  This deliberately",
+            "116: \t\tr_ag     <= 17; ",
+            "119: \tend else if(((r_ae != r_ae_set) || (r_ag != r_ag_set))&&(I_cam_cfg_done==1'b1)&&(I_ae_cfg_done==1'b1)) begin",
+            "120: \t\tr_ae     <= r_ae_set; ",
+            "121: \t\tr_ag     <= r_ag_set; "
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": {
+          "sha256": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+          "relevant_lines": [
+            "5: // O[23:16] -> 0x3e09 analog coarse gain",
+            "6: // O[15:8]  -> 0x3e06 digital coarse gain",
+            "7: // O[7:0]   -> 0x3e07 digital fine gain (0x80 = 1x)"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": {
+          "sha256": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+          "relevant_lines": [
+            "6:     output wire [8:0]  REG_SIZE,",
+            "10:     assign REG_SIZE = 9'd8;",
+            "15:             9'd1: REG_DATA = {16'h3e00, 4'h0, I_AE[15:12]};",
+            "18:             9'd4: REG_DATA = {16'h3e09, I_AG[23:16]};",
+            "19:             9'd5: REG_DATA = {16'h3e06, I_AG[15:8]};",
+            "20:             9'd6: REG_DATA = {16'h3e07, I_AG[7:0]};"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": {
+          "sha256": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+          "relevant_lines": [
+            "208:         .REG_SIZE(init_reg_size)",
+            "219:         .REG_SIZE(ae_reg_size),"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": {
+          "sha256": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+          "relevant_lines": [
+            "10:     output wire [8:0]  REG_SIZE",
+            "12:     assign REG_SIZE = 9'd165;",
+            "119:             9'd103: REG_DATA = {16'h3e00, 8'h00};",
+            "122:             9'd106: REG_DATA = {16'h3e09, 8'h00};"
+          ]
+        }
+      }
+    },
+    "0f3a8f5": {
+      "commit": "0f3a8f5e2219cbe48ed7565290093fcabd4fff6c",
+      "files": {
+        "user_source/hdl_source/uiisp_beta/ae_set.v": {
+          "sha256": "1d9826596b01aafcb8c4cfec7d106991b8cdedab49c765fdd91a140a8731ed53",
+          "relevant_lines": [
+            "73: // 原厂720p60模式VTS=1000，曝光以半行计，最大值为2*VTS-9=1991。",
+            "74: // 2026-10-24：曝光 1991 -> 1600（降 20%）。",
+            "76: //     实测把 r_ag_set 从 160 改到 151，亮度 137.3 -> 136.9（几乎没变），",
+            "77: //     SC520GainTbl 里 151/160 对应 0x3e07 = 0x9C/0xC0（数字 fine gain），",
+            "79: //     而曝光时间 0x3e00~0x3e02 是每帧都要重写的，改动必然生效。",
+            "87: //   曝光 1991 已在硬件上限（720p60 下约 1/60s，整帧曝光），画面暗是因为",
+            "98: reg \t[15:0] \tr_ae_set = 1991, r_ag_set = 160; ",
+            "103: \t\tr_ae_set <= 1991; ",
+            "104: \t\tr_ag_set <= 160; ",
+            "111: \t\t\tr_ae_set <= (r_ae_set > 2) ? r_ae_set - r_ae_tick : r_ae_set; ",
+            "113: \t\t\tr_ae_set <= (r_ae_set < 1991) ? r_ae_set + r_ae_tick : r_ae_set; ",
+            "116: \t\t\t\tr_ag_set <= (r_ag_set > 16) ? r_ag_set - r_ag_tick : r_ag_set; ",
+            "118: \t\t\t\tr_ag_set <= (r_ag_set < 176) ? r_ag_set + r_ag_tick : r_ag_set; ",
+            "134: \t\tr_ae     <= 1990; ",
+            "135: \t\t// Start from a value different from r_ag_set.  This deliberately",
+            "138: \t\tr_ag     <= 17; ",
+            "141: \tend else if(((r_ae != r_ae_set) || (r_ag != r_ag_set))&&(I_cam_cfg_done==1'b1)&&(I_ae_cfg_done==1'b1)) begin",
+            "142: \t\tr_ae     <= r_ae_set; ",
+            "143: \t\tr_ag     <= r_ag_set; "
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": {
+          "sha256": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+          "relevant_lines": [
+            "5: // O[23:16] -> 0x3e09 analog coarse gain",
+            "6: // O[15:8]  -> 0x3e06 digital coarse gain",
+            "7: // O[7:0]   -> 0x3e07 digital fine gain (0x80 = 1x)"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": {
+          "sha256": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+          "relevant_lines": [
+            "6:     output wire [8:0]  REG_SIZE,",
+            "10:     assign REG_SIZE = 9'd8;",
+            "15:             9'd1: REG_DATA = {16'h3e00, 4'h0, I_AE[15:12]};",
+            "18:             9'd4: REG_DATA = {16'h3e09, I_AG[23:16]};",
+            "19:             9'd5: REG_DATA = {16'h3e06, I_AG[15:8]};",
+            "20:             9'd6: REG_DATA = {16'h3e07, I_AG[7:0]};"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": {
+          "sha256": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+          "relevant_lines": [
+            "208:         .REG_SIZE(init_reg_size)",
+            "219:         .REG_SIZE(ae_reg_size),"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": {
+          "sha256": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+          "relevant_lines": [
+            "10:     output wire [8:0]  REG_SIZE",
+            "12:     assign REG_SIZE = 9'd165;",
+            "119:             9'd103: REG_DATA = {16'h3e00, 8'h00};",
+            "122:             9'd106: REG_DATA = {16'h3e09, 8'h00};"
+          ]
+        }
+      }
+    },
+    "9935e72": {
+      "commit": "9935e7284527ddf9a841de78199c1c843a07b1db",
+      "files": {
+        "user_source/hdl_source/uiisp_beta/ae_set.v": {
+          "sha256": "1d9826596b01aafcb8c4cfec7d106991b8cdedab49c765fdd91a140a8731ed53",
+          "relevant_lines": [
+            "73: // 原厂720p60模式VTS=1000，曝光以半行计，最大值为2*VTS-9=1991。",
+            "74: // 2026-10-24：曝光 1991 -> 1600（降 20%）。",
+            "76: //     实测把 r_ag_set 从 160 改到 151，亮度 137.3 -> 136.9（几乎没变），",
+            "77: //     SC520GainTbl 里 151/160 对应 0x3e07 = 0x9C/0xC0（数字 fine gain），",
+            "79: //     而曝光时间 0x3e00~0x3e02 是每帧都要重写的，改动必然生效。",
+            "87: //   曝光 1991 已在硬件上限（720p60 下约 1/60s，整帧曝光），画面暗是因为",
+            "98: reg \t[15:0] \tr_ae_set = 1991, r_ag_set = 160; ",
+            "103: \t\tr_ae_set <= 1991; ",
+            "104: \t\tr_ag_set <= 160; ",
+            "111: \t\t\tr_ae_set <= (r_ae_set > 2) ? r_ae_set - r_ae_tick : r_ae_set; ",
+            "113: \t\t\tr_ae_set <= (r_ae_set < 1991) ? r_ae_set + r_ae_tick : r_ae_set; ",
+            "116: \t\t\t\tr_ag_set <= (r_ag_set > 16) ? r_ag_set - r_ag_tick : r_ag_set; ",
+            "118: \t\t\t\tr_ag_set <= (r_ag_set < 176) ? r_ag_set + r_ag_tick : r_ag_set; ",
+            "134: \t\tr_ae     <= 1990; ",
+            "135: \t\t// Start from a value different from r_ag_set.  This deliberately",
+            "138: \t\tr_ag     <= 17; ",
+            "141: \tend else if(((r_ae != r_ae_set) || (r_ag != r_ag_set))&&(I_cam_cfg_done==1'b1)&&(I_ae_cfg_done==1'b1)) begin",
+            "142: \t\tr_ae     <= r_ae_set; ",
+            "143: \t\tr_ag     <= r_ag_set; "
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": {
+          "sha256": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+          "relevant_lines": [
+            "5: // O[23:16] -> 0x3e09 analog coarse gain",
+            "6: // O[15:8]  -> 0x3e06 digital coarse gain",
+            "7: // O[7:0]   -> 0x3e07 digital fine gain (0x80 = 1x)"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": {
+          "sha256": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+          "relevant_lines": [
+            "6:     output wire [8:0]  REG_SIZE,",
+            "10:     assign REG_SIZE = 9'd8;",
+            "15:             9'd1: REG_DATA = {16'h3e00, 4'h0, I_AE[15:12]};",
+            "18:             9'd4: REG_DATA = {16'h3e09, I_AG[23:16]};",
+            "19:             9'd5: REG_DATA = {16'h3e06, I_AG[15:8]};",
+            "20:             9'd6: REG_DATA = {16'h3e07, I_AG[7:0]};"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": {
+          "sha256": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+          "relevant_lines": [
+            "208:         .REG_SIZE(init_reg_size)",
+            "219:         .REG_SIZE(ae_reg_size),"
+          ]
+        },
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": {
+          "sha256": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+          "relevant_lines": [
+            "10:     output wire [8:0]  REG_SIZE",
+            "12:     assign REG_SIZE = 9'd165;",
+            "119:             9'd103: REG_DATA = {16'h3e00, 8'h00};",
+            "122:             9'd106: REG_DATA = {16'h3e09, 8'h00};"
+          ]
+        }
+      }
+    }
+  },
+  "candidate_gains": [
+    {
+      "index": 160,
+      "3e09": "0f",
+      "3e06": "00",
+      "3e07": "c0",
+      "analog_nominal": 16,
+      "digital_nominal": 1.5,
+      "total_nominal": 24.0,
+      "relative_to_index160": 1.0,
+      "stops_below_index160": 0.0
+    },
+    {
+      "index": 151,
+      "3e09": "0f",
+      "3e06": "00",
+      "3e07": "9c",
+      "analog_nominal": 16,
+      "digital_nominal": 1.21875,
+      "total_nominal": 19.5,
+      "relative_to_index160": 0.8125,
+      "stops_below_index160": 0.29956028185890793
+    },
+    {
+      "index": 144,
+      "3e09": "0f",
+      "3e06": "00",
+      "3e07": "80",
+      "analog_nominal": 16,
+      "digital_nominal": 1.0,
+      "total_nominal": 16.0,
+      "relative_to_index160": 0.6666666666666666,
+      "stops_below_index160": 0.5849625007211562
+    },
+    {
+      "index": 128,
+      "3e09": "0b",
+      "3e06": "00",
+      "3e07": "c0",
+      "analog_nominal": 8,
+      "digital_nominal": 1.5,
+      "total_nominal": 12.0,
+      "relative_to_index160": 0.5,
+      "stops_below_index160": 1.0
+    },
+    {
+      "index": 112,
+      "3e09": "0b",
+      "3e06": "00",
+      "3e07": "80",
+      "analog_nominal": 8,
+      "digital_nominal": 1.0,
+      "total_nominal": 8.0,
+      "relative_to_index160": 0.3333333333333333,
+      "stops_below_index160": 1.584962500721156
+    },
+    {
+      "index": 96,
+      "3e09": "09",
+      "3e06": "00",
+      "3e07": "c0",
+      "analog_nominal": 4,
+      "digital_nominal": 1.5,
+      "total_nominal": 6.0,
+      "relative_to_index160": 0.25,
+      "stops_below_index160": 2.0
+    },
+    {
+      "index": 80,
+      "3e09": "09",
+      "3e06": "00",
+      "3e07": "80",
+      "analog_nominal": 4,
+      "digital_nominal": 1.0,
+      "total_nominal": 4.0,
+      "relative_to_index160": 0.16666666666666666,
+      "stops_below_index160": 2.584962500721156
+    },
+    {
+      "index": 64,
+      "3e09": "08",
+      "3e06": "00",
+      "3e07": "c0",
+      "analog_nominal": 2,
+      "digital_nominal": 1.5,
+      "total_nominal": 3.0,
+      "relative_to_index160": 0.125,
+      "stops_below_index160": 3.0
+    },
+    {
+      "index": 48,
+      "3e09": "08",
+      "3e06": "00",
+      "3e07": "80",
+      "analog_nominal": 2,
+      "digital_nominal": 1.0,
+      "total_nominal": 2.0,
+      "relative_to_index160": 0.08333333333333333,
+      "stops_below_index160": 3.584962500721156
+    },
+    {
+      "index": 32,
+      "3e09": "00",
+      "3e06": "00",
+      "3e07": "c0",
+      "analog_nominal": 1,
+      "digital_nominal": 1.5,
+      "total_nominal": 1.5,
+      "relative_to_index160": 0.0625,
+      "stops_below_index160": 4.0
+    },
+    {
+      "index": 16,
+      "3e09": "00",
+      "3e06": "00",
+      "3e07": "80",
+      "analog_nominal": 1,
+      "digital_nominal": 1.0,
+      "total_nominal": 1.0,
+      "relative_to_index160": 0.041666666666666664,
+      "stops_below_index160": 4.584962500721156
+    }
+  ]
+}

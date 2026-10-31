@@ -1,0 +1,146 @@
+{
+  "versions": {
+    "ed7b8a1": {
+      "commit": "ed7b8a1b67f18711ae5304ff67574f99a1a3a84a",
+      "git_blob_sha256": {
+        "user_source/hdl_source/awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+        "user_source/hdl_source/color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+        "user_source/hdl_source/img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885"
+      }
+    },
+    "ee675b6": {
+      "commit": "ee675b6d144c6425f05c60fedd31cdd8a7e1515b",
+      "git_blob_sha256": {
+        "user_source/hdl_source/awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+        "user_source/hdl_source/color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+        "user_source/hdl_source/img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885"
+      }
+    },
+    "f4ca7a2": {
+      "commit": "f4ca7a28dbcdf0471de0238036f3536427e52750",
+      "git_blob_sha256": {
+        "user_source/hdl_source/awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+        "user_source/hdl_source/color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+        "user_source/hdl_source/img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885"
+      }
+    },
+    "d75dc8e": {
+      "commit": "d75dc8eeb42f115543006bc4a645b20c9b7750ec",
+      "git_blob_sha256": {
+        "user_source/hdl_source/awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+        "user_source/hdl_source/color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+        "user_source/hdl_source/img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885"
+      }
+    },
+    "cc91060": {
+      "commit": "cc91060257e19488e9ad89cc8a6f7ae1d1eceb85",
+      "git_blob_sha256": {
+        "user_source/hdl_source/awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+        "user_source/hdl_source/color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+        "user_source/hdl_source/img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+        "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+        "user_source/hdl_source/uics520_cfg/uicfgcs520.v": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+        "user_source/hdl_source/uics520_cfg/uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+        "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885"
+      }
+    }
+  },
+  "all_listed_sources_identical": true,
+  "gamma": {
+    "unchanged_0_239": true,
+    "never_increases_0_255": true,
+    "changes": [
+      {
+        "input": 240,
+        "old": 255,
+        "current": 244
+      },
+      {
+        "input": 241,
+        "old": 255,
+        "current": 245
+      },
+      {
+        "input": 242,
+        "old": 255,
+        "current": 245
+      },
+      {
+        "input": 243,
+        "old": 255,
+        "current": 246
+      },
+      {
+        "input": 244,
+        "old": 255,
+        "current": 247
+      },
+      {
+        "input": 245,
+        "old": 255,
+        "current": 247
+      },
+      {
+        "input": 246,
+        "old": 255,
+        "current": 248
+      },
+      {
+        "input": 247,
+        "old": 255,
+        "current": 249
+      },
+      {
+        "input": 248,
+        "old": 255,
+        "current": 250
+      },
+      {
+        "input": 249,
+        "old": 255,
+        "current": 250
+      },
+      {
+        "input": 250,
+        "old": 255,
+        "current": 251
+      },
+      {
+        "input": 251,
+        "old": 255,
+        "current": 252
+      },
+      {
+        "input": 252,
+        "old": 255,
+        "current": 252
+      },
+      {
+        "input": 253,
+        "old": 255,
+        "current": 253
+      },
+      {
+        "input": 254,
+        "old": 255,
+        "current": 254
+      }
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "scope": "Code/history only; exposure0/C0/P0/W0; C3 excluded as cause of user feedback; no image3 references, hardware, production edits, compile or commit.",
+  "sample_count": 19,
+  "initial": "022ab99",
+  "current": "cc91060257e19488e9ad89cc8a6f7ae1d1eceb85 2026-10-31T20:06:14+08:00 近白高光颜色保护编译上板，保存三档对照和完整验证记录",
+  "unchanged_all_samples": [
+    {
+      "path": "user_source/hdl_source/isp/demosaic_4x_2_0/mipi_to_raw_converter.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "4df7de9630dca7e016c2df97ea0bcc88ac922b4d0ce0dec3fc8f530337519584"
+    },
+    {
+      "path": "user_source/hdl_source/isp/demosaic_4x_2_0/bilinear_interpolation.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "81f98dbde1eeeffa936d287667d03b19ab04cf8d4d17e867ba76aa95038610ad"
+    },
+    {
+      "path": "user_source/hdl_source/isp/demosaic_4x_2_0/raw_matrix_3x3_buffer.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "19b78f1588d135619dda455e7bb0d091e2827e6badfd61ff2294becc0a67cc9f"
+    },
+    {
+      "path": "user_source/hdl_source/isp/data128_96/data128_96.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "d1287c8235cfb5a24112fac6d0a9bd2c9cc460f8cd60c1ce00507a0f3fb843c6"
+    },
+    {
+      "path": "user_source/hdl_source/data_96bit_to_128bit.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "0d39014b57ed46035610a6cab08be4e152f98b272dab280e6afbb7cac33e8206"
+    },
+    {
+      "path": "user_source/hdl_source/video_in.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "fd85881f10baeab1fc2067e48517030cb686ab3b5d3779e4082ab265c6f3453a"
+    },
+    {
+      "path": "user_source/hdl_source/video_out.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "ba83c18049580b9a651b2e403345078d2a43ac335801f49568d8b4cd3f6d2e5e"
+    },
+    {
+      "path": "user_source/hdl_source/isp/raw10_unpacket_2lane.v",
+      "unique_logic_hashes": 1,
+      "logic_sha": "34124d3d537cbdca0af24f3d39dd924602ca3b203c2884eb33cfa84693d92942"
+    }
+  ],
+  "green_awb_arithmetic_identical_all_samples": true,
+  "raw10_scale": "floor(raw10/4), selects each [9:2]",
+  "compiled_awb": "user_source/hdl_source/awb.v",
+  "awb_green": "unchanged delayed green, no gain",
+  "shading_green": "unchanged green in both RGB8 and RGB9 outputs",
+  "gamma_current_equals_oct18_all256": true,
+  "gamma_current_minus_ee675b6_minmax": [
+    -11,
+    0
+  ],
+  "gamma_recent_change_inputs": [
+    240,
+    241,
+    242,
+    243,
+    244,
+    245,
+    246,
+    247,
+    248,
+    249,
+    250,
+    251,
+    252,
+    253,
+    254
+  ],
+  "active_raw_pass_or_awb_bypass_sample_commits": [],
+  "active_awb_simple_sample_commits": [],
+  "historical_changes": [
+    {
+      "commit": "022ab99",
+      "date": "2026-10-18",
+      "cause": "Gamma active in earliest visible revision; G128->157. Same all256 curve as current."
+    },
+    {
+      "commit": "34d362d",
+      "date": "2026-10-24",
+      "cause": "Shading introduced; Gamma changed shadow/midtone profile."
+    },
+    {
+      "commit": "c5fb3dc",
+      "date": "2026-10-24",
+      "cause": "Strong S Gamma: G128->210, G192->250; min input mapping255 is232."
+    },
+    {
+      "commit": "0f3a8f5",
+      "date": "2026-10-24",
+      "cause": "RAW_PASS code added but committed define off; AWB statistics/IIR changed only R/B."
+    },
+    {
+      "commit": "fea65bf",
+      "date": "2026-10-25",
+      "cause": "AWB R/B IIR1/64 and calibrated shading; G still pass."
+    },
+    {
+      "commit": "fff0068",
+      "date": "2026-10-25",
+      "cause": "Gentle Gamma restored below240; 240..255 plateau incorrectly set255."
+    },
+    {
+      "commit": "d5fb8a9",
+      "date": "2026-10-31",
+      "cause": "Plateau removed; current curve exactly same as Oct18."
+    }
+  ],
+  "conclusion": "No recent C0 green arithmetic/scaling increase found. Old Gamma lift explains non-linear bright baseline, not proof of recent regression. Actual sensor exposure/gain/bit identity/AWB state require matched evidence."
+}

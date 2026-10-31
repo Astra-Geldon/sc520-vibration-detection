@@ -1,0 +1,68 @@
+{
+  "source_manifest": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-white-protection-20261031\\compile-v1\\source_manifest.json",
+  "manifest_commit": "a7a12be282e9ef2b63dc2f3111d51b3ebe474db3",
+  "source_files": {
+    "user_source/hdl_source/img_mode_sel.v": {
+      "frozen_sha256": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/highlight_tone.v": {
+      "frozen_sha256": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/highlight_region.v": {
+      "frozen_sha256": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/highlight_shoulder_lut.v": {
+      "frozen_sha256": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/design_top_wrapper.v": {
+      "frozen_sha256": "5d8345370f7778eeef2da74ea32349388cbd4a0dc4a7f51de9a3acf54510458c",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/awb.v": {
+      "frozen_sha256": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/color_shading.v": {
+      "frozen_sha256": "c2f5c446654b57b185577964a028dc8b8627e210a5b1a8500c4af37eb2e74970",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/color_shading_lut.v": {
+      "frozen_sha256": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/img_proc.v": {
+      "frozen_sha256": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/isp/isp_top.v": {
+      "frozen_sha256": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/uiisp_beta/ae_set.v": {
+      "frozen_sha256": "cf964824fa329c9da8582d7f8a830bd00544142d4b9f88ce7c1580ab10bc388b",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/uics520_cfg/SC520GainTbl.v": {
+      "frozen_sha256": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/uics520_cfg/uicfgcs520.v": {
+      "frozen_sha256": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/uics520_cfg/uics520regAE.v": {
+      "frozen_sha256": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+      "matches_current_normalized": true
+    },
+    "user_source/hdl_source/uics520_cfg/uics520reg_720p60.v": {
+      "frozen_sha256": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+      "matches_current_normalized": true
+    }
+  },
+  "status": "PASS",
+  "limit": "Read-only source provenance check; no new device verification."
+}

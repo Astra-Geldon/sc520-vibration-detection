@@ -1,0 +1,92 @@
+{
+  "scope": "Code/history only. No user images, camera, TD synthesis, or hardware programming.",
+  "source_commit": "cc91060257e19488e9ad89cc8a6f7ae1d1eceb85",
+  "source_sha256": {
+    "user_source\\hdl_source\\img_mode_sel.v": "9eaa3c186c381c97d00f4663e0b6896beabdc2dd20826b8dcc336297181c2b21",
+    "user_source\\hdl_source\\highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "user_source\\hdl_source\\highlight_region.v": "32c576614f456191a1aad61897a2524cac98adb9ab15978d5f090cbc9f02ca8f",
+    "user_source\\hdl_source\\highlight_shoulder_lut.v": "57fe68008e0a0dcb8b1b631e4272948d8a0f3620a701743b7c459aee562f7f01",
+    "user_source\\hdl_source\\design_top_wrapper.v": "5d8345370f7778eeef2da74ea32349388cbd4a0dc4a7f51de9a3acf54510458c",
+    "user_source\\hdl_source\\awb.v": "92e34659da63ef8e28f728ca805567803bbb86b2ec97967049d88fa191690baf",
+    "user_source\\hdl_source\\color_shading.v": "c2f5c446654b57b185577964a028dc8b8627e210a5b1a8500c4af37eb2e74970",
+    "user_source\\hdl_source\\color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+    "user_source\\hdl_source\\img_proc.v": "5cf85e08169f77db0691e6154a64501332bf263dfb3df8588fd73dfc9da9e72c",
+    "user_source\\hdl_source\\isp\\isp_top.v": "848488d4de7e85f08fd09c3d69b2a28375decfb4c2077f23c3274671a0cfd7df",
+    "user_source\\hdl_source\\uiisp_beta\\ae_set.v": "cf964824fa329c9da8582d7f8a830bd00544142d4b9f88ce7c1580ab10bc388b",
+    "user_source\\hdl_source\\uics520_cfg\\SC520GainTbl.v": "45c6e2867f9fcad17eddeb55abad62ed423663b03a0be26b4e41fc83081c8b68",
+    "user_source\\hdl_source\\uics520_cfg\\uicfgcs520.v": "a8f41e1adb98eff4ec8f7ce902f925646809bee227420d633fe8b9fa6552fc0d",
+    "user_source\\hdl_source\\uics520_cfg\\uics520regAE.v": "c8930145298088ff75c3f0130b40e3f8fa801b2d53653a4bc7fda4be5bce4403",
+    "user_source\\hdl_source\\uics520_cfg\\uics520reg_720p60.v": "9c33ee9e4f64c107a16a95950bde0f89396f81e45ec211368c7931c83d643885",
+    "td_project\\camera_to_dsi_display.al": "e23e67f5fc3a566670cde0dcf55f59a9f771a518435da92a08320f3ffe5a5d28"
+  },
+  "menu": {
+    "reset_exposure": 3,
+    "reset_candidate": 7,
+    "candidate_meaning": "C3/P3/W0",
+    "key3_verified_transitions": 44,
+    "all_preserve_candidate": true,
+    "after_key3_once": {
+      "exposure": 0,
+      "candidate": 7
+    }
+  },
+  "neutral_tone_input_output": [
+    {
+      "input": 32,
+      "output": 84
+    },
+    {
+      "input": 64,
+      "output": 141
+    },
+    {
+      "input": 96,
+      "output": 175
+    },
+    {
+      "input": 128,
+      "output": 193
+    },
+    {
+      "input": 160,
+      "output": 201
+    },
+    {
+      "input": 192,
+      "output": 206
+    },
+    {
+      "input": 208,
+      "output": 208
+    },
+    {
+      "input": 224,
+      "output": 219
+    },
+    {
+      "input": 240,
+      "output": 224
+    },
+    {
+      "input": 255,
+      "output": 227
+    }
+  ],
+  "neutral_input_scope": "At highlight_tone input; not sensor RAW or a full AWB/Gamma simulation.",
+  "c0_p0_w0_clipped_reference_vectors": 4096,
+  "source_unchanged": true,
+  "top_static_assertions": "PASS: current default EXP3/profile7/11-menu, colour-only gates, active AWB manifest",
+  "limits": [
+    "Menu independence is a secondary issue; C3 does not explain the latest exposure0/C0/P0/W0 feedback.",
+    "No sensor-register readback or RAW measurement performed.",
+    "Simulation proves code behaviour, not a complete recent-brightness root cause."
+  ],
+  "status": "PASS",
+  "latest_user_observation": {
+    "image4_osd": "exposure0/C0/P0/W0",
+    "highlight_problem_persists_with_c3_off": true,
+    "c3_excluded_as_cause_of_this_observation": true,
+    "image3_not_used_as_exposure0_reference": true,
+    "scope": "OSD and visible overbrightness only; no RAW or register inference from JPEG."
+  }
+}
