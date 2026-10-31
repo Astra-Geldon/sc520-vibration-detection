@@ -110,7 +110,13 @@ fix: reduce highlight exposure 20261030
 3. 核查 `awb.v` 的高光剔除、暗部下限、肤色排除和 `sample_count` 门槛，避免曝光切换后有效统计集合突变；先不改变Gamma、shading和视频时序。
 4. 评估曝光1200是否能在保留高光的同时恢复较合理肤色。若需要改RTL，优先用曝光更新toggle跨域通知AWB，在新曝光首个有效帧快速收敛数帧后恢复 `old+(new-old)/64`，不得直接跨域传一拍请求脉冲。
 
-E1 第一版已在分支 `image-e1-awb-stability-20261031` 完成完整 A→B→C 编译，时序 `SWNS=+0.133 ns`、`HWNS=+0.020 ns`、`STNS/HTNS=0`；资源为 LUT6 11046、Slice 12180、FF 10144、ERAM 52、DSP 34、PLL 3、MCU 1。相对 C3 降噪回退基线，LUT6 +25、Slice -22、FF -72，其余关键资源不增加。bit 只归档在 `_build`，尚未烧录和板测。
+E1 第一版已在分支 `image-e1-awb-stability-20261031` 完成完整 A→B→C 编译和JTAG烧录，时序 `SWNS=+0.133 ns`、`HWNS=+0.020 ns`、`STNS/HTNS=0`；资源为 LUT6 11046、Slice 12180、FF 10144、ERAM 52、DSP 34、PLL 3、MCU 1。相对 C3 降噪回退基线，LUT6 +25、Slice -22、FF -72，其余关键资源不增加。bit 位于 `_build/20261029project/e1-awb-stability-20261031/compile-v1/camera_to_dsi_display.bit`，SHA-256 为 `7E1E1F74341703F535C63499E5425B90F73C50F293BFC634EE82639EDE7613BD`。用户板上观察到 D0～D3 在稳定画面中无可见差异，因此E1不作为空间偏色修复结果。
+
+### 研究结论：停止继续加大D，先做空间校正
+
+已完成在线资料和当前RTL的交叉核查，详见 `IMAGE_QUALITY_RESEARCH_20261031.md`。D路径只对同帧3×3窗口中的 `R-G/B-G` 做门控平滑，D1/D2/D3的最终改变量分别限制为±2/±4/±6码；它针对高频色度噪声，不能解决截图中几十到几百像素尺度的固定灰绿/蓝紫空间偏色。当前 `color_shading.v` 实际是10列水平1D Q8表，垂直方向没有校正；`S_k_sel` 还固定为0.75，KEY4的D档并不改变shading强度。
+
+外部方案中，适合本板的顺序是：S0 关闭/开启现有shading做同场景对照；S1 用白墙/白纸平场和暗场重新生成正确的10×1 R/B表；只有S1仍有上下残差时才增加10×3或10×6定点分区；再做区域AWB；最后才重新评估D色度噪声。当前资源为 LUT6 11046/21216、Slice 12180/21216、FF 10144/42432、ERAM 52/108、DSP 34/40，DSP仅余6个，不能直接搬用Vitis RGB bilateral参考实现（约32 DSP）。
 
 ### E2：可见的色度降噪候选
 

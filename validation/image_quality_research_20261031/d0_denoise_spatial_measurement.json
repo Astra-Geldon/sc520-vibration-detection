@@ -1,0 +1,16 @@
+{
+  "description": "D0-D3 user screenshots and D0 spatial chroma measurements",
+  "images": [
+    {"label":"D0","sha256":"ea07b5a1c049a6e6b6d46dc439e036075375f2709530630b36992a88c069c005"},
+    {"label":"D1","sha256":"6b8234aa18615bfbe74e52eff56a4737ac5683ae068ad35f0ff8b9ea4e47d9e8"},
+    {"label":"D3","sha256":"16023e2a45ddf5bc42c90c3bcc7704d01ce06f768b1c6c221d3f4db26404c8df"},
+    {"label":"D2","sha256":"50f433a2715b0a3bb97e4f2b29651ee351eec305bd047c7209b27be2dea43ab9"}
+  ],
+  "d0_column_median_g_over_r": [1.127,1.047,0.978,0.925,0.910,0.927,0.956,1.000,1.072,1.094],
+  "d0_column_median_g_over_b": [0.867,0.885,0.899,0.919,0.948,0.953,0.923,0.949,1.016,0.930],
+  "suggested_q8_gain_if_flat_field_confirmed": {
+    "r": [288,268,250,237,233,237,245,256,274,280],
+    "b": [222,227,230,235,243,244,236,243,260,238]
+  },
+  "caveat": "The screenshots contain a non-flat scene and JPEG capture; the suggested gains are diagnostic only and must not replace a fixed white-wall/white-paper calibration capture."
+}

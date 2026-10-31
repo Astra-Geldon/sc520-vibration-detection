@@ -1,0 +1,9 @@
+{
+  "branch": "image-e1-awb-stability-20261031",
+  "commit": "1869376",
+  "bit": "D:\\FPGA\\codex\\_build\\20261029project\\e1-awb-stability-20261031\\compile-v1\\camera_to_dsi_display.bit",
+  "sha256": "7E1E1F74341703F535C63499E5425B90F73C50F293BFC634EE82639EDE7613BD",
+  "programmer": "PRG-2014 Chip validation success: PH1P35MDG324",
+  "board_visual_validation": "user_observed_no_visible_difference_D0_to_D3",
+  "notes": "JTAG burn completed. User observed stable video, but D0/D1/D2/D3 produced no visible difference; this E1 image is therefore an AWB-transition experiment, not a spatial-color correction result."
+}
