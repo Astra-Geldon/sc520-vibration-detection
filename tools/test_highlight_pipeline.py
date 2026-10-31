@@ -24,13 +24,15 @@ def main():
     top_file = hdl / 'design_top_wrapper.v'
     top = top_file.read_text(encoding='utf-8')
     gain_compare = '.GAIN_DEBUG_EN ( 1 )' in top
+    gain8_lift = 'gain8_lift u_gain8_lift (' in top
     summary = {'pass': False, 'scope': 'Actual white-prepare/wide-peak/metadata/tone/OSD/mixer versus pre-mixer processor; all11 profiles and4 modes'}
     try:
         def instance(start_text):
             start = top.index(start_text)
             stop = top.index('    );', start) + len('    );')
             return top[start:stop]
-        tone_marker = '    highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) u_highlight_tone ('
+        tone_marker = ('    gain8_lift u_gain8_lift (' if gain8_lift else
+                       '    highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) u_highlight_tone (')
         peak_start = top.index('    wire [26:0] S_tone_prepared_wide_data;')
         peak_stop = top.index('    reg [8:0] S_tone_stage_peak;', peak_start)
         peak_logic = top[peak_start:peak_stop]
@@ -208,6 +210,18 @@ endmodule
             harness = harness.replace('if (f==1 && x%103==0) S_region_sel_active=(x/103)%11;',
                 'if (f==1 && x%103==0) begin S_gain_sel_active=(x/103)%4; S_gain_verified_active=(x/103)%2; end')
             summary['scope'] = 'Actual gain-label metadata and fixed C/P/W0 pipeline versus original pre-mixer output; four gains and four modes'
+        if gain8_lift:
+            begin = harness.index('highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) reference_processor (')
+            end = harness.index('hdmi_mixer_original #(', begin)
+            harness = harness[:begin] + '''gain8_lift reference_processor (
+ .I_de(S_hdmi_de),.I_enable(S_img_mode==0),.I_sel(S_region_sel_active[1:0]),
+ .I_data(S_imgp_data),.I_peak(S_tone_input_peak[7:0]),.O_data(reference_tone));
+''' + harness[end:]
+            harness = harness.replace('S_region_sel_active=0; S_gain_sel_active=f%4;',
+                                      'S_region_sel_active=f%4; S_gain_sel_active=f%4;')
+            harness = harness.replace('begin S_gain_sel_active=(x/103)%4;',
+                                      'begin S_region_sel_active=(x/103)%4; S_gain_sel_active=(x/103)%4;')
+            summary['scope'] = 'Actual RGB8 L0..3 lift, same-pixel metadata, OSD and mixer versus original pre-mixer reference; four modes and gains'
         test_file = output / 'tb_highlight_pipeline.v'
         test_file.write_text(harness, encoding='utf-8')
         files = [top_file, hdl/'hdmi_mixer.v', hdl/'highlight_tone.v', hdl/'highlight_region.v', hdl/'highlight_shoulder_lut.v',
