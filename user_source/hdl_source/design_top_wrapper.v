@@ -424,8 +424,11 @@ module design_top_wrapper (
     // emerge together; candidate/OSD metadata follow that same register.
     wire [23:0] S_tone_stage_data;
     reg [26:0] S_tone_stage_wide_data;
-    wire [17:0] S_tone_input_gain;
-    reg [17:0] S_tone_stage_gain;
+    wire [8:0] S_tone_input_rg_max = (S_csc_wide_data[26:18] > S_csc_wide_data[17:9]) ?
+                                    S_csc_wide_data[26:18] : S_csc_wide_data[17:9];
+    wire [8:0] S_tone_input_peak = (S_tone_input_rg_max > S_csc_wide_data[8:0]) ?
+                                  S_tone_input_rg_max : S_csc_wide_data[8:0];
+    reg [8:0] S_tone_stage_peak;
     wire S_tone_stage_de, S_tone_stage_vs;
     reg [2:0] S_tone_stage_mode, S_tone_stage_sel;
     reg [1:0] S_tone_stage_exp, S_tone_stage_k;
@@ -1345,18 +1348,15 @@ isp_top u_isp_top (
     //  OSD 叠加：右上角安路 Logo + 左上角算法名
     //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
     //------------------------------------------------------------------
-    // Split gain lookup and multiply at the mixer's EXISTING first data edge.
-    // Gain, RGB9, clipped RGB8 and all metadata refer to the SAME input pixel.
-    highlight_gain u_highlight_input_gain (
-        .I_sel(S_region_sel_active), .I_data(S_imgp_data),
-        .I_wide_data(S_csc_wide_data), .O_gain(S_tone_input_gain)
-    );
+    // Balance the existing first-data edge: shading/max before it, LUT/multiply
+    // after it. Wide peak equals clipped peak below208; both legacy gains are
+    // unity above208, so P0 reference is also exact. Non-colour bypass is intact.
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
             S_tone_stage_sel <= 3'd0;
             S_tone_stage_wide_data <= 27'd0;
-            S_tone_stage_gain <= 18'd65536;
+            S_tone_stage_peak <= 9'd0;
             S_tone_stage_exp <= 2'd3;
             S_tone_stage_k <= 2'd2;
             S_tone_stage_threshold <= 8'd0;
@@ -1368,7 +1368,7 @@ isp_top u_isp_top (
             // Same edge as mixer.S_video_data_1d: colour mode is a pure
             // img_proc passthrough. No extra pixel/sync or DDR read delay.
             S_tone_stage_wide_data <= S_csc_wide_data;
-            S_tone_stage_gain <= S_tone_input_gain;
+            S_tone_stage_peak <= S_tone_input_peak;
             S_tone_stage_exp <= S_exp_sel;
             S_tone_stage_k <= S_k_sel;
             S_tone_stage_threshold <= S_img_threshold;
@@ -1376,13 +1376,13 @@ isp_top u_isp_top (
             S_tone_stage_locked <= S_img_th_locked;
         end
     end
-    highlight_tone #(.GAIN_STAGE_EN(1)) u_highlight_tone (
+    highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) u_highlight_tone (
         .I_de       ( S_tone_stage_de ),
         .I_enable   ( S_tone_stage_mode == 3'd0 ),
         .I_sel      ( S_tone_stage_sel ),
         .I_data     ( S_tone_stage_data ),
         .I_wide_data( S_tone_stage_wide_data ),
-        .I_gain     ( S_tone_stage_gain ),
+        .I_peak     ( S_tone_stage_peak ),
         .O_mask     ( ),
         .O_data     ( S_region_data )
     );

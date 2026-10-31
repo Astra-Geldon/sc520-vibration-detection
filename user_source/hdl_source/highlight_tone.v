@@ -1,18 +1,12 @@
-// Shared analytical gain selector. Top may place the existing pixel boundary
-// between this selector and highlight_tone's three-multiplier application.
+// Shared analytical gain lookup from the current pixel maximum.
+// Top captures only the maximum at the existing pixel boundary.
 module highlight_gain (
     input wire [2:0] I_sel,
-    input wire [23:0] I_data,
-    input wire [26:0] I_wide_data,
+    input wire [8:0] I_peak,
     output wire [17:0] O_gain
 );
     wire [1:0] S_profile = I_sel[1:0];
     wire S_wide_enable = (S_profile != 2'd0);
-    wire [8:0] S_r = S_wide_enable ? I_wide_data[26:18] : {1'b0, I_data[23:16]};
-    wire [8:0] S_g = S_wide_enable ? I_wide_data[17:9] : {1'b0, I_data[15:8]};
-    wire [8:0] S_b = S_wide_enable ? I_wide_data[8:0] : {1'b0, I_data[7:0]};
-    wire [8:0] S_rg_max = (S_r > S_g) ? S_r : S_g;
-    wire [8:0] S_peak = (S_rg_max > S_b) ? S_rg_max : S_b;
     // Full Q16 gain is algebraically identical to old value+round(value*boost).
     function [17:0] f_c3_gain;
         input [7:0] peak;
@@ -231,11 +225,11 @@ module highlight_gain (
         end
     endfunction
     wire [47:0] S_shoulder_gains;
-    highlight_shoulder_lut u_shoulder_lut (.I_peak(S_peak), .O_gains(S_shoulder_gains));
+    highlight_shoulder_lut u_shoulder_lut (.I_peak(I_peak), .O_gains(S_shoulder_gains));
     reg [17:0] S_gain;
     always @(*) begin
-        S_gain = (I_sel[2] && (S_peak < 9'd208)) ? f_c3_gain(S_peak[7:0]) : 18'd65536;
-        if (S_wide_enable && (S_peak > 9'd208)) begin
+        S_gain = (I_sel[2] && (I_peak < 9'd208)) ? f_c3_gain(I_peak[7:0]) : 18'd65536;
+        if (S_wide_enable && (I_peak > 9'd208)) begin
             case (S_profile)
                 2'd1: S_gain = {2'b0, S_shoulder_gains[47:32]};
                 2'd2: S_gain = {2'b0, S_shoulder_gains[31:16]};
@@ -251,14 +245,14 @@ endmodule
 // Shading values retain nine integer bits until the common gain is applied.
 // No pixel registers, frame/line storage, runtime division or history.
 module highlight_tone #(
-    parameter integer GAIN_STAGE_EN = 0
+    parameter integer PRECOMPUTED_PEAK_EN = 0
 )(
     input wire I_de,
     input wire I_enable,
     input wire [2:0] I_sel,
     input wire [23:0] I_data, // original clipped img_proc output; non-colour bypass
     input wire [26:0] I_wide_data, // aligned {R9,G9,B9} BEFORE shading clipping
-    input wire [17:0] I_gain, // used only with GAIN_STAGE_EN=1; already aligned
+    input wire [8:0] I_peak, // used only with PRECOMPUTED_PEAK_EN=1; aligned with RGB
     output wire O_mask,
     output wire [23:0] O_data
 );
@@ -272,15 +266,17 @@ module highlight_tone #(
     wire [8:0] S_r = S_wide_enable ? I_wide_data[26:18] : {1'b0, I_data[23:16]};
     wire [8:0] S_g = S_wide_enable ? I_wide_data[17:9] : {1'b0, I_data[15:8]};
     wire [8:0] S_b = S_wide_enable ? I_wide_data[8:0] : {1'b0, I_data[7:0]};
-    wire [17:0] S_gain;
+    wire [8:0] S_peak;
     generate
-        if (GAIN_STAGE_EN != 0) begin : g_registered_gain
-            assign S_gain = I_gain;
-        end else begin : g_combinational_gain
-            highlight_gain u_gain (.I_sel(I_sel), .I_data(I_data),
-                                   .I_wide_data(I_wide_data), .O_gain(S_gain));
+        if (PRECOMPUTED_PEAK_EN != 0) begin : g_registered_peak
+            assign S_peak = I_peak;
+        end else begin : g_combinational_peak
+            wire [8:0] rg_max = (S_r > S_g) ? S_r : S_g;
+            assign S_peak = (rg_max > S_b) ? rg_max : S_b;
         end
     endgenerate
+    wire [17:0] S_gain;
+    highlight_gain u_gain (.I_sel(I_sel), .I_peak(S_peak), .O_gain(S_gain));
     // Exactly three multiplications; both branches select operands BEFORE them.
     wire [26:0] S_pr = S_r * S_gain;
     wire [26:0] S_pg = S_g * S_gain;

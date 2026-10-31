@@ -18,12 +18,18 @@ reg [2:0] sel=0;
 reg [26:0] wide=0;
 reg [23:0] old_pixel=0;
 wire [23:0] actual;
+wire [23:0] actual_peak;
 wire mask;
+wire [8:0] rg_peak = (wide[26:18]>wide[17:9]) ? wide[26:18] : wide[17:9];
+wire [8:0] wide_peak = (rg_peak>wide[8:0]) ? rg_peak : wide[8:0];
 integer p,v,c,n,checks=0;
 reg [8:0] vr,vg,vb;
 reg [23:0] expected;
 highlight_tone dut(.I_de(de),.I_enable(en),.I_sel(sel),.I_data(old_pixel),
  .I_wide_data(wide),.O_mask(mask),.O_data(actual));
+highlight_tone #(.PRECOMPUTED_PEAK_EN(1)) peak_dut (
+ .I_de(de),.I_enable(en),.I_sel(sel),.I_data(old_pixel),
+ .I_wide_data(wide),.I_peak(wide_peak),.O_mask(),.O_data(actual_peak));
 function [7:0] clip;
  input [8:0] x;
  begin clip=(x>255)?255:x[7:0];end
@@ -64,6 +70,7 @@ task check;
  emask=de&&en&&(y4>=832||old_pixel[23:16]>=250||old_pixel[15:8]>=250||old_pixel[7:0]>=250);
  #1;
  if(actual!==expected)$fatal(1,"math mismatch sel%0d wide%h old%h actual%h expected%h",sel,wide,old_pixel,actual,expected);
+ if(actual_peak!==expected)$fatal(1,"precomputed peak mismatch sel%0d wide%h actual%h expected%h",sel,wide,actual_peak,expected);
  if(mask!==emask)$fatal(1,"mask changed");
  checks=checks+1;
  end
