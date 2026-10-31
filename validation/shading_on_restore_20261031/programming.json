@@ -11,7 +11,9 @@
   "log_sha256": "e4b99b3d092df1d3877ad107ca5b0457e66e5646c0fb24ae19b5bcf7e68116f0",
   "mode": "JTAG SRAM download, not Flash",
   "rtl_verification": "git diff a2e58a9 -- user_source is empty",
-  "board_visual_validation": "pending_user_observation_after_restore",
+  "board_visual_validation": "user_confirmed_previous_appearance_restored; image_quality_problem_unresolved",
+  "user_feedback": "已经恢复观感，但是问题还是依旧没有解决，我觉得你的思路可能有问题。你再仔细研究一下",
+  "user_feedback_image": "C:/Users/27525/AppData/Local/Temp/codex-clipboard-49a0cf17-1968-40f1-b2c0-ac845ff1e1d3.jpg",
   "resources": {
     "LUT6": 11046,
     "Slice": 12180,

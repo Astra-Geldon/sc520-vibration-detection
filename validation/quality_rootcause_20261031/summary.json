@@ -1,0 +1,353 @@
+{
+  "baseline": "ade348a",
+  "scope": "source audit, numeric core simulation, synthetic response, processed JPEG proxy; no board operations",
+  "production_rtl_changed": false,
+  "new_bit_compiled": false,
+  "user_restoration_confirmed": true,
+  "image_quality_pass": false,
+  "user_image_sha256": "ac51d51b8a73b841fa70d04be5ef825ac44725c2b88c8b4fc5d19e6f52da0f20",
+  "numeric_core": {
+    "pass": true,
+    "vectors": 120000,
+    "coverage": {
+      "blank": 3871,
+      "same": 21002,
+      "changed": 19023,
+      "bypass": 75474,
+      "gamut_fallback": 630
+    },
+    "full_stream_rerun": false
+  },
+  "tone_response": {
+    "scope": "Controlled synthetic algorithm response; not board SNR",
+    "source_sha256": "5269db598d40b37b8397589e48b7f080fa44aa38640f877e2b735f408380bd4b",
+    "lut_rows_verified": 208,
+    "neutral_levels": {
+      "16": 46,
+      "32": 84,
+      "50": 119,
+      "80": 160,
+      "100": 178,
+      "128": 193,
+      "150": 199,
+      "160": 201,
+      "180": 204,
+      "208": 208
+    },
+    "flat_RGB_noise": {
+      "50": {
+        "input": {
+          "mean_Y8": 49.99228830645161,
+          "std_Y8": 1.378255312778431,
+          "std_R_minus_G": 2.8508218559111227,
+          "std_B_minus_G": 2.853638064164544
+        },
+        "C3": {
+          "mean_Y8": 117.84469926075269,
+          "std_Y8": 2.6417380388435774,
+          "std_R_minus_G": 6.69134601170079,
+          "std_B_minus_G": 6.696798871915787
+        },
+        "C3_D3": {
+          "mean_Y8": 117.84469926075269,
+          "std_Y8": 2.6417380388435774,
+          "std_R_minus_G": 3.827869678103952,
+          "std_B_minus_G": 3.842615408199338
+        }
+      },
+      "80": {
+        "input": {
+          "mean_Y8": 80.00010920698925,
+          "std_Y8": 1.3796993210726953,
+          "std_R_minus_G": 2.855668371988531,
+          "std_B_minus_G": 2.8556189050289715
+        },
+        "C3": {
+          "mean_Y8": 158.3131804435484,
+          "std_Y8": 2.0555649124367736,
+          "std_R_minus_G": 5.691763102989168,
+          "std_B_minus_G": 5.692624482418286
+        },
+        "C3_D3": {
+          "mean_Y8": 158.3131804435484,
+          "std_Y8": 2.0555649124367736,
+          "std_R_minus_G": 3.0242902388496766,
+          "std_B_minus_G": 3.018611915213589
+        }
+      },
+      "128": {
+        "input": {
+          "mean_Y8": 128.00277217741936,
+          "std_Y8": 1.3789504747475703,
+          "std_R_minus_G": 2.8568130645027807,
+          "std_B_minus_G": 2.8537545445040924
+        },
+        "C3": {
+          "mean_Y8": 191.059375,
+          "std_Y8": 1.573395713652669,
+          "std_R_minus_G": 4.233747573746707,
+          "std_B_minus_G": 4.229691622626794
+        },
+        "C3_D3": {
+          "mean_Y8": 191.059375,
+          "std_Y8": 1.573395713652669,
+          "std_R_minus_G": 2.1249427414084794,
+          "std_B_minus_G": 2.1202212306284567
+        }
+      },
+      "160": {
+        "input": {
+          "mean_Y8": 159.9914314516129,
+          "std_Y8": 1.378768236070059,
+          "std_R_minus_G": 2.8672230982478726,
+          "std_B_minus_G": 2.866324243550446
+        },
+        "C3": {
+          "mean_Y8": 199.3947244623656,
+          "std_Y8": 1.3791441915045477,
+          "std_R_minus_G": 3.5994163916361965,
+          "std_B_minus_G": 3.5990710425301593
+        },
+        "C3_D3": {
+          "mean_Y8": 199.3947244623656,
+          "std_Y8": 1.3791441915045477,
+          "std_R_minus_G": 1.7938181481496343,
+          "std_B_minus_G": 1.787848550251704
+        }
+      }
+    },
+    "broad_chroma": {
+      "16": {
+        "ideal_all_gates_open_attenuation_fraction": 0.028545175308267463,
+        "input": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 5.612486080160912,
+          "std_B_minus_G": 5.612486080160912
+        },
+        "D3": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 5.399291041423864,
+          "std_B_minus_G": 5.399291041423864
+        },
+        "modified_fraction": 0.375
+      },
+      "32": {
+        "ideal_all_gates_open_attenuation_fraction": 0.007205519848788582,
+        "input": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 5.689880478034526,
+          "std_B_minus_G": 5.689880478034526
+        },
+        "D3": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 5.689880478034526,
+          "std_B_minus_G": 5.689880478034526
+        },
+        "modified_fraction": 0.0
+      },
+      "64": {
+        "ideal_all_gates_open_attenuation_fraction": 0.0018057274979261678,
+        "input": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 5.748409215318946,
+          "std_B_minus_G": 5.748409215318946
+        },
+        "D3": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 5.748409215318946,
+          "std_B_minus_G": 5.748409215318946
+        },
+        "modified_fraction": 0.0
+      }
+    },
+    "texture": {
+      "80": {
+        "input_std_Y8": 5.612486080160912,
+        "C3_std_Y8": 5.997069596894804,
+        "contrast_retained": 1.0685228455342317,
+        "D3_recovery": 0.0
+      },
+      "128": {
+        "input_std_Y8": 5.612486080160912,
+        "C3_std_Y8": 1.996089927833914,
+        "contrast_retained": 0.35565164872118227,
+        "D3_recovery": 0.0
+      },
+      "160": {
+        "input_std_Y8": 5.612486080160912,
+        "C3_std_Y8": 0.8569568250501305,
+        "contrast_retained": 0.1526875635521507,
+        "D3_recovery": 0.0
+      }
+    },
+    "constant_Y8_chroma_noise": {
+      "80": {
+        "input": {
+          "mean_Y8": 80.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 2.5858680202373394,
+          "std_B_minus_G": 2.5792990615904325
+        },
+        "C3": {
+          "mean_Y8": 158.16141633064515,
+          "std_Y8": 1.1421386616791007,
+          "std_R_minus_G": 5.153100654641361,
+          "std_B_minus_G": 5.158598123180865
+        },
+        "C3_D3": {
+          "mean_Y8": 158.16141633064515,
+          "std_Y8": 1.1421386616791007,
+          "std_R_minus_G": 2.5343207716483143,
+          "std_B_minus_G": 2.526924784212878
+        },
+        "C3_output_Y8_range": [
+          155,
+          160
+        ]
+      },
+      "128": {
+        "input": {
+          "mean_Y8": 128.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 2.5846017724412222,
+          "std_B_minus_G": 2.588389690879906
+        },
+        "C3": {
+          "mean_Y8": 190.8458501344086,
+          "std_Y8": 1.142962005884335,
+          "std_R_minus_G": 3.8906807419854017,
+          "std_B_minus_G": 3.797115818926798
+        },
+        "C3_D3": {
+          "mean_Y8": 190.8458501344086,
+          "std_Y8": 1.142962005884335,
+          "std_R_minus_G": 1.9145368778467444,
+          "std_B_minus_G": 1.8875519601514255
+        },
+        "C3_output_Y8_range": [
+          188,
+          193
+        ]
+      },
+      "160": {
+        "input": {
+          "mean_Y8": 160.0,
+          "std_Y8": 0.0,
+          "std_R_minus_G": 2.5894409565154124,
+          "std_B_minus_G": 2.586192440721101
+        },
+        "C3": {
+          "mean_Y8": 199.20423387096776,
+          "std_Y8": 1.109680136095152,
+          "std_R_minus_G": 3.14714794428109,
+          "std_B_minus_G": 3.226372309406997
+        },
+        "C3_D3": {
+          "mean_Y8": 199.20423387096776,
+          "std_Y8": 1.109680136095152,
+          "std_R_minus_G": 1.5991422319276842,
+          "std_B_minus_G": 1.637063233686151
+        },
+        "C3_output_Y8_range": [
+          196,
+          201
+        ]
+      }
+    },
+    "equal_luma_example": {
+      "input_RGB": [
+        [
+          128,
+          128,
+          128
+        ],
+        [
+          131,
+          127,
+          127
+        ]
+      ],
+      "input_Y8": [
+        128,
+        128
+      ],
+      "output_RGB": [
+        [
+          193,
+          193,
+          193
+        ],
+        [
+          194,
+          188,
+          188
+        ]
+      ],
+      "output_Y8": [
+        193,
+        190
+      ]
+    },
+    "oracle_base_diagnostic": {
+      "scope": "Known synthetic base only; no deployable estimator or noise model",
+      "input": {
+        "mean_Y8": 160.0,
+        "std_Y8": 5.612486080160912,
+        "std_R_minus_G": 0.0,
+        "std_B_minus_G": 0.0
+      },
+      "C3": {
+        "mean_Y8": 201.125,
+        "std_Y8": 0.8569568250501305,
+        "std_R_minus_G": 0.0,
+        "std_B_minus_G": 0.0
+      },
+      "constant_base_gain": {
+        "mean_Y8": 201.125,
+        "std_Y8": 7.131575912797956,
+        "std_R_minus_G": 0.0,
+        "std_B_minus_G": 0.0
+      },
+      "mean_alignment_offset": 0.0,
+      "warning": "A real gain field must protect highlights, suppress noise and avoid halos"
+    }
+  },
+  "artifacts": "D:\\FPGA\\codex\\_build\\20261029project\\deep-image-audit-20261031",
+  "equal_Y8_production_RTL_simulation": {
+    "pass": true,
+    "cases": 2,
+    "log_sha256": "0a1185e070946ea674481785c558aa43831c6209dee01ce28d94480a737f254d"
+  },
+  "references": [
+    {
+      "url": "https://datasheets.raspberrypi.com/camera/raspberry-pi-image-signal-processor-specification.pdf",
+      "accessed": "2026-10-31"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/raspberrypi/libcamera/master/src/ipa/rpi/controller/rpi/denoise.cpp",
+      "accessed": "2026-10-31"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/raspberrypi/libcamera/master/src/ipa/rpi/controller/rpi/noise.cpp",
+      "accessed": "2026-10-31"
+    },
+    {
+      "url": "https://people.csail.mit.edu/fredo/PUBLI/Siggraph2002/DurandBilateral.pdf",
+      "accessed": "2026-10-31"
+    },
+    {
+      "url": "https://people.csail.mit.edu/kaiming/publications/eccv10guidedfilter.pdf",
+      "accessed": "2026-10-31"
+    },
+    {
+      "url": "https://www.emva.org/wp-content/uploads/EMVA1288-3.1a.pdf",
+      "accessed": "2026-10-31"
+    }
+  ]
+}
