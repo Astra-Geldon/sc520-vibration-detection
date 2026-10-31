@@ -1,21 +1,11 @@
-// One shared three-multiplier bank: legacy C0/C3 or wide RGB shoulder.
-// I_sel={C3_enable, P[1:0]}; P0=legacy reference, P1/2/3=weak/medium/strong.
-// Shading values retain nine integer bits until the common gain is applied.
-// No pixel registers, frame/line storage, runtime division or history.
-module highlight_tone (
-    input wire I_de,
-    input wire I_enable,
+// Shared analytical gain selector. Top may place the existing pixel boundary
+// between this selector and highlight_tone's three-multiplier application.
+module highlight_gain (
     input wire [2:0] I_sel,
-    input wire [23:0] I_data, // original clipped img_proc output; non-colour bypass
-    input wire [26:0] I_wide_data, // aligned {R9,G9,B9} BEFORE shading clipping
-    output wire O_mask,
-    output wire [23:0] O_data
+    input wire [23:0] I_data,
+    input wire [26:0] I_wide_data,
+    output wire [17:0] O_gain
 );
-    wire [23:0] S_marker;
-    highlight_region u_h1 (
-        .I_de(I_de), .I_enable(I_enable), .I_sel(2'd1),
-        .I_source(I_data), .I_data(I_data), .O_mask(O_mask), .O_data(S_marker)
-    );
     wire [1:0] S_profile = I_sel[1:0];
     wire S_wide_enable = (S_profile != 2'd0);
     wire [8:0] S_r = S_wide_enable ? I_wide_data[26:18] : {1'b0, I_data[23:16]};
@@ -253,6 +243,44 @@ module highlight_tone (
             endcase
         end
     end
+    assign O_gain = S_gain;
+endmodule
+
+// One shared three-multiplier bank: legacy C0/C3 or wide RGB shoulder.
+// I_sel={C3_enable, P[1:0]}; P0=legacy reference, P1/2/3=weak/medium/strong.
+// Shading values retain nine integer bits until the common gain is applied.
+// No pixel registers, frame/line storage, runtime division or history.
+module highlight_tone #(
+    parameter integer GAIN_STAGE_EN = 0
+)(
+    input wire I_de,
+    input wire I_enable,
+    input wire [2:0] I_sel,
+    input wire [23:0] I_data, // original clipped img_proc output; non-colour bypass
+    input wire [26:0] I_wide_data, // aligned {R9,G9,B9} BEFORE shading clipping
+    input wire [17:0] I_gain, // used only with GAIN_STAGE_EN=1; already aligned
+    output wire O_mask,
+    output wire [23:0] O_data
+);
+    wire [23:0] S_marker;
+    highlight_region u_h1 (
+        .I_de(I_de), .I_enable(I_enable), .I_sel(2'd1),
+        .I_source(I_data), .I_data(I_data), .O_mask(O_mask), .O_data(S_marker)
+    );
+    wire [1:0] S_profile = I_sel[1:0];
+    wire S_wide_enable = (S_profile != 2'd0);
+    wire [8:0] S_r = S_wide_enable ? I_wide_data[26:18] : {1'b0, I_data[23:16]};
+    wire [8:0] S_g = S_wide_enable ? I_wide_data[17:9] : {1'b0, I_data[15:8]};
+    wire [8:0] S_b = S_wide_enable ? I_wide_data[8:0] : {1'b0, I_data[7:0]};
+    wire [17:0] S_gain;
+    generate
+        if (GAIN_STAGE_EN != 0) begin : g_registered_gain
+            assign S_gain = I_gain;
+        end else begin : g_combinational_gain
+            highlight_gain u_gain (.I_sel(I_sel), .I_data(I_data),
+                                   .I_wide_data(I_wide_data), .O_gain(S_gain));
+        end
+    endgenerate
     // Exactly three multiplications; both branches select operands BEFORE them.
     wire [26:0] S_pr = S_r * S_gain;
     wire [26:0] S_pg = S_g * S_gain;
