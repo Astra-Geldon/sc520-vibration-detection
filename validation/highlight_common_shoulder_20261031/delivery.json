@@ -45,6 +45,15 @@
     "scope": "Pre-shading-clip RGB9 shoulder candidate; user confirmed connection/power; Flash not written",
     "log_sha256": "5141ffc209a402449cbd5e90e66f507a469838f4f09a2efb195dc2d7f4a483aa"
   },
-  "visual_acceptance": "pending_user_observation",
-  "generated_utc": "2026-10-31T11:20:44.195429+00:00"
+  "visual_acceptance": "highlight_effective_colour_rejected",
+  "generated_utc": "2026-10-31T11:20:44.195429+00:00",
+  "visual_feedback": {
+    "date_local": "2026-10-31",
+    "user_report": "P有效，但画面更红，不能接受这个代价",
+    "conclusion": "Same-exposure screenshot centre highlights trend magenta; P RGB9 colour basis differs from P0 clipped RGB8.",
+    "report": "HIGHLIGHT_PINK_REVIEW_20261031.md",
+    "rtl_changed_in_review": false,
+    "recompiled_or_programmed_in_review": false,
+    "next_direction": "Research selective near-white clipping-risk chroma protection at current post-P luma; no new DSP; not implemented"
+  }
 }

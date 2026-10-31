@@ -78,10 +78,19 @@
     "finished_utc": "2026-10-31T11:19:52.903091+00:00",
     "evidence": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\burn-v1\\programming.json"
   },
-  "visual_acceptance": "pending_user_observation",
+  "visual_acceptance": "highlight_effective_colour_rejected",
   "generated_utc": "2026-10-31T11:14:08.606017+00:00",
   "bit": {
     "path": "D:\\FPGA\\codex\\_build\\20261029project\\highlight-common-shoulder-20261031\\compile-v3\\camera_to_dsi_display.bit",
     "sha256": "b985aabd936b2d8cf5fd6ce3cbdd875a0b37b3038108275aecf0d4ab6d55786f"
+  },
+  "visual_feedback": {
+    "date_local": "2026-10-31",
+    "user_report": "P有效，但画面更红，不能接受这个代价",
+    "conclusion": "Same-exposure screenshot centre highlights trend magenta; P RGB9 colour basis differs from P0 clipped RGB8.",
+    "report": "HIGHLIGHT_PINK_REVIEW_20261031.md",
+    "rtl_changed_in_review": false,
+    "recompiled_or_programmed_in_review": false,
+    "next_direction": "Research selective near-white clipping-risk chroma protection at current post-P luma; no new DSP; not implemented"
   }
 }

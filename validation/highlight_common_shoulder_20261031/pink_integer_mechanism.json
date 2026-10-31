@@ -1,0 +1,237 @@
+{
+  "scope": "Exact current RTL integer equations; alternative outputs are offline examples, not implemented or accepted",
+  "center_Q8_gains": [
+    284,
+    256,
+    277
+  ],
+  "pre_shading_example": [
+    255,
+    255,
+    255
+  ],
+  "wide_example": [
+    282,
+    255,
+    275
+  ],
+  "old_clipped_example": [
+    255,
+    255,
+    255
+  ],
+  "profiles": [
+    {
+      "P": 0,
+      "current_RGB": [
+        255,
+        255,
+        255
+      ],
+      "project_Y": 255,
+      "current_R_minus_G": 0,
+      "current_B_minus_G": 0,
+      "illustrative_full_white_protection_RGB": [
+        255,
+        255,
+        255
+      ],
+      "illustrative_project_Y_preserved": true
+    },
+    {
+      "P": 1,
+      "current_RGB": [
+        255,
+        230,
+        249
+      ],
+      "project_Y": 241,
+      "current_R_minus_G": 25,
+      "current_B_minus_G": 19,
+      "illustrative_full_white_protection_RGB": [
+        241,
+        241,
+        241
+      ],
+      "illustrative_project_Y_preserved": true
+    },
+    {
+      "P": 2,
+      "current_RGB": [
+        242,
+        219,
+        236
+      ],
+      "project_Y": 229,
+      "current_R_minus_G": 23,
+      "current_B_minus_G": 17,
+      "illustrative_full_white_protection_RGB": [
+        229,
+        229,
+        229
+      ],
+      "illustrative_project_Y_preserved": true
+    },
+    {
+      "P": 3,
+      "current_RGB": [
+        230,
+        208,
+        225
+      ],
+      "project_Y": 217,
+      "current_R_minus_G": 22,
+      "current_B_minus_G": 17,
+      "illustrative_full_white_protection_RGB": [
+        217,
+        217,
+        217
+      ],
+      "illustrative_project_Y_preserved": true
+    }
+  ],
+  "naive_repair_counterexamples": [
+    {
+      "pre_shading_gray": 232,
+      "wide_RGB": [
+        257,
+        232,
+        251
+      ],
+      "clipped_RGB": [
+        255,
+        232,
+        251
+      ],
+      "current_P3_RGB": [
+        227,
+        205,
+        222
+      ],
+      "current_peak": 227,
+      "current_Y": 214,
+      "same_gain_clipped_input_RGB": [
+        226,
+        205,
+        222
+      ],
+      "same_gain_clipped_input_peak": 226,
+      "rescaled_clipped_input_RGB": [
+        227,
+        207,
+        224
+      ],
+      "rescaled_clipped_input_Y": 216
+    },
+    {
+      "pre_shading_gray": 240,
+      "wide_RGB": [
+        266,
+        240,
+        259
+      ],
+      "clipped_RGB": [
+        255,
+        240,
+        255
+      ],
+      "current_P3_RGB": [
+        229,
+        206,
+        223
+      ],
+      "current_peak": 229,
+      "current_Y": 216,
+      "same_gain_clipped_input_RGB": [
+        219,
+        206,
+        219
+      ],
+      "same_gain_clipped_input_peak": 219,
+      "rescaled_clipped_input_RGB": [
+        229,
+        215,
+        229
+      ],
+      "rescaled_clipped_input_Y": 222
+    },
+    {
+      "pre_shading_gray": 248,
+      "wide_RGB": [
+        275,
+        248,
+        268
+      ],
+      "clipped_RGB": [
+        255,
+        248,
+        255
+      ],
+      "current_P3_RGB": [
+        230,
+        207,
+        224
+      ],
+      "current_peak": 230,
+      "current_Y": 217,
+      "same_gain_clipped_input_RGB": [
+        213,
+        207,
+        213
+      ],
+      "same_gain_clipped_input_peak": 213,
+      "rescaled_clipped_input_RGB": [
+        230,
+        223,
+        230
+      ],
+      "rescaled_clipped_input_Y": 226
+    },
+    {
+      "pre_shading_gray": 255,
+      "wide_RGB": [
+        282,
+        255,
+        275
+      ],
+      "clipped_RGB": [
+        255,
+        255,
+        255
+      ],
+      "current_P3_RGB": [
+        230,
+        208,
+        225
+      ],
+      "current_peak": 230,
+      "current_Y": 217,
+      "same_gain_clipped_input_RGB": [
+        208,
+        208,
+        208
+      ],
+      "same_gain_clipped_input_peak": 208,
+      "rescaled_clipped_input_RGB": [
+        230,
+        230,
+        230
+      ],
+      "rescaled_clipped_input_Y": 230
+    }
+  ],
+  "interpretation": [
+    "Common RGB gain preserves wide RGB ratios, while P0 uses a different clipped RGB colour reference.",
+    "Same-gain clipped operands can reverse output peak on a physically valid increasing neutral ramp.",
+    "T/clip(peak) preserves target maximum but may increase luma; it is not equal-brightness repair.",
+    "A neutral anchor at the chosen post-P luma preserves that code-value luma; a selective mask is essential.",
+    "No guarantee of true colour, subjective brightness or recovered texture follows from this integer illustration."
+  ],
+  "source_sha256": {
+    "user_source/hdl_source/color_shading.v": "c2f5c446654b57b185577964a028dc8b8627e210a5b1a8500c4af37eb2e74970",
+    "user_source/hdl_source/color_shading_lut.v": "d35395596d5177045709d1baaaa53e0047a48491d142e9b233e30870e2dcd20a",
+    "user_source/hdl_source/highlight_tone.v": "ebf30df2916b6d46f6d096043cd6d3814325e587ad0c5d2748703e28d29f7942",
+    "tools/gen_highlight_shoulder_lut.py": "6f2b262dd95ced836f942059254b12b933d70268111b8a342ee73056796122b4"
+  },
+  "hardware_changed": false
+}
