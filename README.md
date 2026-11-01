@@ -91,10 +91,9 @@ Gamma 为 **16 段锚点＋线性插值**；Color Shading 是 **10 列一维水�
 | `user_source/constraints_source/pin.adc` | 实体引脚约束 |
 | `td_project/`、`td_project/patch/` | TD工程及必须保留的HDMI数据库补丁/时序检查 |
 | `tools/` | 仿真、抓图和烧录辅助脚本 |
-| `validation/five_switch_demo_20261101/` | 与当前源码绑定的小型验证/资源/下载证据 |
-| `history/`、其余日期命名MD | 历史实验记录，不作为当前按键/算法说明 |
+| `validation/five_switch_demo_20261101/` | 与当前源码绑定的验证、资源和发布证据 |
 
-先读 [TEAM_GUIDE](TEAM_GUIDE.md)，再按需要查看 [算法](CURRENT_ALGORITHMS.md)、[资源](RESOURCE_USAGE.md)、[编译烧录](BUILD_AND_PROGRAM.md)、[MCU现状](MCU_USAGE.md) 和 [MCU经验](MCU_LESSONS.md)。[全部文档索引](DOCUMENTATION_INDEX.md) 标明当前与历史范围。
+先读 [TEAM_GUIDE](TEAM_GUIDE.md)，再按需要查看 [算法](CURRENT_ALGORITHMS.md)、[资源](RESOURCE_USAGE.md)、[编译烧录](BUILD_AND_PROGRAM.md)、[MCU现状](MCU_USAGE.md) 和 [MCU经验](MCU_LESSONS.md)。[全部文档索引](DOCUMENTATION_INDEX.md) 标明当前入口。
 
 ## 当前功能边界
 

@@ -49,6 +49,6 @@ AWB/Gamma/去马赛克旁路保留原同步流水，shading仍以常数k计算�
 - 资源对比、时序范围和证据入口：[RESOURCE_USAGE](RESOURCE_USAGE.md)。
 - bit完整路径、SHA和自行烧录：[BUILD_AND_PROGRAM](BUILD_AND_PROGRAM.md)。
 - 当前六种算法的准确处理位置和局限：[CURRENT_ALGORITHMS](CURRENT_ALGORITHMS.md)。
-- 编译过程历史与未烧录候选：[历史构建记录](history/FIVE_SWITCH_BUILD_NOTES_20261101.md)，其中旧“当前/待验收/不推云端”是当时记录。
+- 编译和烧录流程以[编译与烧录说明](BUILD_AND_PROGRAM.md)为准；旧实验记录不放入最终工程目录。
 
 当前源码和说明已获本次Gitee推送授权；默认其他后续工作仍遵循本地Git偏好，除非再次明确要求云端同步。
