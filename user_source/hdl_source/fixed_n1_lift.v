@@ -287,13 +287,149 @@ module fixed_n1_channel(input wire [7:0] I_pixel,input wire [10:0] I_gain,output
 endmodule
 
 
-module fixed_n1_lift(input wire I_de, input wire I_enable,
-    input wire [23:0] I_data, input wire [7:0] I_peak, output wire [23:0] O_data);
+// 自适应强度只在显示端按帧更新。参数为0时保留原N1逐位结果。
+module fixed_n1_adaptive_channel(input wire [7:0] I_pixel,
+    input wire [7:0] I_peak, input wire [10:0] I_base_gain,
+    input wire [3:0] I_strength, output wire [7:0] O_pixel);
+    wire [7:0] base_pixel;
+    fixed_n1_channel u_base(.I_pixel(I_pixel), .I_gain(I_base_gain), .O_pixel(base_pixel));
+    // 按strength/128计算附加提亮，使用显式移位加法，避免新增乘法器。
+    wire [11:0] p0 = I_strength[0] ? {4'd0, base_pixel} : 12'd0;
+    wire [11:0] p1 = I_strength[1] ? {3'd0, base_pixel, 1'd0} : 12'd0;
+    wire [11:0] p2 = I_strength[2] ? {2'd0, base_pixel, 2'd0} : 12'd0;
+    wire [11:0] p3 = I_strength[3] ? {1'd0, base_pixel, 3'd0} : 12'd0;
+    wire [11:0] extra_num = p0 + p1 + p2 + p3;
+    wire [8:0] boosted = {1'b0, base_pixel} + ((extra_num + 12'd64) >> 7);
+    wire [8:0] limited = (I_peak < 8'd192 && boosted > 9'd192) ? 9'd192 : boosted;
+    assign O_pixel = (I_peak >= 8'd192 || I_strength == 0) ? base_pixel : limited[7:0];
+endmodule
+
+module fixed_n1_lift #(parameter integer ADAPTIVE = 0) (
+    input wire I_de, input wire I_enable,
+    input wire [23:0] I_data, input wire [7:0] I_peak,
+    input wire [3:0] I_extra_strength, output wire [23:0] O_data);
     wire [10:0] gain;
     wire [23:0] lifted;
     fixed_n1_gain u_gain(.I_peak(I_peak), .O_gain(gain));
-    fixed_n1_channel r(.I_pixel(I_data[23:16]), .I_gain(gain), .O_pixel(lifted[23:16]));
-    fixed_n1_channel g(.I_pixel(I_data[15:8]), .I_gain(gain), .O_pixel(lifted[15:8]));
-    fixed_n1_channel b(.I_pixel(I_data[7:0]), .I_gain(gain), .O_pixel(lifted[7:0]));
+    generate
+        if (ADAPTIVE != 0) begin : gen_adaptive
+            fixed_n1_adaptive_channel r(.I_pixel(I_data[23:16]), .I_peak(I_peak),
+                .I_base_gain(gain), .I_strength(I_extra_strength), .O_pixel(lifted[23:16]));
+            fixed_n1_adaptive_channel g(.I_pixel(I_data[15:8]), .I_peak(I_peak),
+                .I_base_gain(gain), .I_strength(I_extra_strength), .O_pixel(lifted[15:8]));
+            fixed_n1_adaptive_channel b(.I_pixel(I_data[7:0]), .I_peak(I_peak),
+                .I_base_gain(gain), .I_strength(I_extra_strength), .O_pixel(lifted[7:0]));
+        end else begin : gen_baseline
+            fixed_n1_channel r(.I_pixel(I_data[23:16]), .I_gain(gain), .O_pixel(lifted[23:16]));
+            fixed_n1_channel g(.I_pixel(I_data[15:8]), .I_gain(gain), .O_pixel(lifted[15:8]));
+            fixed_n1_channel b(.I_pixel(I_data[7:0]), .I_gain(gain), .O_pixel(lifted[7:0]));
+        end
+    endgenerate
     assign O_data = (!I_de || !I_enable) ? I_data : lifted;
+endmodule
+
+// 按4×3粗分区统计显示端原始像素，只输出一帧一个统一强度。
+// 分区用于判断明暗差，不给不同区域套不同增益，因此不会出现拼块边界。
+(* dsp_style = "no" *)
+module adaptive_n1_control #(
+    parameter integer H_ACTIVE = 1280,
+    parameter integer V_ACTIVE = 720,
+    parameter integer EXPECTED_SAMPLES = 14400,
+    parameter integer SAMPLE_LOG2 = 6
+) (
+    input wire I_clk, input wire I_rst_n,
+    input wire I_vs, input wire I_de, input wire I_enable,
+    input wire [23:0] I_data, output reg [3:0] O_strength
+);
+    localparam integer COUNT_W = (EXPECTED_SAMPLES < 2) ? 1 : $clog2(EXPECTED_SAMPLES + 1);
+    localparam integer SUM_W = 18;
+    localparam integer MIX_COUNT = (EXPECTED_SAMPLES * 2 + 99) / 100;
+    localparam integer SHADOW_COUNT = (EXPECTED_SAMPLES * 20 + 99) / 100;
+    localparam integer REGION_SAMPLES = (EXPECTED_SAMPLES < 12) ? 1 : (EXPECTED_SAMPLES / 12);
+    localparam integer PHASE_W = (SAMPLE_LOG2 < 1) ? 1 : SAMPLE_LOG2;
+    localparam integer EXIT_REGION_SAMPLES = (REGION_SAMPLES * 3 + 3) / 4;
+    localparam integer REGION_RANGE = 18;
+    localparam integer H4 = H_ACTIVE / 4;
+    localparam integer V3 = V_ACTIVE / 3;
+    reg vs_d, active, overflow;
+    reg [11:0] x;
+    reg [10:0] y;
+    reg [PHASE_W-1:0] phase;
+    reg [COUNT_W-1:0] sample_count, bright_count, shadow_count;
+    reg [SUM_W-1:0] region_sum [0:11];
+    integer i;
+    reg [SUM_W-1:0] min_sum, max_sum;
+    reg [SUM_W-1:0] range_sum;
+    reg contrast_enter, contrast_exit;
+    reg [2:0] rise_wait, fall_wait;
+    wire vs_start = I_vs && !vs_d;
+    wire [11:0] luma_sum = {4'd0, I_data[23:16]} +
+                            {3'd0, I_data[15:8], 1'b0} + {4'd0, I_data[7:0]};
+    wire [5:0] luma6 = luma_sum[9:4];
+    wire sample_now = I_de && (phase == 0) && (sample_count < EXPECTED_SAMPLES);
+    wire [1:0] col = (x < H4) ? 2'd0 : ((x < H4*2) ? 2'd1 :
+                         ((x < H4*3) ? 2'd2 : 2'd3));
+    wire [1:0] row = (y < V3) ? 2'd0 : ((y < V3*2) ? 2'd1 : 2'd2);
+    wire [3:0] region_index = {row, 2'b00} + col;
+    wire frame_geometry_good = (x == 0) && (y == V_ACTIVE-1);
+    wire frame_good = active && !overflow && (sample_count == EXPECTED_SAMPLES) && frame_geometry_good;
+
+    always @(*) begin
+        min_sum = region_sum[0];
+        max_sum = region_sum[0];
+        for (i = 1; i < 12; i = i + 1) begin
+            if (region_sum[i] < min_sum) min_sum = region_sum[i];
+            if (region_sum[i] > max_sum) max_sum = region_sum[i];
+        end
+        range_sum = max_sum - min_sum;
+        contrast_enter = frame_good && (range_sum >= (REGION_RANGE * REGION_SAMPLES)) &&
+                         (bright_count >= MIX_COUNT) && (shadow_count >= SHADOW_COUNT);
+        contrast_exit = !contrast_enter || (range_sum < (REGION_RANGE * EXIT_REGION_SAMPLES)) ||
+                        (bright_count < (MIX_COUNT / 2)) || (shadow_count < (SHADOW_COUNT / 2));
+    end
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            vs_d <= 0; active <= 0; overflow <= 0; x <= 0; y <= 0; phase <= 0;
+            sample_count <= 0; bright_count <= 0; shadow_count <= 0;
+            O_strength <= 0; rise_wait <= 0; fall_wait <= 0;
+            for (i = 0; i < 12; i = i + 1) region_sum[i] <= 0;
+        end else begin
+            vs_d <= I_vs;
+            if (vs_start) begin
+                if (active && I_enable && frame_good) begin
+                    if (contrast_enter) begin
+                        fall_wait <= 0;
+                        if (rise_wait == 3'd3) begin
+                            rise_wait <= 0;
+                            if (O_strength < 4'd8) O_strength <= O_strength + 1'b1;
+                        end else rise_wait <= rise_wait + 1'b1;
+                    end else if (contrast_exit) begin
+                        rise_wait <= 0;
+                        if (fall_wait == 3'd7) begin
+                            fall_wait <= 0;
+                            if (O_strength != 0) O_strength <= O_strength - 1'b1;
+                        end else fall_wait <= fall_wait + 1'b1;
+                    end
+                end
+                active <= I_enable;
+                overflow <= 0; x <= 0; y <= 0; phase <= 0;
+                sample_count <= 0; bright_count <= 0; shadow_count <= 0;
+                for (i = 0; i < 12; i = i + 1) region_sum[i] <= 0;
+                if (!I_enable) begin O_strength <= 0; rise_wait <= 0; fall_wait <= 0; end
+            end else if (active && I_de) begin
+                if (phase == {PHASE_W{1'b1}}) phase <= 0;
+                else phase <= phase + 1'b1;
+                if (sample_now) begin
+                    sample_count <= sample_count + 1'b1;
+                    region_sum[region_index] <= region_sum[region_index] + luma6;
+                    if (luma6 >= 6'd48) bright_count <= bright_count + 1'b1;
+                    if (luma6 <= 6'd12) shadow_count <= shadow_count + 1'b1;
+                end
+                if (x == H_ACTIVE-1) begin x <= 0; if (y < V_ACTIVE-1) y <= y + 1'b1; end
+                else x <= x + 1'b1;
+            end
+            // 采样数量达到预期后不再累加；帧边界负责提交本帧统计。
+        end
+    end
 endmodule

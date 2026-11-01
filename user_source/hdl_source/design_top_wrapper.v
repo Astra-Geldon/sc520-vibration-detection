@@ -379,6 +379,7 @@ module design_top_wrapper (
     wire [23:0] S_imgp_data, S_awb_data, S_csc_data, S_csc_corrected, S_osd_mix;
     wire [2:0] S_img_mode;
     wire [23:0] S_lift_data, S_tone_stage_data;
+    wire [3:0] S_n1_extra_strength;
     wire S_tone_stage_de, S_tone_stage_vs;
     wire [7:0] S_lift_rg_max = (S_imgp_data[23:16] > S_imgp_data[15:8]) ?
                                S_imgp_data[23:16] : S_imgp_data[15:8];
@@ -1004,9 +1005,16 @@ isp_top u_isp_top (
             S_tone_stage_peak <= S_tone_input_peak;
         end
     end
-    fixed_n1_lift u_n1_lift (
+    adaptive_n1_control u_adaptive_n1_control (
+        .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
+        .I_vs(S_tone_stage_vs), .I_de(S_tone_stage_de),
+        .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
+        .I_data(S_tone_stage_data), .O_strength(S_n1_extra_strength)
+    );
+    fixed_n1_lift #(.ADAPTIVE(1)) u_n1_lift (
         .I_de(S_tone_stage_de), .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
-        .I_data(S_tone_stage_data), .I_peak(S_tone_stage_peak), .O_data(S_lift_data)
+        .I_data(S_tone_stage_data), .I_peak(S_tone_stage_peak),
+        .I_extra_strength(S_n1_extra_strength), .O_data(S_lift_data)
     );
     osd_overlay #(
         .OSD_EN(1), .LOGO_EN(1), .H_ACTIVE(1280), .V_ACTIVE(720),
