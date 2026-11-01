@@ -20,7 +20,10 @@ module video_in (
     output reg         O_ddr_user_wr_en,
     output reg[24:0]   O_ddr_user_addr,
     output wire[127:0] O_ddr_user_wr_data,
-    input wire         I_ddr_user_ready
+    input wire         I_ddr_user_ready,
+    // Passive metadata only: slot used by the address latch on this edge.
+    output wire        O_latency_frame_start,
+    output wire [1:0]  O_latency_frame_slot
 );
 
     wire        S_fifo_rst;
@@ -97,6 +100,8 @@ module video_in (
     end
 
     assign S_frame_start = ~S_camera_frame_start_extend_3d & S_camera_frame_start_extend_2d;
+    assign O_latency_frame_start = S_frame_start;
+    assign O_latency_frame_slot = S_video_in_wp;
 
 	/*
 		如果前一帧图像有误少行了，那么地址回退为之前的，覆盖有问题的那帧图像

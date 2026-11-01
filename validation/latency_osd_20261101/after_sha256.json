@@ -1,0 +1,74 @@
+[
+  {
+    "path": "user_source/hdl_source/design_top_wrapper.v",
+    "sha256": "1ae5a0a409265e3cc84cc87f883fee8b7c67b0da1b2b40b00e2a840afae203e4"
+  },
+  {
+    "path": "user_source/hdl_source/video_in.v",
+    "sha256": "5cd963fa4bf619dcc7197bc1d1b56cf43c7cc94c96aad115cb63c844eedfca37"
+  },
+  {
+    "path": "user_source/hdl_source/video_out.v",
+    "sha256": "e09ed40fdc8f523dfdc11737982d91503d6f2e239030d47ec9979fbf451fafea"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display.al",
+    "sha256": "2dbde758c63a16f2747050bc0d8425e5a863fcfe41dde4a2dcbcf52c94cd94f4"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display.sdc",
+    "sha256": "d3929f31b2f9d2a0d8aac8a2ad7a4cd4231bf1f2ad184b04aab01ec90196407c"
+  },
+  {
+    "path": "td_project/patch/check_demo_cdc_registers.tcl",
+    "sha256": "e76ff75ef5e5f8794f0f62593f17a6168fdc0c8ea1da801e8fca3a6a434800b0"
+  },
+  {
+    "path": "td_project/patch/check_demo_cdc.tcl",
+    "sha256": "9a4c584ae3705df9e5e7cae8f0dc26ada295fc5eaffeed64c309670e98b10ecb"
+  },
+  {
+    "path": "td_project/patch/phaseC_build_from_patched.tcl",
+    "sha256": "3b3fa471a273ba0af5d3ff5c06b1c46ab5dff2165a7c8340c5f0b036e25334f5"
+  },
+  {
+    "path": "BUILD_AND_PROGRAM.md",
+    "sha256": "2297f116d77e5f57a8fb38e6c3f13be7aadd1a1265981ba3af7d760f65490f26"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "fb308fc2187b381d748efd80b0db251f9f9b0b868db298cd47592d50f5a73bc6"
+  },
+  {
+    "path": "user_source/hdl_source/osd_overlay.v",
+    "sha256": "b55199235f9c88707bddb5f0f3ba3b3bbacca3a342e45ad468337636cd2990aa"
+  },
+  {
+    "path": "user_source/hdl_source/video_latency_monitor.v",
+    "sha256": "6f41f575fd873d6260a128fbb8165a57878c5b335b7e671c49b510b01bc39267"
+  },
+  {
+    "path": "LATENCY_DISPLAY.md",
+    "sha256": "b570952f1ca364f10dc4602e43eee52e685bdce807c74b79531b84437231ca18"
+  },
+  {
+    "path": "tools/test_video_latency_monitor.py",
+    "sha256": "03ccefbdd187b2a29115e59cb6cf277084e71b8281ab5f881cb05e85b449851c"
+  },
+  {
+    "path": "tools/test_video_latency_osd.py",
+    "sha256": "302d4ec766a7692c85601e59bd73ea717058294f86e9e083e8f79cff3bc2b5b5"
+  },
+  {
+    "path": "tools/check_video_latency_integration.py",
+    "sha256": "a558acfbb1e5f19e344287148e7a0842d621914b9f597af538c7096ef8359fc4"
+  },
+  {
+    "path": "tools/tests/tb_video_latency_monitor.v",
+    "sha256": "a066764b137fed2484fa3e09026af1ff6263087a7f0d2e4725dec52ce33690a9"
+  },
+  {
+    "path": "validation/latency_osd_20261101/README.md",
+    "sha256": "fe567ee4618db6f5fe3a073c060f828ace7ccba6c41032d3654661ca6797761e"
+  }
+]

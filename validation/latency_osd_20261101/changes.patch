@@ -1,0 +1,417 @@
+--- a/user_source/hdl_source/design_top_wrapper.v
++++ b/user_source/hdl_source/design_top_wrapper.v
+@@ -159,6 +159,10 @@
+     wire        S_video_out_rd_busy;
+     wire        S_video_in_wr_busy; 
+     wire[1:0]   S_video_out_rp;     
++    wire S_latency_write_start, S_latency_read_start;
++    wire [1:0] S_latency_write_slot;
++    wire [15:0] S_latency_bcd;
++    wire S_latency_valid;
+ 
+     wire        S_ddr_user_wr_en;       
+     wire        S_ddr_user_rd_en;       
+@@ -725,6 +729,8 @@
+         .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
+         .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
+         .O_video_out_rp       ( S_video_out_rp        ),
++        .O_latency_frame_start(S_latency_write_start ),
++        .O_latency_frame_slot (S_latency_write_slot  ),
+ 
+         .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
+         .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
+@@ -789,6 +795,7 @@
+         .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
+         .I_vib_ddr_busy      ( S_vib_ddr_own        ),   // 新增：算法正在占用 DDR
+         .I_video_out_rp      ( S_video_out_rp       ),
++        .O_latency_frame_start(S_latency_read_start),
+  
+         .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
+         .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
+@@ -803,6 +810,17 @@
+     );
+ 
+ 
++
++    // Observe the existing frame path. Nothing feeds back into DDR or pixels.
++    video_latency_monitor u_video_latency (
++        .I_rst_n(S_rst_n), .I_ddr_clk(S_ddr_clk),
++        .I_camera_toggle(S_cam_frame_toggle),
++        .I_write_start(S_latency_write_start), .I_write_slot(S_latency_write_slot),
++        .I_read_start(S_latency_read_start), .I_read_slot(S_video_out_rp),
++        .I_pixel_clk(S_hdmi_pixel_clk),
++        .I_output_vs(S_hdmi_out_vsync), .I_output_de(S_hdmi_out_de),
++        .O_bcd(S_latency_bcd), .O_valid(S_latency_valid)
++    );
+ 
+     mc_to_user_interface u_mc_to_user_interface(
+         .I_clk                   ( S_ddr_clk               ),
+@@ -965,6 +983,7 @@
+     )u_osd_overlay(
+         .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
+         .I_de(S_tone_stage_de), .I_vs(S_tone_stage_vs), .I_mode(S_tone_stage_mode),
++        .I_latency_bcd(S_latency_bcd), .I_latency_valid(S_latency_valid),
+         .I_alg_state(S_demo_alg_state), .I_alg_pending(S_demo_alg_pending),
+         .I_data(S_lift_data), .O_data(S_osd_mix)
+     );
+--- a/user_source/hdl_source/video_in.v
++++ b/user_source/hdl_source/video_in.v
+@@ -20,7 +20,10 @@
+     output reg         O_ddr_user_wr_en,
+     output reg[24:0]   O_ddr_user_addr,
+     output wire[127:0] O_ddr_user_wr_data,
+-    input wire         I_ddr_user_ready
++    input wire         I_ddr_user_ready,
++    // Passive metadata only: slot used by the address latch on this edge.
++    output wire        O_latency_frame_start,
++    output wire [1:0]  O_latency_frame_slot
+ );
+ 
+     wire        S_fifo_rst;
+@@ -97,6 +100,8 @@
+     end
+ 
+     assign S_frame_start = ~S_camera_frame_start_extend_3d & S_camera_frame_start_extend_2d;
++    assign O_latency_frame_start = S_frame_start;
++    assign O_latency_frame_slot = S_video_in_wp;
+ 
+ 	/*
+ 		如果前一帧图像有误少行了，那么地址回退为之前的，覆盖有问题的那帧图像
+--- a/user_source/hdl_source/video_out.v
++++ b/user_source/hdl_source/video_out.v
+@@ -18,7 +18,9 @@
+     input wire        I_dsi_clk,
+     input wire        I_video_vsync,
+     input wire        I_video_rd_en,  
+-    output reg[23:0]  O_vdieo_data
++    output reg[23:0]  O_vdieo_data,
++    // Passive hook, identical to the event that latches I_video_out_rp.
++    output wire       O_latency_frame_start
+ );
+ 
+     reg         S_fifo_rst;     
+@@ -54,6 +56,7 @@
+     end
+ 
+     assign S_video_frame_start = ~S_video_vsync_3d & S_video_vsync_2d;
++    assign O_latency_frame_start = S_video_frame_start;
+ 
+ 
+     always @(posedge I_ddr_clk or negedge I_rst_n) begin
+--- a/td_project/camera_to_dsi_display.al
++++ b/td_project/camera_to_dsi_display.al
+@@ -414,6 +414,14 @@
+                     <Attr Name="UsedInP&R" Val="true"/>
+                     <Attr Name="BelongTo" Val="design_1"/>
+                     <Attr Name="CompileOrder" Val="66"/>
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/video_latency_monitor.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true"/>
++                    <Attr Name="UsedInP&R" Val="true"/>
++                    <Attr Name="BelongTo" Val="design_1"/>
++                    <Attr Name="CompileOrder" Val="67"/>
+                 </FileInfo>
+             </File>
+         </Verilog>
+--- a/td_project/camera_to_dsi_display.sdc
++++ b/td_project/camera_to_dsi_display.sdc
+@@ -55,3 +55,15 @@
+ set_max_delay -from [get_regs {u_demo_sensor_status/acknowledge}] -to [get_regs {u_demo_sensor_status/acknowledge_s1}] -datapath_only 8.0
+ set_max_delay -from [get_regs {u_demo_sensor_status/request_s1}] -to [get_regs {u_demo_sensor_status/request_s2}] 4.0
+ set_max_delay -from [get_regs {u_demo_sensor_status/acknowledge_s1}] -to [get_regs {u_demo_sensor_status/acknowledge_s2}] 4.0
++
++# Passive frame-latency observer: the result mailbox holds its 17-bit payload
++# until acknowledgment; the OSD freezes it in blanking. Events use toggles.
++set_max_delay -from [get_regs {u_video_latency/u_result_cdc/payload[*]}] -to [get_regs {u_video_latency/u_result_cdc/O_dst_data[*]}] -datapath_only 8.0
++set_max_delay -from [get_regs {u_video_latency/u_result_cdc/request}] -to [get_regs {u_video_latency/u_result_cdc/request_s1}] -datapath_only 8.0
++set_max_delay -from [get_regs {u_video_latency/u_result_cdc/acknowledge}] -to [get_regs {u_video_latency/u_result_cdc/acknowledge_s1}] -datapath_only 8.0
++set_max_delay -from [get_regs {u_video_latency/u_result_cdc/request_s1}] -to [get_regs {u_video_latency/u_result_cdc/request_s2}] 4.0
++set_max_delay -from [get_regs {u_video_latency/u_result_cdc/acknowledge_s1}] -to [get_regs {u_video_latency/u_result_cdc/acknowledge_s2}] 4.0
++set_max_delay -from [get_regs {S_cam_frame_toggle}] -to [get_regs {u_video_latency/camera_s1}] -datapath_only 8.0
++set_max_delay -from [get_regs {u_video_latency/camera_s1}] -to [get_regs {u_video_latency/camera_s2}] 4.0
++set_max_delay -from [get_regs {u_video_latency/output_toggle}] -to [get_regs {u_video_latency/output_s1}] -datapath_only 8.0
++set_max_delay -from [get_regs {u_video_latency/output_s1}] -to [get_regs {u_video_latency/output_s2}] 4.0
+--- a/td_project/patch/check_demo_cdc_registers.tcl
++++ b/td_project/patch/check_demo_cdc_registers.tcl
+@@ -6,6 +6,7 @@
+     u_demo_sensor_controls 1
+     u_demo_mipi_status 5
+     u_demo_sensor_status 3
++    u_video_latency/u_result_cdc 17
+ } {
+     foreach {from to expected} [list \
+         {payload[*]} {O_dst_data[*]} $width \
+@@ -28,5 +29,19 @@
+         incr demo_register_groups
+     }
+ }
+-if {$demo_register_groups != 25} {error "DEMO CDC register group count mismatch"}
++foreach {from to} {
++    S_cam_frame_toggle u_video_latency/camera_s1
++    u_video_latency/camera_s1 u_video_latency/camera_s2
++    u_video_latency/output_toggle u_video_latency/output_s1
++    u_video_latency/output_s1 u_video_latency/output_s2
++} {
++    set a [get_regs $from]
++    set b [get_regs $to]
++    if {[llength $a] != 1 || [llength $b] != 1} {
++        error "LATENCY CDC collection mismatch: $from -> $to"
++    }
++    if {![get_property ASYNC_REG $b]} {error "LATENCY CDC ASYNC_REG missing: $b"}
++    incr demo_register_groups
++}
++if {$demo_register_groups != 34} {error "DEMO CDC register group count mismatch"}
+ puts "DEMO_CDC_REGISTERS_PASS groups=$demo_register_groups"
+--- a/td_project/patch/check_demo_cdc.tcl
++++ b/td_project/patch/check_demo_cdc.tcl
+@@ -18,7 +18,7 @@
+     read_sdc -ip ddr2 ../user_source/hdl_source/ph1p35_ddr/ddr2/src/sdc/ddr2.sdc
+     read_sdc -ip w128_d512_fifo ../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.tcl
+     update_timing -mode final
+-# Local physical audit of the five production control mailboxes. No probe RTL.
++# Audit six production mailboxes and two passive frame-event synchronizers.
+ set demo_cdc_paths 0
+ foreach {inst width} {
+     u_demo_mipi_controls 5
+@@ -26,6 +26,7 @@
+     u_demo_sensor_controls 1
+     u_demo_mipi_status 5
+     u_demo_sensor_status 3
++    u_video_latency/u_result_cdc 17
+ } {
+     foreach {from to limit expected} [list \
+         {payload[*]} {O_dst_data[*]} 8.0 $width \
+@@ -47,7 +48,7 @@
+                 if {![get_property ASYNC_REG $reg]} {error "DEMO CDC ASYNC_REG missing: $reg"}
+             }
+         }
+-        set label [string map [list {[} _ {]} _ {*} all] "${inst}_${from}_${to}"]
++        set label [string map [list / _ {[} _ {]} _ {*} all] "${inst}_${from}_${to}"]
+         set report "demo_cdc_${label}.rpt"
+         report_timing_path -from $a -to $b -ep_num 64 -path_num 1 -report_type max_min -file $report
+         set fd [open $report r]
+@@ -64,5 +65,31 @@
+         incr demo_cdc_paths
+     }
+ }
+-if {$demo_cdc_paths != 25} {error "DEMO CDC audit group count mismatch"}
++foreach {from to limit} {
++    S_cam_frame_toggle u_video_latency/camera_s1 8.0
++    u_video_latency/camera_s1 u_video_latency/camera_s2 4.0
++    u_video_latency/output_toggle u_video_latency/output_s1 8.0
++    u_video_latency/output_s1 u_video_latency/output_s2 4.0
++} {
++    set a [get_regs $from]
++    set b [get_regs $to]
++    if {[llength $a] != 1 || [llength $b] != 1} {
++        error "LATENCY CDC collection mismatch: $from -> $to"
++    }
++    if {![get_property ASYNC_REG $b]} {error "LATENCY CDC ASYNC_REG missing: $b"}
++    set label [string map {/ _} "${from}_${to}"]
++    set report "demo_cdc_${label}.rpt"
++    report_timing_path -from $a -to $b -ep_num 1 -path_num 1 -report_type max_min -file $report
++    set fd [open $report r]
++    set detail [read $fd]
++    close $fd
++    set delays [regexp -all -inline {Data Path Delay[ \t]*:[ \t]*([0-9.]+)ns} $detail]
++    if {[llength $delays] == 0} {error "LATENCY CDC missing routed path: $label"}
++    set worst 0.0
++    foreach {whole value} $delays {if {$value > $worst} {set worst $value}}
++    if {$worst > $limit} {error "LATENCY CDC physical delay exceeded: $label $worst > $limit"}
++    puts "DEMO_CDC_PHYSICAL $label source_count=1 target_count=1 max_data_delay_ns=$worst limit_ns=$limit"
++    incr demo_cdc_paths
++}
++if {$demo_cdc_paths != 34} {error "DEMO CDC audit group count mismatch"}
+ puts "DEMO_CDC_PHYSICAL_PASS groups=$demo_cdc_paths"
+--- a/td_project/patch/phaseC_build_from_patched.tcl
++++ b/td_project/patch/phaseC_build_from_patched.tcl
+@@ -55,7 +55,7 @@
+     set audit_log [read $fd]
+     close $fd
+     puts $audit_log
+-    if {[string first {DEMO_CDC_PHYSICAL_PASS groups=25} $audit_log] < 0 ||
++    if {[string first {DEMO_CDC_PHYSICAL_PASS groups=34} $audit_log] < 0 ||
+         [string first PHASE_D_DONE $audit_log] < 0} {
+         error "Independent DEMO CDC audit failed; see demo_cdc_audit.log"
+     }
+--- a/BUILD_AND_PROGRAM.md
++++ b/BUILD_AND_PROGRAM.md
+@@ -39,14 +39,14 @@
+ 
+ | 检查 | 成功标志／文件 |
+ |---|---|
+-| 综合 | `pA.log`：`PHASE_A_DONE ERR=0`、`DEMO_CDC_REGISTERS_PASS groups=25` |
++| 综合 | `pA.log`：`PHASE_A_DONE ERR=0`、`DEMO_CDC_REGISTERS_PASS groups=34` |
+ | HDMI 补丁 | `pB.log`：`PATCH_FINISHED`、`VERIFIED_COUNTER_SELECTORS12` |
+ | 补丁保留 | `pC.log`：`CHECK valid_2d=2 valid_3d=14` |
+ | DSP | bbox DSP=0，总 DSP≤40，`No need to merge 9x9 Dsps.` |
+ | 布线 | 无新增物理无驱动网／跳过布线警告，`eco open net = 0` |
+-| 时序／CDC | `DEMO_PRODUCTION_TIMING_PASS`、`DEMO_CDC_PHYSICAL_PASS groups=25`、`PHASE_D_DONE` |
++| 时序／CDC | `DEMO_PRODUCTION_TIMING_PASS`、`DEMO_CDC_PHYSICAL_PASS groups=34`、`PHASE_D_DONE` |
+ | 完成 | `PHASE_C_DONE ERR=0`，新 Bit 时间戳和 SHA256 |
+ 
+-核对 `camera_to_dsi_display_phy.area` 资源和 `patched_final_timing.rpt` 的 setup/hold 后再烧录。本版最终资源与验证情况见[资源说明](RESOURCE_USAGE.md)及[修复档案](validation/green_lines_dsp_20261101/README.md)。
++核对 `camera_to_dsi_display_phy.area` 资源和 `patched_final_timing.rpt` 的 setup/hold 后再烧录。上述已验证 Bit 与[资源说明](RESOURCE_USAGE.md)属于添加延时显示之前的基线；延时显示源码尚需用户完整构建，含新增 9 组 CDC 审计。测量口径见[延时显示说明](LATENCY_DISPLAY.md)。
+ 
+ 旧 `verify_diag.py` 面向关闭 HDMI 的历史诊断版本；`check_all_inst.py` 不能识别带初值的端口，具体不适用项已记录在本版 `static_checks.json`，不要为通过旧脚本关闭 HDMI 或改写已验证逻辑。
+--- a/.gitignore
++++ b/.gitignore
+@@ -66,3 +66,7 @@
+ validation/green_lines_dsp_20261101/program.tcl
+ validation/green_lines_dsp_20261101/vib_bbox_grid.before.v
+ validation/green_lines_dsp_20261101/vib_bbox_grid.after.v
++
++# Local known-good source backup and latency simulation executables
++validation/latency_osd_20261101/before/
++validation/latency_osd_20261101/sim_*/
+--- a/user_source/hdl_source/osd_overlay.v
++++ b/user_source/hdl_source/osd_overlay.v
+@@ -5,6 +5,7 @@
+     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
+     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
+     parameter integer STATUS_EN   = 1,
++    parameter integer LATENCY_EN  = 1,
+ 
+     // ---- 画面尺寸（与 VTC 一致）----
+     parameter integer H_ACTIVE    = 1280,
+@@ -31,6 +32,8 @@
+     // SW2 jointly controls Gamma and N1; each still shows its effective state.
+     input  wire [ 5:0] I_alg_state,
+     input  wire [ 5:0] I_alg_pending,
++    input  wire        I_latency_valid,
++    input  wire [15:0] I_latency_bcd, // Four BCD digits, xxx.x milliseconds.
+     input  wire [23:0] I_data,      // 来自 img_proc
+     output wire [23:0] O_data       // 送 hdmi_mixer
+ );
+@@ -66,6 +69,25 @@
+ 
+             if (I_vs)              S_y <= 10'd0;
+             else if (S_line_end)   S_y <= S_y + 1'b1;
++        end
++    end
++
++    // The timing result arrives independently of the raster.  Show one stable
++    // snapshot for the whole frame, even if the next result arrives mid-frame.
++    reg S_vs_d;
++    reg S_latency_valid;
++    reg [15:0] S_latency_bcd;
++    always @(posedge I_clk or negedge I_rst_n) begin
++        if (!I_rst_n) begin
++            S_vs_d <= 1'b0;
++            S_latency_valid <= 1'b0;
++            S_latency_bcd <= 16'd0;
++        end else begin
++            S_vs_d <= I_vs;
++            if (I_vs && !S_vs_d) begin
++                S_latency_valid <= I_latency_valid;
++                S_latency_bcd <= I_latency_bcd;
++            end
+         end
+     end
+ 
+@@ -227,6 +249,43 @@
+         endcase
+     end
+ 
++    // Upper-left timing panel, beside every mode name.  A 16-pixel character
++    // pitch matches the existing name/status text and uses the same font ROM.
++    localparam integer LATENCY_X = 96;
++    localparam integer LATENCY_CHARS = 12; // "LAT 033.2 MS", or "LAT ---.- MS".
++    wire [10:0] S_latency_dx = S_x - LATENCY_X;
++    wire [9:0] S_latency_dy = S_y - TEXT_Y;
++    wire S_in_latency_box = (LATENCY_EN != 0) &&
++                           (S_x >= LATENCY_X - BOX_PAD) &&
++                           (S_x < LATENCY_X + 192 + BOX_PAD) &&
++                           (S_y >= TEXT_Y - BOX_PAD) &&
++                           (S_y < TEXT_Y + 16 + BOX_PAD);
++    wire S_in_latency_text = (LATENCY_EN != 0) &&
++                            (S_x >= LATENCY_X) && (S_x < LATENCY_X + 192) &&
++                            (S_y >= TEXT_Y) && (S_y < TEXT_Y + 16);
++    wire [3:0] S_latency_char = S_latency_dx[7:4];
++    reg [7:0] S_latency_ascii;
++    always @(*) begin
++        S_latency_ascii = " ";
++        case (S_latency_char)
++            4'd0: S_latency_ascii = "L";
++            4'd1: S_latency_ascii = "A";
++            4'd2: S_latency_ascii = "T";
++            4'd4: S_latency_ascii = S_latency_valid ?
++                                   (8'h30 + {4'd0,S_latency_bcd[15:12]}) : "-";
++            4'd5: S_latency_ascii = S_latency_valid ?
++                                   (8'h30 + {4'd0,S_latency_bcd[11:8]}) : "-";
++            4'd6: S_latency_ascii = S_latency_valid ?
++                                   (8'h30 + {4'd0,S_latency_bcd[7:4]}) : "-";
++            4'd7: S_latency_ascii = ".";
++            4'd8: S_latency_ascii = S_latency_valid ?
++                                   (8'h30 + {4'd0,S_latency_bcd[3:0]}) : "-";
++            4'd10: S_latency_ascii = "M";
++            4'd11: S_latency_ascii = "S";
++            default: S_latency_ascii = " ";
++        endcase
++    end
++
+     function [34:0] status_glyph;
+         input [7:0] ascii;
+         begin
+@@ -239,6 +298,7 @@
+                 "F":status_glyph=35'b11111_10000_10000_11110_10000_10000_10000;
+                 "G":status_glyph=35'b01111_10000_10000_10111_10001_10001_01111;
+                 "I":status_glyph=35'b11111_00100_00100_00100_00100_00100_11111;
++                "L":status_glyph=35'b10000_10000_10000_10000_10000_10000_11111;
+                 "M":status_glyph=35'b10001_11011_10101_10101_10001_10001_10001;
+                 "N":status_glyph=35'b10001_11001_10101_10011_10001_10001_10001;
+                 "O":status_glyph=35'b01110_10001_10001_10001_10001_10001_01110;
+@@ -247,22 +307,33 @@
+                 "T":status_glyph=35'b11111_00100_00100_00100_00100_00100_00100;
+                 "W":status_glyph=35'b10001_10001_10001_10101_10101_11011_10001;
+                 "X":status_glyph=35'b10001_10001_01010_00100_01010_10001_10001;
++                "0":status_glyph=35'b01110_10001_10011_10101_11001_10001_01110;
+                 "1":status_glyph=35'b00100_01100_00100_00100_00100_00100_01110;
+                 "2":status_glyph=35'b01110_10001_00001_00010_00100_01000_11111;
+                 "3":status_glyph=35'b11110_00001_00001_01110_00001_00001_11110;
+                 "4":status_glyph=35'b00010_00110_01010_10010_11111_00010_00010;
+                 "5":status_glyph=35'b11111_10000_10000_11110_00001_00001_11110;
++                "6":status_glyph=35'b01110_10000_10000_11110_10001_10001_01110;
++                "7":status_glyph=35'b11111_00001_00010_00100_01000_01000_01000;
++                "8":status_glyph=35'b01110_10001_10001_01110_10001_10001_01110;
++                "9":status_glyph=35'b01110_10001_10001_01111_00001_00001_01110;
++                ".":status_glyph=35'b00000_00000_00000_00000_00000_00110_00110;
++                "-":status_glyph=35'b00000_00000_00000_11111_00000_00000_00000;
+                 default:status_glyph=35'd0;
+             endcase
+         end
+     endfunction
+-    wire [34:0] S_status_glyph = status_glyph(S_status_ascii);
++    // Share the glyph lookup and variable bit selector between both panels.
++    wire [7:0] S_small_ascii = S_in_latency_text ? S_latency_ascii : S_status_ascii;
++    wire [2:0] S_small_row = S_in_latency_text ? S_latency_dy[3:1] : S_status_row;
++    wire [2:0] S_small_col = S_in_latency_text ? S_latency_dx[3:1] : S_status_col;
++    wire [34:0] S_small_glyph = status_glyph(S_small_ascii);
+     // Five bits per row: shift/add is explicit, with no multiplier or DSP.
+-    wire [5:0] S_status_bit_index = 6'd34 -
+-                       {1'b0,S_status_row,2'b00} - {3'b000,S_status_row} -
+-                       {3'b000,S_status_col};
+-    wire S_status_ink = (S_status_col < 3'd5) && (S_status_row < 3'd7) &&
+-                        S_status_glyph[S_status_bit_index];
++    wire [5:0] S_small_bit_index = 6'd34 -
++                       {1'b0,S_small_row,2'b00} - {3'b000,S_small_row} -
++                       {3'b000,S_small_col};
++    wire S_small_ink = (S_small_col < 3'd5) && (S_small_row < 3'd7) &&
++                       S_small_glyph[S_small_bit_index];
+     wire [23:0] S_status_rgb = S_status_pending ? C_WAIT :
+                                (S_status_enabled ? C_ON : C_OFF);
+ 
+@@ -280,8 +351,10 @@
+             assign O_data = S_logo_opaque ? S_logo_rgb  :
+                             S_in_text1    ? (S_text_bit1 ? C_WHITE : C_BLACK) :
+                             S_in_box1     ? C_BLACK :
++                            S_in_latency_text ? (S_small_ink ? C_WHITE : C_BLACK) :
++                            S_in_latency_box ? C_BLACK :
+                             ((STATUS_EN != 0) && S_in_status_text) ?
+-                                (S_status_ink ? S_status_rgb : C_BLACK) :
++                                (S_small_ink ? S_status_rgb : C_BLACK) :
+                             ((STATUS_EN != 0) && S_in_status_box) ? C_BLACK :
+                                             I_data;
+         end

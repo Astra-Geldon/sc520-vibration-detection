@@ -1,10 +1,12 @@
 // Production OSD: actual mode, original Anlogic Logo, and applied enhancement
-// states.  The status panel uses a small 5x7 font; the pixel path stays purely
-// combinational, including the existing name/Logo priority outside the panel.
+// states. Compact panels use native 5x7 glyphs with an 8-pixel character pitch.
+// Character/row lookahead prepares text before its first pixel; video remains
+// combinational, with no added pixel delay or change to name/Logo priority.
 module osd_overlay #(
     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
     parameter integer STATUS_EN   = 1,
+    parameter integer LATENCY_EN  = 1,
 
     // ---- 画面尺寸（与 VTC 一致）----
     parameter integer H_ACTIVE    = 1280,
@@ -31,6 +33,8 @@ module osd_overlay #(
     // SW2 jointly controls Gamma and N1; each still shows its effective state.
     input  wire [ 5:0] I_alg_state,
     input  wire [ 5:0] I_alg_pending,
+    input  wire        I_latency_valid,
+    input  wire [15:0] I_latency_bcd, // Four BCD digits, xxx.x milliseconds.
     input  wire [23:0] I_data,      // 来自 img_proc
     output wire [23:0] O_data       // 送 hdmi_mixer
 );
@@ -66,6 +70,25 @@ module osd_overlay #(
 
             if (I_vs)              S_y <= 10'd0;
             else if (S_line_end)   S_y <= S_y + 1'b1;
+        end
+    end
+
+    // The timing result arrives independently of the raster.  Show one stable
+    // snapshot for the whole frame, even if the next result arrives mid-frame.
+    reg S_vs_d;
+    reg S_latency_valid;
+    reg [15:0] S_latency_bcd;
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            S_vs_d <= 1'b0;
+            S_latency_valid <= 1'b0;
+            S_latency_bcd <= 16'd0;
+        end else begin
+            S_vs_d <= I_vs;
+            if (I_vs && !S_vs_d) begin
+                S_latency_valid <= I_latency_valid;
+                S_latency_bcd <= I_latency_bcd;
+            end
         end
     end
 
@@ -145,44 +168,50 @@ module osd_overlay #(
     wire       S_text_bit1 = S_font_row1[S_bit_idx1];
 
     //------------------------------------------------------------------
-    // Lower-left applied-state panel.  3 columns x 2 rows, 192x32 per item.
+    // Lower-left applied-state panel. 3 columns x 2 rows, 96x16 per item.
     // Each label identifies the physical switch, e.g. "S2 GAM ON" and
     // "S2 N1 ON".  WAIT takes priority over the last confirmed ON/OFF state.
     // Coordinates and font selection are shared across all six entries.
     //------------------------------------------------------------------
     localparam integer STATUS_X = 24;
-    localparam integer STATUS_Y = V_ACTIVE - 64;
+    localparam integer STATUS_Y = V_ACTIVE - 32;
     localparam [23:0] C_ON   = 24'h50_FF_80;
     localparam [23:0] C_OFF  = 24'hA0_A0_A0;
     localparam [23:0] C_WAIT = 24'hFF_D0_40;
 
-    wire [10:0] S_status_dx = S_x - STATUS_X;
+    // Both compact panels start on an 8-pixel boundary. Decode a character
+    // two pixels early, then register its five-bit row one pixel early.
+    wire [10:0] S_small_fetch_x = S_x + 11'd2;
+    wire [10:0] S_status_dx = S_small_fetch_x - STATUS_X;
     wire [ 9:0] S_status_dy = S_y - STATUS_Y;
-    wire S_in_status_box = (S_x >= STATUS_X - 8) && (S_x < STATUS_X + 584) &&
-                           (S_y >= STATUS_Y - 8) && (S_y < STATUS_Y + 56);
-    wire S_in_status_text = (S_x >= STATUS_X) && (S_x < STATUS_X + 576) &&
-                            (S_y >= STATUS_Y) && (S_y < STATUS_Y + 48) &&
-                            !S_status_dy[4];
+    wire S_in_status_box = (S_x >= STATUS_X - 4) && (S_x < STATUS_X + 292) &&
+                           (S_y >= STATUS_Y - 4) && (S_y < STATUS_Y + 28);
+    wire S_status_text_line = (S_y >= STATUS_Y) && (S_y < STATUS_Y + 24) &&
+                              !S_status_dy[3];
+    wire S_in_status_text = (S_x >= STATUS_X) && (S_x < STATUS_X + 288) &&
+                            S_status_text_line;
+    wire S_fetch_status = (STATUS_EN != 0) &&
+                          (S_small_fetch_x >= STATUS_X) &&
+                          (S_small_fetch_x < STATUS_X + 288) && S_status_text_line;
     reg [1:0] S_status_column;
-    reg [7:0] S_status_item_x;
+    reg [6:0] S_status_item_x;
     always @(*) begin
-        if (S_status_dx < 11'd192) begin
+        if (S_status_dx < 11'd96) begin
             S_status_column = 2'd0;
-            S_status_item_x = S_status_dx[7:0];
-        end else if (S_status_dx < 11'd384) begin
+            S_status_item_x = S_status_dx[6:0];
+        end else if (S_status_dx < 11'd192) begin
             S_status_column = 2'd1;
-            S_status_item_x = S_status_dx - 11'd192;
+            S_status_item_x = S_status_dx - 11'd96;
         end else begin
             S_status_column = 2'd2;
-            S_status_item_x = S_status_dx - 11'd384;
+            S_status_item_x = S_status_dx - 11'd192;
         end
     end
-    wire [2:0] S_status_item = S_status_dy[5] ?
+    wire [2:0] S_status_item = S_status_dy[4] ?
                                (3'd3 + {1'b0, S_status_column}) :
                                {1'b0, S_status_column};
-    wire [3:0] S_status_char = S_status_item_x[7:4];
-    wire [2:0] S_status_col = S_status_item_x[3:1];
-    wire [2:0] S_status_row = S_status_dy[3:1];
+    wire [3:0] S_status_char = S_status_item_x[6:3];
+    wire [2:0] S_status_row = S_status_dy[2:0];
     wire S_status_pending = I_alg_pending[S_status_item];
     wire S_status_enabled = I_alg_state[S_status_item];
 
@@ -227,6 +256,49 @@ module osd_overlay #(
         endcase
     end
 
+    // Upper-left timing panel, beside every mode name, vertically centered
+    // against the original 16-pixel mode label. The compact box is 104x16.
+    localparam integer LATENCY_X = 96;
+    localparam integer LATENCY_Y = TEXT_Y + 4;
+    localparam integer LATENCY_CHARS = 12; // "LAT 033.2 MS", or "LAT ---.- MS".
+    wire [10:0] S_latency_dx = S_small_fetch_x - LATENCY_X;
+    wire [9:0] S_latency_dy = S_y - LATENCY_Y;
+    wire S_in_latency_box = (LATENCY_EN != 0) &&
+                           (S_x >= LATENCY_X - 4) &&
+                           (S_x < LATENCY_X + LATENCY_CHARS * 8 + 4) &&
+                           (S_y >= LATENCY_Y - 4) &&
+                           (S_y < LATENCY_Y + 8 + 4);
+    wire S_in_latency_text = (LATENCY_EN != 0) &&
+                            (S_x >= LATENCY_X) &&
+                            (S_x < LATENCY_X + LATENCY_CHARS * 8) &&
+                            (S_y >= LATENCY_Y) && (S_y < LATENCY_Y + 8);
+    wire S_fetch_latency = (LATENCY_EN != 0) &&
+                           (S_small_fetch_x >= LATENCY_X) &&
+                           (S_small_fetch_x < LATENCY_X + LATENCY_CHARS * 8) &&
+                           (S_y >= LATENCY_Y) && (S_y < LATENCY_Y + 8);
+    wire [3:0] S_latency_char = S_latency_dx[6:3];
+    reg [7:0] S_latency_ascii;
+    always @(*) begin
+        S_latency_ascii = " ";
+        case (S_latency_char)
+            4'd0: S_latency_ascii = "L";
+            4'd1: S_latency_ascii = "A";
+            4'd2: S_latency_ascii = "T";
+            4'd4: S_latency_ascii = S_latency_valid ?
+                                   (8'h30 + {4'd0,S_latency_bcd[15:12]}) : "-";
+            4'd5: S_latency_ascii = S_latency_valid ?
+                                   (8'h30 + {4'd0,S_latency_bcd[11:8]}) : "-";
+            4'd6: S_latency_ascii = S_latency_valid ?
+                                   (8'h30 + {4'd0,S_latency_bcd[7:4]}) : "-";
+            4'd7: S_latency_ascii = ".";
+            4'd8: S_latency_ascii = S_latency_valid ?
+                                   (8'h30 + {4'd0,S_latency_bcd[3:0]}) : "-";
+            4'd10: S_latency_ascii = "M";
+            4'd11: S_latency_ascii = "S";
+            default: S_latency_ascii = " ";
+        endcase
+    end
+
     function [34:0] status_glyph;
         input [7:0] ascii;
         begin
@@ -239,6 +311,7 @@ module osd_overlay #(
                 "F":status_glyph=35'b11111_10000_10000_11110_10000_10000_10000;
                 "G":status_glyph=35'b01111_10000_10000_10111_10001_10001_01111;
                 "I":status_glyph=35'b11111_00100_00100_00100_00100_00100_11111;
+                "L":status_glyph=35'b10000_10000_10000_10000_10000_10000_11111;
                 "M":status_glyph=35'b10001_11011_10101_10101_10001_10001_10001;
                 "N":status_glyph=35'b10001_11001_10101_10011_10001_10001_10001;
                 "O":status_glyph=35'b01110_10001_10001_10001_10001_10001_01110;
@@ -247,24 +320,77 @@ module osd_overlay #(
                 "T":status_glyph=35'b11111_00100_00100_00100_00100_00100_00100;
                 "W":status_glyph=35'b10001_10001_10001_10101_10101_11011_10001;
                 "X":status_glyph=35'b10001_10001_01010_00100_01010_10001_10001;
+                "0":status_glyph=35'b01110_10001_10011_10101_11001_10001_01110;
                 "1":status_glyph=35'b00100_01100_00100_00100_00100_00100_01110;
                 "2":status_glyph=35'b01110_10001_00001_00010_00100_01000_11111;
                 "3":status_glyph=35'b11110_00001_00001_01110_00001_00001_11110;
                 "4":status_glyph=35'b00010_00110_01010_10010_11111_00010_00010;
                 "5":status_glyph=35'b11111_10000_10000_11110_00001_00001_11110;
+                "6":status_glyph=35'b01110_10000_10000_11110_10001_10001_01110;
+                "7":status_glyph=35'b11111_00001_00010_00100_01000_01000_01000;
+                "8":status_glyph=35'b01110_10001_10001_01110_10001_10001_01110;
+                "9":status_glyph=35'b01110_10001_10001_01111_00001_00001_01110;
+                ".":status_glyph=35'b00000_00000_00000_00000_00000_00110_00110;
+                "-":status_glyph=35'b00000_00000_00000_11111_00000_00000_00000;
                 default:status_glyph=35'd0;
             endcase
         end
     endfunction
-    wire [34:0] S_status_glyph = status_glyph(S_status_ascii);
-    // Five bits per row: shift/add is explicit, with no multiplier or DSP.
-    wire [5:0] S_status_bit_index = 6'd34 -
-                       {1'b0,S_status_row,2'b00} - {3'b000,S_status_row} -
-                       {3'b000,S_status_col};
-    wire S_status_ink = (S_status_col < 3'd5) && (S_status_row < 3'd7) &&
-                        S_status_glyph[S_status_bit_index];
-    wire [23:0] S_status_rgb = S_status_pending ? C_WAIT :
-                               (S_status_enabled ? C_ON : C_OFF);
+    // Split character decoding, glyph-row lookup and pixel selection. Only
+    // text metadata is registered; the input video never passes these FFs.
+    reg [7:0] S_small_ascii;
+    reg [2:0] S_small_row;
+    reg [1:0] S_small_style;
+    wire [34:0] S_small_glyph = status_glyph(S_small_ascii);
+    reg [4:0] S_small_row_bits;
+    always @(*) begin
+        case (S_small_row)
+            3'd0: S_small_row_bits = S_small_glyph[34:30];
+            3'd1: S_small_row_bits = S_small_glyph[29:25];
+            3'd2: S_small_row_bits = S_small_glyph[24:20];
+            3'd3: S_small_row_bits = S_small_glyph[19:15];
+            3'd4: S_small_row_bits = S_small_glyph[14:10];
+            3'd5: S_small_row_bits = S_small_glyph[9:5];
+            3'd6: S_small_row_bits = S_small_glyph[4:0];
+            default: S_small_row_bits = 5'd0;
+        endcase
+    end
+    reg [4:0] S_small_bits;
+    reg [1:0] S_small_color;
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            S_small_ascii <= " ";
+            S_small_row <= 0;
+            S_small_style <= 0;
+            S_small_bits <= 0;
+            S_small_color <= 0;
+        end else if (I_de) begin
+            if ((S_x[2:0] == 3'd6) && (S_fetch_latency || S_fetch_status)) begin
+                S_small_ascii <= S_fetch_latency ? S_latency_ascii : S_status_ascii;
+                S_small_row <= S_fetch_latency ? S_latency_dy[2:0] : S_status_row;
+                S_small_style <= S_fetch_latency ? 2'd0 :
+                                 (S_status_pending ? 2'd3 :
+                                  (S_status_enabled ? 2'd1 : 2'd2));
+            end
+            if (S_x[2:0] == 3'd7) begin
+                S_small_bits <= S_small_row_bits;
+                S_small_color <= S_small_style;
+            end
+        end
+    end
+    reg S_small_ink;
+    always @(*) begin
+        case (S_x[2:0])
+            3'd0: S_small_ink = S_small_bits[4];
+            3'd1: S_small_ink = S_small_bits[3];
+            3'd2: S_small_ink = S_small_bits[2];
+            3'd3: S_small_ink = S_small_bits[1];
+            3'd4: S_small_ink = S_small_bits[0];
+            default: S_small_ink = 1'b0;
+        endcase
+    end
+    wire [23:0] S_status_rgb = (S_small_color == 2'd3) ? C_WAIT :
+                               ((S_small_color == 2'd1) ? C_ON : C_OFF);
 
     //------------------------------------------------------------------
     //  叠加（纯组合 3 选 1）
@@ -280,8 +406,10 @@ module osd_overlay #(
             assign O_data = S_logo_opaque ? S_logo_rgb  :
                             S_in_text1    ? (S_text_bit1 ? C_WHITE : C_BLACK) :
                             S_in_box1     ? C_BLACK :
+                            S_in_latency_text ? (S_small_ink ? C_WHITE : C_BLACK) :
+                            S_in_latency_box ? C_BLACK :
                             ((STATUS_EN != 0) && S_in_status_text) ?
-                                (S_status_ink ? S_status_rgb : C_BLACK) :
+                                (S_small_ink ? S_status_rgb : C_BLACK) :
                             ((STATUS_EN != 0) && S_in_status_box) ? C_BLACK :
                                             I_data;
         end

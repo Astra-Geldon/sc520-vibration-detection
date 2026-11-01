@@ -1,0 +1,7 @@
+{
+  "scope": "Whole top Icarus compatibility comparison only",
+  "preexisting_icarus_errors_unchanged": 36,
+  "locations": "vib_gauss3x3 / vib_lk_grid_multi declarations after use",
+  "focused_latency_tests": "passed separately",
+  "td_compilation": "not_run"
+}

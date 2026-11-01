@@ -66,3 +66,9 @@ validation/green_lines_dsp_20261101/program.err
 validation/green_lines_dsp_20261101/program.tcl
 validation/green_lines_dsp_20261101/vib_bbox_grid.before.v
 validation/green_lines_dsp_20261101/vib_bbox_grid.after.v
+
+# Local known-good source backup and latency simulation executables
+validation/latency_osd_20261101/before/
+validation/latency_osd_20261101/sim_*/
+validation/compact_osd_20261101/before/
+validation/compact_osd_20261101/sim_*/

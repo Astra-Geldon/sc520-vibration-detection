@@ -4,6 +4,8 @@
 
 本版已完成完整 TD 编译和 JTAG SRAM 烧录。用户提供的最新画面中，之前的密集绿色竖条已消失，摄像头画面、状态面板和 Logo 可正常显示。该反馈用于确认显示恢复；本阶段没有进行完整的振动测频精度验收。
 
+当前源码在上述已上板基线上增加同帧关联的 `LAT xxx.x MS` 延迟显示，并缩小 LAT 和左下算法状态面板。测量口径、紧凑布局及本机检查见 [延迟显示说明](LATENCY_DISPLAY.md) 和 [紧凑 OSD 验证](validation/compact_osd_20261101/README.md)。下文 Bit 哈希及资源表保留的是历史已上板基线；当前源码需重新构建，不能用旧 Bit 验收 LAT。自动曝光尚未接入，SW5 仍选择两组固定曝光/增益。
+
 ## 工程基线
 
 - 摄像头、基础图像处理、图像增强、视频缓存与 HDMI：沿用 `20261029project`。
@@ -33,9 +35,9 @@ cd sc520-vibration-detection
 
 ## 编译与下载
 
-先看[编译烧录说明](BUILD_AND_PROGRAM.md)。必须完整执行 `td_project/patch/build_all.ps1` 的 A→B→C，保留加密 HDMI 核的 12 处数据库补丁及 25 组独立 CDC 检查。
+先看[编译烧录说明](BUILD_AND_PROGRAM.md)。必须完整执行 `td_project/patch/build_all.ps1` 的 A→B→C，保留加密 HDMI 核的 12 处数据库补丁及当前 34 组独立 CDC 检查。
 
-当前本机 Bit：`td_project/camera_to_dsi_display.bit`，1,789,539 字节。SHA256：
+历史已上板基线 Bit：`td_project/camera_to_dsi_display.bit`，1,789,539 字节。SHA256：
 
 ```text
 A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1
@@ -43,7 +45,7 @@ A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1
 
 Git 保存源码和验证摘要；Bit、数据库及完整工具报告保留本地，克隆后需自行构建或取得上述已验证 Bit。日期等 Bit 元数据会使重新构建的 SHA256 改变，应核验新构建来源后再下载。JTAG SRAM 配置掉电丢失。
 
-| 最终物理资源 | 已用／总量 |
+| 历史已上板基线物理资源 | 已用／总量 |
 |---|---|
 | LUT6 | 18,362 / 21,216 |
 | Slice | 19,163 / 21,216，90.32% |

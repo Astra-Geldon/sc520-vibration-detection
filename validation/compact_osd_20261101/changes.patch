@@ -1,0 +1,487 @@
+--- before/user_source/hdl_source/osd_overlay.v
++++ after/user_source/hdl_source/osd_overlay.v
+@@ -1,6 +1,7 @@
+ // Production OSD: actual mode, original Anlogic Logo, and applied enhancement
+-// states.  The status panel uses a small 5x7 font; the pixel path stays purely
+-// combinational, including the existing name/Logo priority outside the panel.
++// states. Compact panels use native 5x7 glyphs with an 8-pixel character pitch.
++// Character/row lookahead prepares text before its first pixel; video remains
++// combinational, with no added pixel delay or change to name/Logo priority.
+ module osd_overlay #(
+     parameter integer OSD_EN      = 1,      // 0 = 完全旁路（不消耗 BRAM）
+     parameter integer LOGO_EN     = 1,      // 0 = 只保留算法文字，释放Logo ROM资源
+@@ -167,44 +168,50 @@
+     wire       S_text_bit1 = S_font_row1[S_bit_idx1];
+ 
+     //------------------------------------------------------------------
+-    // Lower-left applied-state panel.  3 columns x 2 rows, 192x32 per item.
++    // Lower-left applied-state panel. 3 columns x 2 rows, 96x16 per item.
+     // Each label identifies the physical switch, e.g. "S2 GAM ON" and
+     // "S2 N1 ON".  WAIT takes priority over the last confirmed ON/OFF state.
+     // Coordinates and font selection are shared across all six entries.
+     //------------------------------------------------------------------
+     localparam integer STATUS_X = 24;
+-    localparam integer STATUS_Y = V_ACTIVE - 64;
++    localparam integer STATUS_Y = V_ACTIVE - 32;
+     localparam [23:0] C_ON   = 24'h50_FF_80;
+     localparam [23:0] C_OFF  = 24'hA0_A0_A0;
+     localparam [23:0] C_WAIT = 24'hFF_D0_40;
+ 
+-    wire [10:0] S_status_dx = S_x - STATUS_X;
++    // Both compact panels start on an 8-pixel boundary. Decode a character
++    // two pixels early, then register its five-bit row one pixel early.
++    wire [10:0] S_small_fetch_x = S_x + 11'd2;
++    wire [10:0] S_status_dx = S_small_fetch_x - STATUS_X;
+     wire [ 9:0] S_status_dy = S_y - STATUS_Y;
+-    wire S_in_status_box = (S_x >= STATUS_X - 8) && (S_x < STATUS_X + 584) &&
+-                           (S_y >= STATUS_Y - 8) && (S_y < STATUS_Y + 56);
+-    wire S_in_status_text = (S_x >= STATUS_X) && (S_x < STATUS_X + 576) &&
+-                            (S_y >= STATUS_Y) && (S_y < STATUS_Y + 48) &&
+-                            !S_status_dy[4];
++    wire S_in_status_box = (S_x >= STATUS_X - 4) && (S_x < STATUS_X + 292) &&
++                           (S_y >= STATUS_Y - 4) && (S_y < STATUS_Y + 28);
++    wire S_status_text_line = (S_y >= STATUS_Y) && (S_y < STATUS_Y + 24) &&
++                              !S_status_dy[3];
++    wire S_in_status_text = (S_x >= STATUS_X) && (S_x < STATUS_X + 288) &&
++                            S_status_text_line;
++    wire S_fetch_status = (STATUS_EN != 0) &&
++                          (S_small_fetch_x >= STATUS_X) &&
++                          (S_small_fetch_x < STATUS_X + 288) && S_status_text_line;
+     reg [1:0] S_status_column;
+-    reg [7:0] S_status_item_x;
+-    always @(*) begin
+-        if (S_status_dx < 11'd192) begin
++    reg [6:0] S_status_item_x;
++    always @(*) begin
++        if (S_status_dx < 11'd96) begin
+             S_status_column = 2'd0;
+-            S_status_item_x = S_status_dx[7:0];
+-        end else if (S_status_dx < 11'd384) begin
++            S_status_item_x = S_status_dx[6:0];
++        end else if (S_status_dx < 11'd192) begin
+             S_status_column = 2'd1;
+-            S_status_item_x = S_status_dx - 11'd192;
++            S_status_item_x = S_status_dx - 11'd96;
+         end else begin
+             S_status_column = 2'd2;
+-            S_status_item_x = S_status_dx - 11'd384;
+-        end
+-    end
+-    wire [2:0] S_status_item = S_status_dy[5] ?
++            S_status_item_x = S_status_dx - 11'd192;
++        end
++    end
++    wire [2:0] S_status_item = S_status_dy[4] ?
+                                (3'd3 + {1'b0, S_status_column}) :
+                                {1'b0, S_status_column};
+-    wire [3:0] S_status_char = S_status_item_x[7:4];
+-    wire [2:0] S_status_col = S_status_item_x[3:1];
+-    wire [2:0] S_status_row = S_status_dy[3:1];
++    wire [3:0] S_status_char = S_status_item_x[6:3];
++    wire [2:0] S_status_row = S_status_dy[2:0];
+     wire S_status_pending = I_alg_pending[S_status_item];
+     wire S_status_enabled = I_alg_state[S_status_item];
+ 
+@@ -249,21 +256,27 @@
+         endcase
+     end
+ 
+-    // Upper-left timing panel, beside every mode name.  A 16-pixel character
+-    // pitch matches the existing name/status text and uses the same font ROM.
++    // Upper-left timing panel, beside every mode name, vertically centered
++    // against the original 16-pixel mode label. The compact box is 104x16.
+     localparam integer LATENCY_X = 96;
++    localparam integer LATENCY_Y = TEXT_Y + 4;
+     localparam integer LATENCY_CHARS = 12; // "LAT 033.2 MS", or "LAT ---.- MS".
+-    wire [10:0] S_latency_dx = S_x - LATENCY_X;
+-    wire [9:0] S_latency_dy = S_y - TEXT_Y;
++    wire [10:0] S_latency_dx = S_small_fetch_x - LATENCY_X;
++    wire [9:0] S_latency_dy = S_y - LATENCY_Y;
+     wire S_in_latency_box = (LATENCY_EN != 0) &&
+-                           (S_x >= LATENCY_X - BOX_PAD) &&
+-                           (S_x < LATENCY_X + 192 + BOX_PAD) &&
+-                           (S_y >= TEXT_Y - BOX_PAD) &&
+-                           (S_y < TEXT_Y + 16 + BOX_PAD);
++                           (S_x >= LATENCY_X - 4) &&
++                           (S_x < LATENCY_X + LATENCY_CHARS * 8 + 4) &&
++                           (S_y >= LATENCY_Y - 4) &&
++                           (S_y < LATENCY_Y + 8 + 4);
+     wire S_in_latency_text = (LATENCY_EN != 0) &&
+-                            (S_x >= LATENCY_X) && (S_x < LATENCY_X + 192) &&
+-                            (S_y >= TEXT_Y) && (S_y < TEXT_Y + 16);
+-    wire [3:0] S_latency_char = S_latency_dx[7:4];
++                            (S_x >= LATENCY_X) &&
++                            (S_x < LATENCY_X + LATENCY_CHARS * 8) &&
++                            (S_y >= LATENCY_Y) && (S_y < LATENCY_Y + 8);
++    wire S_fetch_latency = (LATENCY_EN != 0) &&
++                           (S_small_fetch_x >= LATENCY_X) &&
++                           (S_small_fetch_x < LATENCY_X + LATENCY_CHARS * 8) &&
++                           (S_y >= LATENCY_Y) && (S_y < LATENCY_Y + 8);
++    wire [3:0] S_latency_char = S_latency_dx[6:3];
+     reg [7:0] S_latency_ascii;
+     always @(*) begin
+         S_latency_ascii = " ";
+@@ -323,19 +336,61 @@
+             endcase
+         end
+     endfunction
+-    // Share the glyph lookup and variable bit selector between both panels.
+-    wire [7:0] S_small_ascii = S_in_latency_text ? S_latency_ascii : S_status_ascii;
+-    wire [2:0] S_small_row = S_in_latency_text ? S_latency_dy[3:1] : S_status_row;
+-    wire [2:0] S_small_col = S_in_latency_text ? S_latency_dx[3:1] : S_status_col;
++    // Split character decoding, glyph-row lookup and pixel selection. Only
++    // text metadata is registered; the input video never passes these FFs.
++    reg [7:0] S_small_ascii;
++    reg [2:0] S_small_row;
++    reg [1:0] S_small_style;
+     wire [34:0] S_small_glyph = status_glyph(S_small_ascii);
+-    // Five bits per row: shift/add is explicit, with no multiplier or DSP.
+-    wire [5:0] S_small_bit_index = 6'd34 -
+-                       {1'b0,S_small_row,2'b00} - {3'b000,S_small_row} -
+-                       {3'b000,S_small_col};
+-    wire S_small_ink = (S_small_col < 3'd5) && (S_small_row < 3'd7) &&
+-                       S_small_glyph[S_small_bit_index];
+-    wire [23:0] S_status_rgb = S_status_pending ? C_WAIT :
+-                               (S_status_enabled ? C_ON : C_OFF);
++    reg [4:0] S_small_row_bits;
++    always @(*) begin
++        case (S_small_row)
++            3'd0: S_small_row_bits = S_small_glyph[34:30];
++            3'd1: S_small_row_bits = S_small_glyph[29:25];
++            3'd2: S_small_row_bits = S_small_glyph[24:20];
++            3'd3: S_small_row_bits = S_small_glyph[19:15];
++            3'd4: S_small_row_bits = S_small_glyph[14:10];
++            3'd5: S_small_row_bits = S_small_glyph[9:5];
++            3'd6: S_small_row_bits = S_small_glyph[4:0];
++            default: S_small_row_bits = 5'd0;
++        endcase
++    end
++    reg [4:0] S_small_bits;
++    reg [1:0] S_small_color;
++    always @(posedge I_clk or negedge I_rst_n) begin
++        if (!I_rst_n) begin
++            S_small_ascii <= " ";
++            S_small_row <= 0;
++            S_small_style <= 0;
++            S_small_bits <= 0;
++            S_small_color <= 0;
++        end else if (I_de) begin
++            if ((S_x[2:0] == 3'd6) && (S_fetch_latency || S_fetch_status)) begin
++                S_small_ascii <= S_fetch_latency ? S_latency_ascii : S_status_ascii;
++                S_small_row <= S_fetch_latency ? S_latency_dy[2:0] : S_status_row;
++                S_small_style <= S_fetch_latency ? 2'd0 :
++                                 (S_status_pending ? 2'd3 :
++                                  (S_status_enabled ? 2'd1 : 2'd2));
++            end
++            if (S_x[2:0] == 3'd7) begin
++                S_small_bits <= S_small_row_bits;
++                S_small_color <= S_small_style;
++            end
++        end
++    end
++    reg S_small_ink;
++    always @(*) begin
++        case (S_x[2:0])
++            3'd0: S_small_ink = S_small_bits[4];
++            3'd1: S_small_ink = S_small_bits[3];
++            3'd2: S_small_ink = S_small_bits[2];
++            3'd3: S_small_ink = S_small_bits[1];
++            3'd4: S_small_ink = S_small_bits[0];
++            default: S_small_ink = 1'b0;
++        endcase
++    end
++    wire [23:0] S_status_rgb = (S_small_color == 2'd3) ? C_WAIT :
++                               ((S_small_color == 2'd1) ? C_ON : C_OFF);
+ 
+     //------------------------------------------------------------------
+     //  叠加（纯组合 3 选 1）
+--- before/tools/test_video_latency_osd.py
++++ after/tools/test_video_latency_osd.py
+@@ -1,7 +1,7 @@
+-"""Compare the latency OSD against its saved production baseline with Icarus.
++"""Raster-check compact LAT and status text against an independent 5x7 reference.
+ 
+ No TD tools or hardware are used.  All generated simulation files stay under
+-validation/latency_osd_20261101/sim_osd.
++validation/compact_osd_20261101/sim_osd.
+ """
+ from pathlib import Path
+ import hashlib
+@@ -12,7 +12,7 @@
+ ROOT = Path(__file__).resolve().parents[1]
+ VALIDATION = ROOT / "validation/latency_osd_20261101"
+ BASELINE = VALIDATION / "before/osd_overlay.v"
+-SIM = VALIDATION / "sim_osd"
++SIM = ROOT / "validation/compact_osd_20261101/sim_osd"
+ SIM.mkdir(parents=True, exist_ok=True)
+ 
+ expected_hash = (VALIDATION / "before/osd_overlay.sha256").read_text().strip().lower()
+@@ -35,7 +35,7 @@
+     reg valid=0;
+     reg [15:0] bcd=0;
+     reg [23:0] data=0;
+-    wire [23:0] output_new, output_old, output_disabled, output_bypass;
++    wire [23:0] output_new, output_old, output_disabled, output_bypass, output_no_status, output_plain;
+     osd_overlay dut (
+         .I_clk(clk), .I_rst_n(rst_n), .I_de(de), .I_vs(vs), .I_mode(mode),
+         .I_alg_state(states), .I_alg_pending(pending),
+@@ -54,14 +54,26 @@
+         .I_latency_valid(valid), .I_latency_bcd(bcd),
+         .I_data(data), .O_data(output_bypass)
+     );
+-    osd_overlay_baseline old (
++    osd_overlay #(.STATUS_EN(0)) no_status (
++        .I_clk(clk), .I_rst_n(rst_n), .I_de(de), .I_vs(vs), .I_mode(mode),
++        .I_alg_state(states), .I_alg_pending(pending),
++        .I_latency_valid(valid), .I_latency_bcd(bcd),
++        .I_data(data), .O_data(output_no_status)
++    );
++    osd_overlay #(.STATUS_EN(0), .LATENCY_EN(0)) plain (
++        .I_clk(clk), .I_rst_n(rst_n), .I_de(de), .I_vs(vs), .I_mode(mode),
++        .I_alg_state(states), .I_alg_pending(pending),
++        .I_latency_valid(valid), .I_latency_bcd(bcd),
++        .I_data(data), .O_data(output_plain)
++    );
++    osd_overlay_baseline #(.STATUS_EN(0)) old (
+         .I_clk(clk), .I_rst_n(rst_n), .I_de(de), .I_vs(vs), .I_mode(mode),
+         .I_alg_state(states), .I_alg_pending(pending),
+         .I_data(data), .O_data(output_old)
+     );
+ 
+-    // Independent 5x7 reference for the new panel.  Existing status/logo/name
+-    // pixels are checked against the untouched production module instead.
++    // Independent 5x7 reference for both compact panels. The original mode
++    // label, logo and all remaining video pixels use the production baseline.
+     function [34:0] glyph;
+         input [7:0] ascii;
+         begin
+@@ -83,32 +95,62 @@
+                 "9":glyph=35'b01110_10001_10001_01111_00001_00001_01110;
+                 ".":glyph=35'b00000_00000_00000_00000_00000_00110_00110;
+                 "-":glyph=35'b00000_00000_00000_11111_00000_00000_00000;
++                "B":glyph=35'b11110_10001_10001_11110_10001_10001_11110;
++                "C":glyph=35'b01111_10000_10000_10000_10000_10000_01111;
++                "D":glyph=35'b11110_10001_10001_10001_10001_10001_11110;
++                "E":glyph=35'b11111_10000_10000_11110_10000_10000_11111;
++                "F":glyph=35'b11111_10000_10000_11110_10000_10000_10000;
++                "G":glyph=35'b01111_10000_10000_10111_10001_10001_01111;
++                "I":glyph=35'b11111_00100_00100_00100_00100_00100_11111;
++                "N":glyph=35'b10001_11001_10101_10011_10001_10001_10001;
++                "O":glyph=35'b01110_10001_10001_10001_10001_10001_01110;
++                "P":glyph=35'b11110_10001_10001_11110_10000_10000_10000;
++                "W":glyph=35'b10001_10001_10001_10101_10101_11011_10001;
++                "X":glyph=35'b10001_10001_01010_00100_01010_10001_10001;
+                 default:glyph=0;
+             endcase
+         end
+     endfunction
+ 
++    // Physical switch labels, intentionally independent of the DUT decoder.
++    function [7:0] label_char;
++        input integer item, index;
++        reg [87:0] label;
++        begin
++            case(item)
++                0:label="S1 AWB "; 1:label="S2 GAM "; 2:label="S3 CSC ";
++                3:label="S2 N1  "; 4:label="S5 EXP "; 5:label="S4 DEM ";
++            endcase
++            // Strings above are seven characters, right aligned in 88 bits.
++            label_char=(label >> (8*(6-index))) & 8'hff;
++        end
++    endfunction
++
+     reg expected_valid;
+     reg [15:0] expected_bcd;
+-    integer frame, x, y, checked=0, panel_checked=0;
+-    integer char_index, row_index, col_index, bit_index;
++    integer frame, x, y, checked=0, panel_checked=0, status_checked=0;
++    integer char_index, row_index, col_index, bit_index, item;
++    integer lat_file, status_file, full_file;
++    reg [1023:0] filename;
+     reg [7:0] ascii;
+     reg [34:0] bits;
+-    reg [23:0] expected_pixel;
++    reg [23:0] expected_pixel, expected_latency, expected_status, ink_color;
+     task check_pixel;
+         begin
+             if (dut.S_x !== x || dut.S_y !== y)
+                 $fatal(1,"Raster coordinate mismatch expected=(%0d,%0d) actual=(%0d,%0d)",x,y,dut.S_x,dut.S_y);
+-            if (output_disabled !== output_old)
+-                $fatal(1,"LATENCY_EN=0 changed original pixel frame=%0d x=%0d y=%0d",frame,x,y);
++            if (output_plain !== output_old)
++                $fatal(1,"Both panels disabled changed original mode/logo/video frame=%0d x=%0d y=%0d",frame,x,y);
+             if (output_bypass !== data)
+                 $fatal(1,"OSD_EN=0 failed direct bypass");
+-            if (x>=88 && x<296 && y>=16 && y<48) begin
+-                expected_pixel=24'h000000;
+-                if (x>=96 && x<288 && y>=24 && y<40) begin
+-                    char_index=(x-96)/16;
+-                    col_index=((x-96)%16)/2;
+-                    row_index=(y-24)/2;
++            expected_latency=output_old;
++            expected_status=output_old;
++            if (x>=92 && x<196 && y>=24 && y<40) begin
++                expected_latency=24'h000000;
++                if (x>=96 && x<192 && y>=28 && y<36) begin
++                    char_index=(x-96)/8;
++                    col_index=(x-96)%8;
++                    row_index=y-28;
+                     ascii=" ";
+                     case(char_index)
+                         0:ascii="L"; 1:ascii="A"; 2:ascii="T";
+@@ -122,14 +164,43 @@
+                     bits=glyph(ascii);
+                     bit_index=34-row_index*5-col_index;
+                     if (row_index<7 && col_index<5 && bits[bit_index])
+-                        expected_pixel=24'hffffff;
+-                end
+-                if (output_new !== expected_pixel) begin
+-                    $fatal(1,"Timing glyph mismatch frame=%0d x=%0d y=%0d expected=%h actual=%h",frame,x,y,expected_pixel,output_new);
++                        expected_latency=24'hffffff;
+                 end
+                 panel_checked=panel_checked+1;
+-            end else if (output_new !== output_old)
+-                $fatal(1,"Pixel changed outside timing panel frame=%0d mode=%0d x=%0d y=%0d old=%h new=%h",frame,mode,x,y,output_old,output_new);
++                $fwrite(lat_file,"%c%c%c",output_new[23:16],output_new[15:8],output_new[7:0]);
++            end
++            if (x>=20 && x<316 && y>=684 && y<716) begin
++                expected_status=24'h000000;
++                if (x>=24 && x<312 && y>=688 && y<712 && ((y-688)%16)<8) begin
++                    item=((y-688)/16)*3+(x-24)/96;
++                    char_index=((x-24)%96)/8;
++                    col_index=(x-24)%8;
++                    row_index=(y-688)%16;
++                    ascii=" ";
++                    if(char_index<7) ascii=label_char(item,char_index);
++                    else case(char_index)
++                        7:ascii=pending[item] ? "W" : "O";
++                        8:ascii=pending[item] ? "A" : (states[item] ? "N" : "F");
++                        9:ascii=pending[item] ? "I" : (states[item] ? " " : "F");
++                        10:ascii=pending[item] ? "T" : " ";
++                    endcase
++                    ink_color=pending[item] ? 24'hffd040 : (states[item] ? 24'h50ff80 : 24'ha0a0a0);
++                    bits=glyph(ascii);
++                    bit_index=34-row_index*5-col_index;
++                    if(row_index<7 && col_index<5 && bits[bit_index]) expected_status=ink_color;
++                end
++                status_checked=status_checked+1;
++                $fwrite(status_file,"%c%c%c",output_new[23:16],output_new[15:8],output_new[7:0]);
++            end
++            expected_pixel=expected_latency;
++            if(x>=20 && x<316 && y>=684 && y<716) expected_pixel=expected_status;
++            if(output_new !== expected_pixel)
++                $fatal(1,"OSD pixel mismatch frame=%0d x=%0d y=%0d expected=%h actual=%h",frame,x,y,expected_pixel,output_new);
++            if(output_disabled !== expected_status)
++                $fatal(1,"LATENCY_EN=0 mismatch frame=%0d x=%0d y=%0d",frame,x,y);
++            if(output_no_status !== expected_latency)
++                $fatal(1,"STATUS_EN=0 mismatch frame=%0d x=%0d y=%0d",frame,x,y);
++            if(frame==3) $fwrite(full_file,"%c%c%c",output_new[23:16],output_new[15:8],output_new[7:0]);
+             checked=checked+1;
+         end
+     endtask
+@@ -144,8 +215,23 @@
+         for(frame=0;frame<4;frame=frame+1) begin
+             @(negedge clk);
+             mode=frame;
+-            states=states^6'b111011;
+-            pending=pending^6'b110001;
++            case(frame)
++                0:begin states=6'h3f;pending=0;end
++                1:begin states=0;pending=0;end
++                2:begin states=6'h3f;pending=6'h3f;end
++                3:begin states=6'b101010;pending=6'b001001;end
++            endcase
++            $sformat(filename,"__SIM__/lat_%0d.ppm",frame);
++            lat_file=$fopen(filename,"wb");
++            $fwrite(lat_file,"P6\n104 16\n255\n");
++            $sformat(filename,"__SIM__/status_%0d.ppm",frame);
++            status_file=$fopen(filename,"wb");
++            $fwrite(status_file,"P6\n296 32\n255\n");
++            if(frame==3) begin
++                full_file=$fopen("__SIM__/frame.ppm","wb");
++                $fwrite(full_file,"P6\n1280 720\n255\n");
++            end
++            if(!lat_file || !status_file || (frame==3 && !full_file)) $fatal(1,"Cannot open raster output");
+             case(frame)
+                 0:begin expected_valid=0;expected_bcd=16'h0000;end
+                 1:begin expected_valid=1;expected_bcd=16'h9876;end
+@@ -174,18 +260,20 @@
+                 end
+                 @(negedge clk);de=0;
+             end
++            $fclose(lat_file);$fclose(status_file);
++            if(frame==3) $fclose(full_file);
+             $display("FRAME_PASS mode=%0d valid=%0d bcd=%h",mode,expected_valid,expected_bcd);
+         end
+         // A formerly valid result must return to dashes at a later frame edge.
+         @(negedge clk);vs=1;valid=0;bcd=16'h9999;
+         repeat(2) @(negedge clk);
+         if (dut.S_latency_valid !== 1'b0) $fatal(1,"Invalid result did not replace valid result");
+-        $display("LATENCY_OSD_PASS pixels=%0d panel_pixels=%0d",checked,panel_checked);
++        $display("LATENCY_OSD_PASS pixels=%0d panel_pixels=%0d status_pixels=%0d",checked,panel_checked,status_checked);
+         $finish;
+     end
+ endmodule
+ '''
+-(SIM / "tb_video_latency_osd.v").write_text(TB, encoding="utf-8")
++(SIM / "tb_video_latency_osd.v").write_text(TB.replace("__SIM__", SIM.as_posix()), encoding="utf-8")
+ iverilog = shutil.which("iverilog") or r"C:\iverilog\bin\iverilog.exe"
+ vvp = shutil.which("vvp") or r"C:\iverilog\bin\vvp.exe"
+ sources = [
+@@ -204,3 +292,21 @@
+ result.check_returncode()
+ if "LATENCY_OSD_PASS" not in result.stdout:
+     raise RuntimeError("Simulation finished without the required pass marker")
++
++# These previews contain pixels emitted by the production RTL, not mockups.
++from PIL import Image
++import json
++for name in ["frame", *[f"lat_{i}" for i in range(4)], *[f"status_{i}" for i in range(4)]]:
++    Image.open(SIM / (name + ".ppm")).save(SIM / (name + ".png"))
++(SIM.parent / "osd_checks.json").write_text(json.dumps({
++    "pass": True,
++    "pixels_checked": 3686400,
++    "font_pixels": [5, 7], "character_pitch": 8,
++    "latency_box": [92, 24, 104, 16],
++    "status_box": [20, 684, 296, 32],
++    "states_checked": ["ON", "OFF", "WAIT", "mixed"],
++    "outside_panels_matches_original": True,
++    "disabled_parameters_and_combinational_video_bypass": True,
++    "td_run": False,
++    "source_sha256": hashlib.sha256((ROOT / "user_source/hdl_source/osd_overlay.v").read_bytes()).hexdigest(),
++}, indent=2) + "\n", encoding="utf-8")
+--- before/LATENCY_DISPLAY.md
++++ after/LATENCY_DISPLAY.md
+@@ -2,7 +2,9 @@
+ 
+ 工程：`D:\workplace\anlogic\sc520-vibration-detection-main`。
+ 
+-左上角模式名右侧显示白字黑底 `LAT 033.2 MS`，表示 33.2 毫秒。文字从 `(96,24)` 开始，黑底范围 `x=88..295、y=16..47`；原图、灰度、二值化、边缘模式均显示。尚无有效帧、帧关联冲突或延时达到 1000 毫秒时显示 `LAT ---.- MS`。
++左上角模式名右侧显示白字黑底 `LAT 033.2 MS`，表示 33.2 毫秒。文字从 `(96,28)` 开始，采用原生 5×7 字模、8 像素字符节距，黑底范围 `x=92..195、y=24..39`，大小 104×16；原图、灰度、二值化、边缘模式均显示。尚无有效帧、帧关联冲突或延时达到 1000 毫秒时显示 `LAT ---.- MS`。
++
++左下六项算法状态也缩为同样字体，保持三列两行及 ON/OFF/WAIT 配色。文字从 `(24,688)` 开始，列距 96、行距 16，黑底范围 `x=20..315、y=684..715`，大小 296×32。中文模式名与安路 Logo 大小不变。以上坐标对应默认 1280×720。
+ 
+ ## 测量口径
+ 
+@@ -18,6 +20,12 @@
+ 
+ 新增逻辑只有饱和计数器、加减比较、逐周期二进制转 BCD、事件同步器及一个结果邮箱。复用 OSD 的小字模，不增加像素流水级、帧缓存、PLL 或外部引脚；没有新增乘除运算，计时模块带 `dsp_style="no"`。目标是新增 DSP=0、ERAM=0，约数百个 LUT/寄存器量级；最终数量和时序必须以此次 TD 构建为准。
+ 
++2026-11-01 紧凑 OSD 优化：两处英文取消 2× 放大，黑底宽高均减半；字符开始前两拍译码 ASCII、前一拍寄存 5 位字模行，当前像素仅选择五个位之一及叠加颜色。约增加 20 位文字元数据寄存器，替代原有从像素坐标经过 ASCII、35 位字模与动态位索引到输出的长组合链。没有延迟视频、DE 或 VS，计时口径及监视器不变。
++
++后续用户编译的紧凑 OSD 物理报告为 LUT6 18681、REG 17029、Slice 19329、DSP 40、ERAM 66，SWNS +0.012 ns、HWNS +0.020 ns，STNS/HTNS 为 0。相对大字体 LAT 版仅减少 5 个 Slice，没有取得显著资源收益；当前数值仍来自 GUI 构建报告，不等同于 A→B→C 补丁及 34 组 CDC 物理审计的完整验收。原始本机报告路径及摘要记录在 `validation/compact_osd_20261101/latest_td_report.json`。
++
++此前用户编译的大字体 LAT 版物理报告为 LUT6 18619、REG 17005、Slice 19334、DSP 40、ERAM 66，SWNS +0.102 ns；重编无 LAT 的旧版为 LUT6 16430、REG 16770、Slice 17479、DSP 40、ERAM 66，SWNS +0.105 ns。综合估算 Slice 只增加 319，而物理实现增加 1855，额外开销主要在物理实现阶段拉开。该报告属于优化前源码，不能当成本次紧凑 OSD 的结果。
++
+ 修改前当前本地 `_Runs` 报告为 LUT 16430、REG 16770、SLICE 17479、ERAM 66、DSP 40/40、PLL 3，SWNS +0.105 ns、HWNS +0.020 ns。综合与物理均为 40 DSP，物理日志为 `No need to merge 9x9 Dsps.`。`RESOURCE_USAGE.md` 中 LUT 18362 等数值属于另一颗已验收 A→B→C 构建，勿混用。保留现有 `vib_bbox_grid` 的 `dsp_style="no"`。
+ 
+ 新增结果邮箱和两个帧事件同步器已加入 SDC；构建 CDC 审计从 25 组增加为 34 组。新审计会检查寄存器集合、同步级属性及实际布线路径延时，查不到路径也会报错，不以空集合通过。
+@@ -25,6 +33,8 @@
+ ## 构建与验证
+ 
+ 此次仅做代码整理、静态检查与 Icarus 仿真，没有运行 TD 综合、布局布线或下载硬件。原始文件及哈希保存在本机 `validation/latency_osd_20261101/before/` 和 `before_sha256.json`；测试记录在同目录，结果不代表上板验收。
++
++紧凑 OSD 的修改前原件保存在 `validation/compact_osd_20261101/before/`。当前 `tools/test_video_latency_osd.py` 检查两处紧凑面板，结果和实际 RTL 输出预览在该目录的 `sim_osd/`；早期 `test_six_switch_osd.py` 面向历史大字体版，不作为本版的尺寸验收。
+ 
+ 局部仿真通过 50 项帧关联/计时检查和 3,686,400 个 OSD 像素对照。整工程直接交给 Icarus 时，原版与新版均有相同的 36 项旧振动模块声明顺序兼容错误，因此没有宣称整工程仿真通过；这项兼容性问题未改动。Tcl/SDC 审计脚本已用模拟工具命令检查语法与 34 组集合计数，真实布线延时仍由你运行 TD 后验证。
+ 

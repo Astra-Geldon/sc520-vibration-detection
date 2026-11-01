@@ -18,7 +18,9 @@ module video_out (
     input wire        I_dsi_clk,
     input wire        I_video_vsync,
     input wire        I_video_rd_en,  
-    output reg[23:0]  O_vdieo_data
+    output reg[23:0]  O_vdieo_data,
+    // Passive hook, identical to the event that latches I_video_out_rp.
+    output wire       O_latency_frame_start
 );
 
     reg         S_fifo_rst;     
@@ -54,6 +56,7 @@ module video_out (
     end
 
     assign S_video_frame_start = ~S_video_vsync_3d & S_video_vsync_2d;
+    assign O_latency_frame_start = S_video_frame_start;
 
 
     always @(posedge I_ddr_clk or negedge I_rst_n) begin

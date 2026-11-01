@@ -1,0 +1,42 @@
+[
+  {
+    "path": "user_source/hdl_source/design_top_wrapper.v",
+    "sha256": "553400525CB041DAFB95BB84FE82D3F1D5B1C50DE09406AD473BFC6BECC309FE"
+  },
+  {
+    "path": "user_source/hdl_source/video_in.v",
+    "sha256": "A59D9B71FA8582BD8B2D370809E300B0030EB8A20570B6001111EB476F4ADBE0"
+  },
+  {
+    "path": "user_source/hdl_source/video_out.v",
+    "sha256": "ACAA9D8E0BC2C0ACCE41AF70158DB726C0AEC4F40FBEA4AA4F07A0C365319961"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display.al",
+    "sha256": "8D60891C822BF3F8638A2DD18D0A593A6E31A4028A673B2271C63C633200BDCF"
+  },
+  {
+    "path": "td_project/camera_to_dsi_display.sdc",
+    "sha256": "3852FEE044E7129683BD432BF4DDAF0A46A86460177CF04548FCF0C1DE9344E9"
+  },
+  {
+    "path": "td_project/patch/check_demo_cdc_registers.tcl",
+    "sha256": "280AC0E0BEC251B12397144F5979BB8C0E689B91F991099D688505A8C02F2DB3"
+  },
+  {
+    "path": "td_project/patch/check_demo_cdc.tcl",
+    "sha256": "07A44ABD7F33C2D0EF94B6B4D366D3995E58DBB17843B9F0B3DFE2987A42DA18"
+  },
+  {
+    "path": "td_project/patch/phaseC_build_from_patched.tcl",
+    "sha256": "A1D0A0DCB62152E55803FACB89018B6142C5030A14C311B3492150ACB7A51099"
+  },
+  {
+    "path": "BUILD_AND_PROGRAM.md",
+    "sha256": "1CD78F5BFABFA221F51EF2533F4BEC83B694A6C6F5FFA0CACAA5F96F49FB1AC3"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "807570662BC6CF2D392C363310623C97A549765C83F0EF0B42F4DAE1FE57C6A7"
+  }
+]

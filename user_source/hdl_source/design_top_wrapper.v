@@ -159,6 +159,10 @@ module design_top_wrapper (
     wire        S_video_out_rd_busy;
     wire        S_video_in_wr_busy; 
     wire[1:0]   S_video_out_rp;     
+    wire S_latency_write_start, S_latency_read_start;
+    wire [1:0] S_latency_write_slot;
+    wire [15:0] S_latency_bcd;
+    wire S_latency_valid;
 
     wire        S_ddr_user_wr_en;       
     wire        S_ddr_user_rd_en;       
@@ -725,6 +729,8 @@ isp_top u_isp_top (
         .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
         .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
         .O_video_out_rp       ( S_video_out_rp        ),
+        .O_latency_frame_start(S_latency_write_start ),
+        .O_latency_frame_slot (S_latency_write_slot  ),
 
         .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
         .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
@@ -789,6 +795,7 @@ isp_top u_isp_top (
         .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
         .I_vib_ddr_busy      ( S_vib_ddr_own        ),   // 新增：算法正在占用 DDR
         .I_video_out_rp      ( S_video_out_rp       ),
+        .O_latency_frame_start(S_latency_read_start),
  
         .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
         .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
@@ -803,6 +810,17 @@ isp_top u_isp_top (
     );
 
 
+
+    // Observe the existing frame path. Nothing feeds back into DDR or pixels.
+    video_latency_monitor u_video_latency (
+        .I_rst_n(S_rst_n), .I_ddr_clk(S_ddr_clk),
+        .I_camera_toggle(S_cam_frame_toggle),
+        .I_write_start(S_latency_write_start), .I_write_slot(S_latency_write_slot),
+        .I_read_start(S_latency_read_start), .I_read_slot(S_video_out_rp),
+        .I_pixel_clk(S_hdmi_pixel_clk),
+        .I_output_vs(S_hdmi_out_vsync), .I_output_de(S_hdmi_out_de),
+        .O_bcd(S_latency_bcd), .O_valid(S_latency_valid)
+    );
 
     mc_to_user_interface u_mc_to_user_interface(
         .I_clk                   ( S_ddr_clk               ),
@@ -965,6 +983,7 @@ isp_top u_isp_top (
     )u_osd_overlay(
         .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
         .I_de(S_tone_stage_de), .I_vs(S_tone_stage_vs), .I_mode(S_tone_stage_mode),
+        .I_latency_bcd(S_latency_bcd), .I_latency_valid(S_latency_valid),
         .I_alg_state(S_demo_alg_state), .I_alg_pending(S_demo_alg_pending),
         .I_data(S_lift_data), .O_data(S_osd_mix)
     );

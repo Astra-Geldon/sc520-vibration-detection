@@ -55,3 +55,15 @@ set_max_delay -from [get_regs {u_demo_sensor_status/request}] -to [get_regs {u_d
 set_max_delay -from [get_regs {u_demo_sensor_status/acknowledge}] -to [get_regs {u_demo_sensor_status/acknowledge_s1}] -datapath_only 8.0
 set_max_delay -from [get_regs {u_demo_sensor_status/request_s1}] -to [get_regs {u_demo_sensor_status/request_s2}] 4.0
 set_max_delay -from [get_regs {u_demo_sensor_status/acknowledge_s1}] -to [get_regs {u_demo_sensor_status/acknowledge_s2}] 4.0
+
+# Passive frame-latency observer: the result mailbox holds its 17-bit payload
+# until acknowledgment; the OSD freezes it in blanking. Events use toggles.
+set_max_delay -from [get_regs {u_video_latency/u_result_cdc/payload[*]}] -to [get_regs {u_video_latency/u_result_cdc/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_video_latency/u_result_cdc/request}] -to [get_regs {u_video_latency/u_result_cdc/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_video_latency/u_result_cdc/acknowledge}] -to [get_regs {u_video_latency/u_result_cdc/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_video_latency/u_result_cdc/request_s1}] -to [get_regs {u_video_latency/u_result_cdc/request_s2}] 4.0
+set_max_delay -from [get_regs {u_video_latency/u_result_cdc/acknowledge_s1}] -to [get_regs {u_video_latency/u_result_cdc/acknowledge_s2}] 4.0
+set_max_delay -from [get_regs {S_cam_frame_toggle}] -to [get_regs {u_video_latency/camera_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_video_latency/camera_s1}] -to [get_regs {u_video_latency/camera_s2}] 4.0
+set_max_delay -from [get_regs {u_video_latency/output_toggle}] -to [get_regs {u_video_latency/output_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_video_latency/output_s1}] -to [get_regs {u_video_latency/output_s2}] 4.0

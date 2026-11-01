@@ -1,0 +1,16 @@
+{
+  "pass": true,
+  "changed_module_top_ports_match": true,
+  "video_in_out_original_logic_unchanged": true,
+  "project_references_exist": true,
+  "tcl_sdc_and_audit_syntax_mock_only": true,
+  "cdc_groups_expected": 34,
+  "td_synthesis_place_route_or_programming_run": false,
+  "source_sha256": {
+    "user_source\\hdl_source\\design_top_wrapper.v": "1ae5a0a409265e3cc84cc87f883fee8b7c67b0da1b2b40b00e2a840afae203e4",
+    "user_source\\hdl_source\\video_in.v": "5cd963fa4bf619dcc7197bc1d1b56cf43c7cc94c96aad115cb63c844eedfca37",
+    "user_source\\hdl_source\\video_out.v": "e09ed40fdc8f523dfdc11737982d91503d6f2e239030d47ec9979fbf451fafea",
+    "user_source\\hdl_source\\osd_overlay.v": "29035c379ce1f98a87c39baf340ba62ce5fe5b80a4ddc4eabc4488888e1a6369",
+    "user_source\\hdl_source\\video_latency_monitor.v": "6f41f575fd873d6260a128fbb8165a57878c5b335b7e671c49b510b01bc39267"
+  }
+}

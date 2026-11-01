@@ -18,7 +18,7 @@ close $fd
     read_sdc -ip ddr2 ../user_source/hdl_source/ph1p35_ddr/ddr2/src/sdc/ddr2.sdc
     read_sdc -ip w128_d512_fifo ../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.tcl
     update_timing -mode final
-# Local physical audit of the five production control mailboxes. No probe RTL.
+# Audit six production mailboxes and two passive frame-event synchronizers.
 set demo_cdc_paths 0
 foreach {inst width} {
     u_demo_mipi_controls 5
@@ -26,6 +26,7 @@ foreach {inst width} {
     u_demo_sensor_controls 1
     u_demo_mipi_status 5
     u_demo_sensor_status 3
+    u_video_latency/u_result_cdc 17
 } {
     foreach {from to limit expected} [list \
         {payload[*]} {O_dst_data[*]} 8.0 $width \
@@ -47,7 +48,7 @@ foreach {inst width} {
                 if {![get_property ASYNC_REG $reg]} {error "DEMO CDC ASYNC_REG missing: $reg"}
             }
         }
-        set label [string map [list {[} _ {]} _ {*} all] "${inst}_${from}_${to}"]
+        set label [string map [list / _ {[} _ {]} _ {*} all] "${inst}_${from}_${to}"]
         set report "demo_cdc_${label}.rpt"
         report_timing_path -from $a -to $b -ep_num 64 -path_num 1 -report_type max_min -file $report
         set fd [open $report r]
@@ -64,5 +65,31 @@ foreach {inst width} {
         incr demo_cdc_paths
     }
 }
-if {$demo_cdc_paths != 25} {error "DEMO CDC audit group count mismatch"}
+foreach {from to limit} {
+    S_cam_frame_toggle u_video_latency/camera_s1 8.0
+    u_video_latency/camera_s1 u_video_latency/camera_s2 4.0
+    u_video_latency/output_toggle u_video_latency/output_s1 8.0
+    u_video_latency/output_s1 u_video_latency/output_s2 4.0
+} {
+    set a [get_regs $from]
+    set b [get_regs $to]
+    if {[llength $a] != 1 || [llength $b] != 1} {
+        error "LATENCY CDC collection mismatch: $from -> $to"
+    }
+    if {![get_property ASYNC_REG $b]} {error "LATENCY CDC ASYNC_REG missing: $b"}
+    set label [string map {/ _} "${from}_${to}"]
+    set report "demo_cdc_${label}.rpt"
+    report_timing_path -from $a -to $b -ep_num 1 -path_num 1 -report_type max_min -file $report
+    set fd [open $report r]
+    set detail [read $fd]
+    close $fd
+    set delays [regexp -all -inline {Data Path Delay[ \t]*:[ \t]*([0-9.]+)ns} $detail]
+    if {[llength $delays] == 0} {error "LATENCY CDC missing routed path: $label"}
+    set worst 0.0
+    foreach {whole value} $delays {if {$value > $worst} {set worst $value}}
+    if {$worst > $limit} {error "LATENCY CDC physical delay exceeded: $label $worst > $limit"}
+    puts "DEMO_CDC_PHYSICAL $label source_count=1 target_count=1 max_data_delay_ns=$worst limit_ns=$limit"
+    incr demo_cdc_paths
+}
+if {$demo_cdc_paths != 34} {error "DEMO CDC audit group count mismatch"}
 puts "DEMO_CDC_PHYSICAL_PASS groups=$demo_cdc_paths"

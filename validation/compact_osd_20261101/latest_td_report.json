@@ -1,0 +1,19 @@
+{
+  "source": "User-generated GUI TD reports; not run by assistant",
+  "resource_report_local_path": "D:\\workplace\\anlogic\\sc520-vibration-detection-main\\td_project\\camera_to_dsi_display_Runs\\phy_1\\camera_to_dsi_display_phy.area",
+  "resource_report_sha256": "e5af9b8db98e33160b806b84e9c1f67ff672b77a5f2d2f7785ab6037c76f8369",
+  "timing_report_sha256": "cd60c14bbdb38fb810e8a0aca8768caca21f7904e263fdb1f4278868ea4cf34c",
+  "resource_report_mtime_local": "2026-11-01T17:55:06.142267",
+  "resources": {
+    "lut6": 18681,
+    "reg": 17029,
+    "slice": 19329,
+    "dsp": 40,
+    "eram": 66
+  },
+  "timing": "SWNS: 0.012ns, STNS: 0.000ns.\nHWNS: 0.020ns, HTNS: 0.000ns.",
+  "previous_large_latency_slice": 19334,
+  "compact_slice_delta": -5,
+  "current_osd_sha256": "29035c379ce1f98a87c39baf340ba62ce5fe5b80a4ddc4eabc4488888e1a6369",
+  "patched_flow_and_physical_cdc_acceptance_confirmed": false
+}

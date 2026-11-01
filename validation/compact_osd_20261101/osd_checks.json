@@ -1,0 +1,31 @@
+{
+  "pass": true,
+  "pixels_checked": 3686400,
+  "font_pixels": [
+    5,
+    7
+  ],
+  "character_pitch": 8,
+  "latency_box": [
+    92,
+    24,
+    104,
+    16
+  ],
+  "status_box": [
+    20,
+    684,
+    296,
+    32
+  ],
+  "states_checked": [
+    "ON",
+    "OFF",
+    "WAIT",
+    "mixed"
+  ],
+  "outside_panels_matches_original": true,
+  "disabled_parameters_and_combinational_video_bypass": true,
+  "td_run": false,
+  "source_sha256": "29035c379ce1f98a87c39baf340ba62ce5fe5b80a4ddc4eabc4488888e1a6369"
+}

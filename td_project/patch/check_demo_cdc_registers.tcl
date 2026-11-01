@@ -6,6 +6,7 @@ foreach {inst width} {
     u_demo_sensor_controls 1
     u_demo_mipi_status 5
     u_demo_sensor_status 3
+    u_video_latency/u_result_cdc 17
 } {
     foreach {from to expected} [list \
         {payload[*]} {O_dst_data[*]} $width \
@@ -28,5 +29,19 @@ foreach {inst width} {
         incr demo_register_groups
     }
 }
-if {$demo_register_groups != 25} {error "DEMO CDC register group count mismatch"}
+foreach {from to} {
+    S_cam_frame_toggle u_video_latency/camera_s1
+    u_video_latency/camera_s1 u_video_latency/camera_s2
+    u_video_latency/output_toggle u_video_latency/output_s1
+    u_video_latency/output_s1 u_video_latency/output_s2
+} {
+    set a [get_regs $from]
+    set b [get_regs $to]
+    if {[llength $a] != 1 || [llength $b] != 1} {
+        error "LATENCY CDC collection mismatch: $from -> $to"
+    }
+    if {![get_property ASYNC_REG $b]} {error "LATENCY CDC ASYNC_REG missing: $b"}
+    incr demo_register_groups
+}
+if {$demo_register_groups != 34} {error "DEMO CDC register group count mismatch"}
 puts "DEMO_CDC_REGISTERS_PASS groups=$demo_register_groups"
