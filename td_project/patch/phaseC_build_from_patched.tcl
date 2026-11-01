@@ -55,7 +55,7 @@ step demo_cdc {
     set audit_log [read $fd]
     close $fd
     puts $audit_log
-    if {[string first {DEMO_CDC_PHYSICAL_PASS groups=34} $audit_log] < 0 ||
+    if {[string first {DEMO_CDC_PHYSICAL_PASS groups=40} $audit_log] < 0 ||
         [string first PHASE_D_DONE $audit_log] < 0} {
         error "Independent DEMO CDC audit failed; see demo_cdc_audit.log"
     }

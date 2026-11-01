@@ -302,7 +302,7 @@ def main():
     out = args.output or root.parent / '_build' / root.name / 'sensor-gain-compare-20261031/validation'
     out.mkdir(parents=True, exist_ok=True)
     hdl = root / 'user_source/hdl_source'
-    compiler = Path('D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin/iverilog.exe')
+    compiler = Path('C:/iverilog/bin/iverilog.exe')
     files = [hdl / x for x in ('uiisp_beta/ae_set.v', 'uics520_cfg/uicfgcs520.v', 'uics520_cfg/SC520GainTbl.v',
                                'uics520_cfg/uics520regAE.v', 'uics520_cfg/uics520reg_720p60.v')]
     summary = {'pass': False, 'scope': 'Production debounce, fixed900 gain candidates, real tables, grouped writes, six readbacks, injected failures and legacy cycle equivalence',

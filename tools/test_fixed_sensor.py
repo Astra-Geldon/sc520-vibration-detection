@@ -83,7 +83,7 @@ wire[1:0] req,cfg,done,error,idok;
 wire[15:0] ae[0:1],ag[0:1],id[0:1];wire[1:0] scl;tri1 sda0,sda1;
 wire[1:0] gray;wire verified;
 integer cycles=0,requests0=0,requests1=0,k;
-ae_set control(.I_clk(clk),.I_rst(!rstn),.I_ae_cfg_done(done[0]),.I_cam_cfg_done(cfg[0]),
+ae_set control(.I_auto_en(1'b0),.I_freeze(1'b0),.I_measure(6'b0),.I_measure_valid(1'b0),.I_clk(clk),.I_rst(!rstn),.I_ae_cfg_done(done[0]),.I_cam_cfg_done(cfg[0]),
  .O_ae_req(req[0]),.O_ae(ae[0]),.O_ag(ag[0]));
 ae_set_legacy #(.EXP_RST(3),.GAIN_COMPARE_EN(1),.GAIN_RST(1),.GAIN12_EN(1)) old_control(
  .I_clk(clk),.I_rst(!rstn),.I_btn(4'b1111),.I_exp_key_n(1'b1),
@@ -146,7 +146,7 @@ HANDSHAKE = r'''
 module tb;
 reg clk=0,rst=1,cam=0,done=0;always #5 clk=~clk;
 wire req,newreq;wire[15:0] ae,ag,newae,newag;integer n=0,pulses=0,k;
-ae_set uut(.I_clk(clk),.I_rst(rst),.I_ae_cfg_done(done),.I_cam_cfg_done(cam),
+ae_set uut(.I_auto_en(1'b0),.I_freeze(1'b0),.I_measure(6'b0),.I_measure_valid(1'b0),.I_clk(clk),.I_rst(rst),.I_ae_cfg_done(done),.I_cam_cfg_done(cam),
  .O_ae_req(newreq),.O_ae(newae),.O_ag(newag));
 ae_set_legacy #(.EXP_RST(3),.GAIN_COMPARE_EN(1),.GAIN_RST(1),.GAIN12_EN(1)) refu(
  .I_clk(clk),.I_rst(rst),.I_btn(4'b1111),.I_exp_key_n(1'b1),
@@ -178,7 +178,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    iv = Path('D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin/iverilog.exe')
+    iv = Path('C:/iverilog/bin/iverilog.exe')
     hdl = root / 'user_source/hdl_source'
     if 'I_frame_tick' in (hdl/'uics520_cfg/uicfgcs520.v').read_text(encoding='utf-8'):
         # The old same-cycle comparison predates the intentional startup wait.

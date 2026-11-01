@@ -390,11 +390,18 @@ module design_top_wrapper (
     assign O_screen_pwm = 1'b1;
     assign S_video_out_vsync = ~S_hdmi_vsync;
 
-    wire [4:0] S_demo_switches, S_demo_mipi, S_demo_hdmi, S_demo_mipi_status;
+    wire [4:0] S_demo_switches, S_demo_mipi, S_demo_mipi_status;
+    wire [5:0] S_demo_hdmi;
     wire S_demo_switch_valid, S_demo_mipi_valid, S_demo_hdmi_valid, S_demo_mipi_status_valid;
-    wire S_demo_protect, S_demo_protect_valid;
+    wire [3:0] S_demo_sensor_controls;
+    wire S_demo_sensor_controls_valid;
+    wire S_ae_enable_sys, S_auto_applied;
+    wire [5:0] S_ae_luma, S_ae_measure_mipi, S_ae_measure_sensor;
+    wire S_ae_luma_valid, S_ae_luma_fs, S_ae_measure_valid, S_ae_measure_sensor_valid;
     wire S_protect_applied, S_protect_pending, S_protect_valid;
-    wire [2:0] S_demo_sensor_status;
+    wire S_ae_paused = S_demo_sensor_controls[1] &&
+                       (S_demo_sensor_controls[2] || S_demo_sensor_controls[3]);
+    wire [3:0] S_demo_sensor_status;
     wire S_demo_sensor_status_valid;
     reg S_demo_vs_d;
     wire S_demo_frame_apply = S_hdmi_vsync && !S_demo_vs_d;
@@ -406,23 +413,29 @@ module design_top_wrapper (
         .I_clk(I_sys_clk), .I_rst_n(S_rst_n), .I_async(I_sw),
         .O_state(S_demo_switches), .O_valid(S_demo_switch_valid)
     );
+    // C7 / I_key[3]: active-low K3, one toggle per debounced press.
+    ae_key_toggle #(.DEFAULT_ENABLE(1'b1)) u_ae_key (
+        .I_clk(I_sys_clk), .I_rst_n(S_rst_n), .I_key_n(I_key[3]),
+        .O_enable(S_ae_enable_sys)
+    );
     demo_control_cdc u_demo_mipi_controls (
         .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
         .I_src_data(S_demo_switches), .I_src_valid(S_demo_switch_valid),
         .I_dst_clk(S_csi_rx_clk), .I_dst_rst_n(S_rst_n), .I_dst_apply(S_raw_tuser),
         .O_dst_data(S_demo_mipi), .O_dst_valid(S_demo_mipi_valid)
     );
-    demo_control_cdc u_demo_hdmi_controls (
+    demo_control_cdc #(.WIDTH(6), .INITIAL(6'b111111)) u_demo_hdmi_controls (
         .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
-        .I_src_data(S_demo_switches), .I_src_valid(S_demo_switch_valid),
+        .I_src_data({S_ae_enable_sys, S_demo_switches}), .I_src_valid(S_demo_switch_valid),
         .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
         .O_dst_data(S_demo_hdmi), .O_dst_valid(S_demo_hdmi_valid)
     );
-    demo_control_cdc #(.WIDTH(1), .INITIAL(1'b1)) u_demo_sensor_controls (
+    demo_control_cdc #(.WIDTH(4), .INITIAL(4'b0011)) u_demo_sensor_controls (
         .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
-        .I_src_data(S_demo_switches[4]), .I_src_valid(S_demo_switch_valid),
+        .I_src_data({~S_demo_switches[3], S_vib_enable_sys, S_ae_enable_sys, S_demo_switches[4]}),
+        .I_src_valid(S_demo_switch_valid),
         .I_dst_clk(S_24m_clk), .I_dst_rst_n(S_rst_n), .I_dst_apply(1'b1),
-        .O_dst_data(S_demo_protect), .O_dst_valid(S_demo_protect_valid)
+        .O_dst_data(S_demo_sensor_controls), .O_dst_valid(S_demo_sensor_controls_valid)
     );
     // Return committed states, not the mechanical switch request, to the OSD.
     demo_control_cdc u_demo_mipi_status (
@@ -431,16 +444,16 @@ module design_top_wrapper (
         .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
         .O_dst_data(S_demo_mipi_status), .O_dst_valid(S_demo_mipi_status_valid)
     );
-    demo_control_cdc #(.WIDTH(3), .INITIAL(3'b101)) u_demo_sensor_status (
+    demo_control_cdc #(.WIDTH(4), .INITIAL(4'b0110)) u_demo_sensor_status (
         .I_src_clk(S_24m_clk), .I_src_rst_n(S_rst_n),
-        .I_src_data({S_protect_applied, S_protect_pending, S_protect_valid}), .I_src_valid(1'b1),
+        .I_src_data({S_auto_applied, S_protect_applied, (S_protect_pending || S_ae_paused), S_protect_valid}), .I_src_valid(1'b1),
         .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
         .O_dst_data(S_demo_sensor_status), .O_dst_valid(S_demo_sensor_status_valid)
     );
     wire S_demo_raw = !S_demo_mipi_status[3];
     wire [5:0] S_demo_alg_state = {
         S_demo_mipi_status[3],
-        S_demo_sensor_status[2],
+        S_demo_sensor_status[3],
         S_demo_hdmi[1] && !S_demo_raw && (S_tone_stage_mode == 0),
         S_demo_hdmi[2] && !S_demo_raw && ((S_tone_stage_mode == 0) || (S_tone_stage_mode == 2)),
         S_demo_mipi_status[1],
@@ -448,8 +461,9 @@ module design_top_wrapper (
     };
     wire [5:0] S_demo_alg_pending = {
         !S_demo_mipi_status_valid || (S_demo_mipi_status[3] != S_demo_hdmi[3]),
-        !S_demo_sensor_status_valid || !S_demo_sensor_status[0] || S_demo_sensor_status[1] ||
-            (S_demo_sensor_status[2] != S_demo_hdmi[4]),
+        !S_demo_hdmi_valid || !S_demo_sensor_status_valid || !S_demo_sensor_status[0] || S_demo_sensor_status[1] ||
+            (S_demo_sensor_status[3] != S_demo_hdmi[5]) ||
+            (!S_demo_hdmi[5] && (S_demo_sensor_status[2] != S_demo_hdmi[4])),
         !S_demo_hdmi_valid || !S_demo_mipi_status_valid ||
             (S_demo_mipi_status[3:1] != S_demo_hdmi[3:1]),
         !S_demo_hdmi_valid || !S_demo_mipi_status_valid ||
@@ -518,11 +532,15 @@ module design_top_wrapper (
       .I_rst(~S_rst_n),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
-      .I_protect_en(S_demo_protect),
+      .I_protect_en(S_demo_sensor_controls[0]),
+      .I_auto_en(S_demo_sensor_controls[1]),
+      .I_freeze(S_demo_sensor_controls[2] || S_demo_sensor_controls[3]),
+      .I_measure(S_ae_measure_sensor), .I_measure_valid(S_ae_measure_sensor_valid),
       .O_ae_req(S_ae_req),
       .O_ae(S_ae),
       .O_ag(S_ag),
-      .O_protect_applied(S_protect_applied), .O_pending(S_protect_pending), .O_valid(S_protect_valid)
+      .O_protect_applied(S_protect_applied), .O_pending(S_protect_pending), .O_valid(S_protect_valid),
+      .O_auto_applied(S_auto_applied)
   );
   
     uicfgcs520 #(
@@ -711,8 +729,22 @@ isp_top u_isp_top (
 .O_tlast         (S_ISP_O_tlast ),
 .O_tuser         (S_ISP_O_tuser ),
 .O_tvalid        (S_ISP_O_tvalid),
-.I_tready        ()
+.I_tready        (),
+.O_ae_luma(S_ae_luma), .O_ae_valid(S_ae_luma_valid), .O_ae_frame_start(S_ae_luma_fs)
   );
+
+    ae_luma_sampler u_ae_sampler (
+        .I_clk(S_csi_rx_clk), .I_rst_n(S_rst_n),
+        .I_frame_start(S_ae_luma_fs), .I_valid(S_ae_luma_valid),
+        .I_luma(S_ae_luma), .I_enable(S_demo_mipi[3]),
+        .O_measure(S_ae_measure_mipi), .O_valid(S_ae_measure_valid)
+    );
+    demo_control_cdc #(.WIDTH(6), .INITIAL(6'b000011)) u_ae_measure_cdc (
+        .I_src_clk(S_csi_rx_clk), .I_src_rst_n(S_rst_n),
+        .I_src_data(S_ae_measure_mipi), .I_src_valid(S_ae_measure_valid),
+        .I_dst_clk(S_24m_clk), .I_dst_rst_n(S_rst_n), .I_dst_apply(1'b1),
+        .O_dst_data(S_ae_measure_sensor), .O_dst_valid(S_ae_measure_sensor_valid)
+    );
 
 
     video_in u_video_in(

@@ -49,11 +49,13 @@ assert all((ROOT / "td_project" / ref).resolve().is_file() for ref in refs)
 # Mock TD commands in a separate folder; never read/write a real TD database.
 TCL = r'''
 array set widths {
-    u_demo_mipi_controls 5 u_demo_hdmi_controls 5 u_demo_sensor_controls 1
-    u_demo_mipi_status 5 u_demo_sensor_status 3 u_video_latency/u_result_cdc 17
+    u_demo_mipi_controls 5 u_demo_hdmi_controls 6 u_demo_sensor_controls 4
+    u_demo_mipi_status 5 u_demo_sensor_status 4 u_video_latency/u_result_cdc 17 u_ae_measure_cdc 6
 }
+set mock_fault none
 proc get_regs {pattern} {
-    global widths
+    global widths mock_fault
+    if {$mock_fault eq "measure_missing" && $pattern eq {u_ae_measure_cdc/payload[*]}} {return {}}
     if {[regexp {^(.+)/(payload|O_dst_data)\[\*\]$} $pattern -> inst base]} {
         set count $widths($inst)
         if {$inst eq "u_demo_mipi_status" && $base eq "O_dst_data"} {set count 4}
@@ -63,7 +65,11 @@ proc get_regs {pattern} {
     }
     return [list $pattern]
 }
-proc get_property {args} {return 1}
+proc get_property {property reg} {
+    global mock_fault
+    if {$mock_fault eq "key_not_async" && $reg eq "u_ae_key/key_meta"} {return 0}
+    return 1
+}
 proc get_ports {args} {return dummy}
 proc get_nets {args} {return dummy}
 proc get_clocks {args} {return dummy}
@@ -73,7 +79,12 @@ foreach command {create_clock derive_clocks rename_clock set_false_path set_cloc
 proc report_timing_path {args} {
     set index [lsearch -exact $args -file]
     set fd [open [lindex $args [expr {$index+1}]] w]
-    puts $fd "Data Path Delay : 0.500ns"
+    global mock_fault
+    if {$mock_fault eq "key_slow" && [lsearch -exact $args u_ae_key/key_sync] >= 0} {
+        puts $fd "Data Path Delay : 4.500ns"
+    } else {
+        puts $fd "Data Path Delay : 0.500ns"
+    }
     close $fd
 }
 source camera_to_dsi_display.sdc
@@ -90,9 +101,30 @@ assert tcl, "tclsh required for syntax-only mocked audit"
 result = subprocess.run([tcl, "audit_mock.tcl"], cwd=SIM, capture_output=True, text=True, timeout=30)
 (SIM / "tcl_mock.log").write_text(result.stdout + result.stderr, encoding="utf-8")
 assert result.returncode == 0, result.stdout + result.stderr
-assert "DEMO_CDC_REGISTERS_PASS groups=34" in result.stdout
-assert "DEMO_CDC_PHYSICAL_PASS groups=34" in result.stdout
+assert "DEMO_CDC_REGISTERS_PASS groups=40" in result.stdout
+assert "DEMO_CDC_PHYSICAL_PASS groups=40" in result.stdout
 assert "LATENCY_TCL_MOCK_PASS" in result.stdout
+
+# The mocks deliberately inject missing registers, a missing first-stage
+# ASYNC_REG attribute, and a slow key stage1->stage2 data path. Each must fail;
+# a success marker alone does not demonstrate that the auditor rejects errors.
+negative_cases = {
+    "measure_missing": "DEMO CDC collection mismatch: u_ae_measure_cdc",
+    "key_not_async": "AE KEY CDC ASYNC_REG missing: u_ae_key/key_meta",
+    "key_slow": "LATENCY CDC physical delay exceeded: u_ae_key_key_meta_u_ae_key_key_sync",
+}
+for fault, expected_error in negative_cases.items():
+    (SIM / "audit_mock.tcl").write_text(TCL.replace("set mock_fault none", "set mock_fault " + fault), encoding="utf-8")
+    failed = subprocess.run([tcl, "audit_mock.tcl"], cwd=SIM, capture_output=True, text=True, timeout=30)
+    (SIM / ("tcl_mock_" + fault + ".log")).write_text(failed.stdout + failed.stderr, encoding="utf-8")
+    assert failed.returncode != 0 and expected_error in failed.stderr, (fault, failed.stdout, failed.stderr)
+(SIM / "audit_mock.tcl").write_text(TCL, encoding="utf-8")
+
+sdc = (ROOT / "td_project/camera_to_dsi_display.sdc").read_text(encoding="utf-8")
+assert len(re.findall(r"^set_max_delay\s", sdc, re.M)) == 40
+assert "set_false_path -from [get_ports {I_key[3]}] -to [get_regs {u_ae_key/key_meta}]" in sdc
+assert "set_false_path -from [get_ports {I_key[*]}]" not in sdc
+assert "set_false_path -from [get_ports {I_key[3]}]\n" not in sdc
 
 files = [HDL / n for n in ("design_top_wrapper.v", "video_in.v", "video_out.v",
                           "osd_overlay.v", "video_latency_monitor.v")]
@@ -102,9 +134,10 @@ summary = {
     "video_in_out_original_logic_unchanged": True,
     "project_references_exist": True,
     "tcl_sdc_and_audit_syntax_mock_only": True,
-    "cdc_groups_expected": 34,
+    "cdc_groups_expected": 40,
+    "cdc_fault_injection_rejected": list(negative_cases),
     "td_synthesis_place_route_or_programming_run": False,
     "source_sha256": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
 }
 (OUT / "integration_checks.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
-print("LATENCY_INTEGRATION_PASS: ports, unchanged DDR logic, project references, mocked Tcl 34 groups")
+print("LATENCY_INTEGRATION_PASS: ports, unchanged DDR logic, project references, mocked Tcl 40 groups")

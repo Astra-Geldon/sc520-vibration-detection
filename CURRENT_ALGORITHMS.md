@@ -5,7 +5,7 @@
 ## 活动链路与算法位置
 
 ```text
-传感器曝光/增益（SW5，从采集源控制）
+传感器曝光/增益（K3自动曝光；关闭后SW5固定档，从采集源控制）
 SC520CS RAW10 → MIPI CSI → BGGR双线性去马赛克（SW4）
 → AWB（SW1）→ Gamma（SW2）→ RGB打包/DDR帧缓存
 → Color Shading（SW3）→ img_proc模式 → 固定N1（SW2）
@@ -15,7 +15,7 @@ ISP被动抽头 → 640×360微振动链路 → 结果标记叠加至HDMI
                                └→ UART诊断
 ```
 
-源代码入口：[顶层](user_source/hdl_source/design_top_wrapper.v)、[ISP](user_source/hdl_source/isp/isp_top.v)。图像路径保持原流式处理和 DDR 视频缓存，无交替曝光；振动路径另用外部 DDR 保存上一帧。六项图像展示能力为 DEM/AWB/GAM/CSC/N1/EXP，其中 Gamma 和 N1 共用 SW2。KEY3 独立控制微振动算法，默认 OFF。
+源代码入口：[顶层](user_source/hdl_source/design_top_wrapper.v)、[ISP](user_source/hdl_source/isp/isp_top.v)。图像路径保持原流式处理和 DDR 视频缓存，无交替曝光；振动路径另用外部 DDR 保存上一帧。六项图像展示能力为 DEM/AWB/GAM/CSC/N1/AE，其中 Gamma 和 N1 共用 SW2。KEY3 独立控制微振动算法，默认 OFF。
 
 ## 1. 去马赛克与RAW展示（SW4）
 
@@ -102,3 +102,5 @@ KEY3 默认 OFF；关闭时算法链保持复位，振动 DDR 请求被门控，
 为避免 DSP 不足时合并主图像乘法器，`vib_bbox_grid` 仅增加 `(* dsp_style = "no" *)`，将本模块 6 个 DSP 运算映射到 LUT/Slice；未改算法公式、位宽或流水节拍。最终全工程 DSP 为 40，图像 31 个 DSP 保持独立，原 5 条物理浮空网警告已消失。
 
 当前 Bit 于 2026-11-01 15:56:33（北京时间）烧录成功，用户随后截图已无此前绿色竖条。完整频率识别验收尚未进行；构建与烧录证据见[本次修复档案](validation/green_lines_dsp_20261101/README.md)。
+
+当前源码新增 [前端独立抽样自动曝光](AUTO_EXPOSURE.md)，C7／I_key[3]默认开启；上文Bit哈希为接入AE前的历史基线，不包含新功能。

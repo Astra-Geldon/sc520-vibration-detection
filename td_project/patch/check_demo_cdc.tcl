@@ -18,15 +18,18 @@ close $fd
     read_sdc -ip ddr2 ../user_source/hdl_source/ph1p35_ddr/ddr2/src/sdc/ddr2.sdc
     read_sdc -ip w128_d512_fifo ../user_source/ip_source/w128_d512_fifo/w128_d512_fifo.tcl
     update_timing -mode final
-# Audit six production mailboxes and two passive frame-event synchronizers.
+# Audit seven production mailboxes, two passive frame-event synchronizers,
+# and the AE button synchronizer. The external key to stage1 is false-pathed;
+# the stage1 to stage2 physical path remains bounded and is audited below.
 set demo_cdc_paths 0
 foreach {inst width} {
     u_demo_mipi_controls 5
-    u_demo_hdmi_controls 5
-    u_demo_sensor_controls 1
+    u_demo_hdmi_controls 6
+    u_demo_sensor_controls 4
     u_demo_mipi_status 5
-    u_demo_sensor_status 3
+    u_demo_sensor_status 4
     u_video_latency/u_result_cdc 17
+    u_ae_measure_cdc 6
 } {
     foreach {from to limit expected} [list \
         {payload[*]} {O_dst_data[*]} 8.0 $width \
@@ -70,6 +73,7 @@ foreach {from to limit} {
     u_video_latency/camera_s1 u_video_latency/camera_s2 4.0
     u_video_latency/output_toggle u_video_latency/output_s1 8.0
     u_video_latency/output_s1 u_video_latency/output_s2 4.0
+    u_ae_key/key_meta u_ae_key/key_sync 4.0
 } {
     set a [get_regs $from]
     set b [get_regs $to]
@@ -91,5 +95,5 @@ foreach {from to limit} {
     puts "DEMO_CDC_PHYSICAL $label source_count=1 target_count=1 max_data_delay_ns=$worst limit_ns=$limit"
     incr demo_cdc_paths
 }
-if {$demo_cdc_paths != 34} {error "DEMO CDC audit group count mismatch"}
+if {$demo_cdc_paths != 40} {error "DEMO CDC audit group count mismatch"}
 puts "DEMO_CDC_PHYSICAL_PASS groups=$demo_cdc_paths"

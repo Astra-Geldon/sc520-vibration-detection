@@ -1,0 +1,15 @@
+{
+  "source": "User-generated TD GUI build reports, read only; assistant did not build",
+  "resources": {
+    "lut6": 17012,
+    "reg": 17172,
+    "slice": 18202,
+    "dsp": 40,
+    "eram": 66
+  },
+  "timing": "SWNS: 0.108ns, STNS: 0.000ns.\nHWNS: 0.020ns, HTNS: 0.000ns.",
+  "resource_report_sha256": "49c032bd4aef7da2576b55f9d738cada6063a6322a257e6037bf80b8c5b89106",
+  "timing_report_sha256": "898fdc4fdefe41f7d58c9be4548811a47e8b1fb2e1a689d39b9bb9d500482e92",
+  "user_feedback": "AE responds to scene changes; dark scene needs more brightness",
+  "patched_flow_acceptance_confirmed": false
+}

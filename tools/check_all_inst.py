@@ -52,7 +52,8 @@ def parse_module(text, name):
         pblock = re.sub(r"\[[^\]]*\]", " ", pblock)
         for chunk in pblock.split("|")[1:]:
             for nm in chunk.split(","):
-                nm = nm.strip()
+                # ANSI output registers may have a legal declaration initializer.
+                nm = nm.split("=", 1)[0].strip()
                 if re.fullmatch(r"[A-Za-z_]\w*", nm):
                     ports.append(nm)
     return params, ports

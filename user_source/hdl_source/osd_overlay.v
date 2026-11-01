@@ -225,7 +225,7 @@ module osd_overlay #(
                 3'd1: case (letter) 0:status_label="G";1:status_label="A";2:status_label="M";endcase
                 3'd2: case (letter) 0:status_label="C";1:status_label="S";2:status_label="C";endcase
                 3'd3: case (letter) 0:status_label="N";1:status_label="1";endcase
-                3'd4: case (letter) 0:status_label="E";1:status_label="X";2:status_label="P";endcase
+                3'd4: case (letter) 0:status_label="A";1:status_label="E";endcase
                 3'd5: case (letter) 0:status_label="D";1:status_label="E";2:status_label="M";endcase
                 default: status_label=" ";
             endcase
@@ -236,12 +236,12 @@ module osd_overlay #(
     always @(*) begin
         S_status_ascii = " ";
         case (S_status_char)
-            4'd0: S_status_ascii = "S";
+            4'd0: S_status_ascii = (S_status_item == 3'd4) ? "K" : "S";
             4'd1: case (S_status_item)
                 3'd0:S_status_ascii="1";
                 3'd1,3'd3:S_status_ascii="2";
                 3'd2:S_status_ascii="3";
-                3'd4:S_status_ascii="5";
+                3'd4:S_status_ascii="3";
                 3'd5:S_status_ascii="4";
                 default:S_status_ascii=" ";
             endcase
@@ -303,6 +303,7 @@ module osd_overlay #(
         input [7:0] ascii;
         begin
             case (ascii)
+                "K":status_glyph=35'b10001_10010_10100_11000_10100_10010_10001;
                 "A":status_glyph=35'b01110_10001_10001_11111_10001_10001_10001;
                 "B":status_glyph=35'b11110_10001_10001_11110_10001_10001_11110;
                 "C":status_glyph=35'b01111_10000_10000_10000_10000_10000_01111;

@@ -45,6 +45,8 @@ cd D:\workplace\anlogic\sc520-vibration-detection-main
 powershell -NoProfile -ExecutionPolicy Bypass -File .\td_project\patch\build_all.ps1 -TdExe 'D:\Anlogic\TD6.2.1\bin\td_commands_prompt.exe'
 ```
 
-验收仍按 `BUILD_AND_PROGRAM.md`：HDMI 补丁通过、DSP 不超过 40、没有新增物理浮空网警告、setup/hold 收敛、`DEMO_CDC_REGISTERS_PASS groups=34` 和 `DEMO_CDC_PHYSICAL_PASS groups=34`。旧 Bit 不含本功能，不能用它验证此次代码。
+验收仍按 `BUILD_AND_PROGRAM.md`：HDMI 补丁通过、DSP 不超过 40、没有新增物理浮空网警告、setup/hold 收敛、`DEMO_CDC_REGISTERS_PASS groups=40` 和 `DEMO_CDC_PHYSICAL_PASS groups=40`（接入 AE 后）。旧 Bit 不含本功能，不能用它验证此次代码。
 
 上板后先看原图颜色及画面稳定性，再看左上延时由横杠变成数值；KEY1/KEY2 和五个图像开关、KEY3 振动使能继续按原工程使用。这里显示的是芯片内部帧延时；若要测曝光到屏幕实际发光的总延时，需要额外光学测试。
+
+当前自动曝光增加一组6位统计邮箱和K3同步器，CDC审计现为40组；上述34组验证与资源数据是接入AE前的历史结果，AE新增资源与物理时序待重新编译。

@@ -39,12 +39,12 @@ A 阶段综合并导出数据库；B 阶段修复加密 HDMI 核的 12 个计数
 
 | 检查 | 成功标志／文件 |
 |---|---|
-| 综合 | `pA.log`：`PHASE_A_DONE ERR=0`、`DEMO_CDC_REGISTERS_PASS groups=34` |
+| 综合 | `pA.log`：`PHASE_A_DONE ERR=0`、`DEMO_CDC_REGISTERS_PASS groups=40` |
 | HDMI 补丁 | `pB.log`：`PATCH_FINISHED`、`VERIFIED_COUNTER_SELECTORS12` |
 | 补丁保留 | `pC.log`：`CHECK valid_2d=2 valid_3d=14` |
 | DSP | bbox DSP=0，总 DSP≤40，`No need to merge 9x9 Dsps.` |
 | 布线 | 无新增物理无驱动网／跳过布线警告，`eco open net = 0` |
-| 时序／CDC | `DEMO_PRODUCTION_TIMING_PASS`、`DEMO_CDC_PHYSICAL_PASS groups=34`、`PHASE_D_DONE` |
+| 时序／CDC | `DEMO_PRODUCTION_TIMING_PASS`、`DEMO_CDC_PHYSICAL_PASS groups=40`、`PHASE_D_DONE` |
 | 完成 | `PHASE_C_DONE ERR=0`，新 Bit 时间戳和 SHA256 |
 
 核对 `camera_to_dsi_display_phy.area` 资源和 `patched_final_timing.rpt` 的 setup/hold 后再烧录。上述已验证 Bit 与[资源说明](RESOURCE_USAGE.md)属于添加延时显示之前的基线；延时显示源码尚需用户完整构建，含新增 9 组 CDC 审计。测量口径见[延时显示说明](LATENCY_DISPLAY.md)。

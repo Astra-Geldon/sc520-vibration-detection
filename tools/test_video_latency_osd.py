@@ -79,6 +79,7 @@ module tb;
         begin
             case (ascii)
                 "L":glyph=35'b10000_10000_10000_10000_10000_10000_11111;
+                "K":glyph=35'b10001_10010_10100_11000_10100_10010_10001;
                 "A":glyph=35'b01110_10001_10001_11111_10001_10001_10001;
                 "T":glyph=35'b11111_00100_00100_00100_00100_00100_00100;
                 "M":glyph=35'b10001_11011_10101_10101_10001_10001_10001;
@@ -119,7 +120,7 @@ module tb;
         begin
             case(item)
                 0:label="S1 AWB "; 1:label="S2 GAM "; 2:label="S3 CSC ";
-                3:label="S2 N1  "; 4:label="S5 EXP "; 5:label="S4 DEM ";
+                3:label="S2 N1  "; 4:label="K3 AE  "; 5:label="S4 DEM ";
             endcase
             // Strings above are seven characters, right aligned in 88 bits.
             label_char=(label >> (8*(6-index))) & 8'hff;

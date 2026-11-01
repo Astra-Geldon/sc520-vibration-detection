@@ -27,7 +27,7 @@ assign sda=slave_low?1'b0:1'bz;
 wire S_csi_rx_clk=byteclk,S_24m_clk=clk,S_rst_n=rst_n,S_cam_i2c_ready=rst_n;
 reg S_csi_frame_start=0;
 __REAL_FRAME_CDC__
-ae_set control(.I_clk(clk),.I_rst(!rst_n),.I_protect_en(1'b1),.I_ae_cfg_done(ae_done),
+ae_set control(.I_auto_en(1'b0),.I_freeze(1'b0),.I_measure(6'b0),.I_measure_valid(1'b0),.I_clk(clk),.I_rst(!rst_n),.I_protect_en(1'b1),.I_ae_cfg_done(ae_done),
  .I_cam_cfg_done(cfg),.O_ae_req(req),.O_ae(ae),.O_ag(ag),
  .O_protect_applied(protect_applied),.O_pending(protect_pending),.O_valid(protect_valid));
 uicfgcs520 #(.CLK_DIV(237)) dut(
@@ -182,7 +182,7 @@ def main():
     hashes = {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in bound}
     bench = out/'startup_bit_tb.v'
     bench.write_text(BENCH.replace('__REAL_FRAME_CDC__', cdc), encoding='utf-8')
-    iv = Path('D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin/iverilog.exe')
+    iv = Path('C:/iverilog/bin/iverilog.exe')
 
     def run(case):
         binary = out/f'case{case}.vvp'

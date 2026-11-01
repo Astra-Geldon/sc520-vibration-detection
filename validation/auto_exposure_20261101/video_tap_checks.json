@@ -1,0 +1,45 @@
+{
+  "pass": true,
+  "td_run": false,
+  "source_sha256": {
+    "user_source\\hdl_source\\awb.v": "0f750a1658c71a723c1ec341b56bd2c88cec1f0f026c7718fac183c19e20dc9e",
+    "user_source\\hdl_source\\isp\\isp_top.v": "5967fd5c8e2d0f1e57166bc634220b3b6bcca4f0b6c4adf1a9662d5ee1aaa50c",
+    "user_source\\hdl_source\\signal_delay.v": "3d8b1fc1faebf25c451b590bfc2435e8ecaf98c58a060cf94fe8f7fa9100851f"
+  },
+  "static": {
+    "awb_original_tokens_preserved": true,
+    "isp_original_tokens_and_video_connections_preserved": true,
+    "isp_ae_ports_pass_through": true
+  },
+  "simulation": {
+    "video_ports": [
+      "data",
+      "valid",
+      "user",
+      "last",
+      "ready"
+    ],
+    "compared_at": "Each input change and each rising clock",
+    "tap_reference": "Externally supplied RGB/input FS/valid, registered once",
+    "vendor_ram_substitute": true,
+    "real_awb_and_signal_delay_used": true,
+    "cases": [
+      {
+        "case": "normal_ram1",
+        "pass": true,
+        "cycles": 77621
+      },
+      {
+        "case": "normal_ram2",
+        "pass": true,
+        "cycles": 77621
+      },
+      {
+        "case": "raw_pass",
+        "pass": true,
+        "cycles": 77621
+      }
+    ]
+  },
+  "limit": "RTL equivalence with shared behavioral RAM does not establish physical timing"
+}

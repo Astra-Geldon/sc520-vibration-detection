@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "td_run": false,
+  "cases": [
+    {
+      "name": "control",
+      "passed": true,
+      "result": "PASS automatic exposure: 66 real requests, handshake, step/clamps, feedback settling, freeze, modes and failure\nD:\\workplace\\anlogic\\sc520-vibration-detection-main\\validation\\auto_exposure_20261101\\control\\control_tb.v:98: $finish called at 42701000 (1ps)"
+    },
+    {
+      "name": "key",
+      "passed": true,
+      "result": "PASS K3: default ON, startup-held inhibition, bounce, release debounce and long press\nD:\\workplace\\anlogic\\sc520-vibration-detection-main\\validation\\auto_exposure_20261101\\control\\key_tb.v:21: $finish called at 4781000 (1ps)"
+    }
+  ]
+}

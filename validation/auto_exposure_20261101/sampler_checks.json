@@ -1,0 +1,26 @@
+{
+  "pass": true,
+  "td_run": false,
+  "reference": "External frame pixels and validity, independent unbounded sums",
+  "source_sha256": "ce6236b140dedd71e336c4142862da8531eebf0dd16be068ca46ce734c1016a2",
+  "cases": [
+    {
+      "case": "edge_cases",
+      "pass": true,
+      "cycles": 2431,
+      "published_frames": 35
+    },
+    {
+      "case": "no_decimation",
+      "pass": true,
+      "cycles": 14,
+      "published_frames": 2
+    },
+    {
+      "case": "720p",
+      "pass": true,
+      "cycles": 460807,
+      "published_frames": 2
+    }
+  ]
+}

@@ -9,6 +9,7 @@
 | [README](README.md) | 版本、目录、操作、bit 路径和资源总览 |
 | [TEAM_GUIDE](TEAM_GUIDE.md) | 队友快速上手和常用操作 |
 | [FIVE_SWITCH_DEMO](FIVE_SWITCH_DEMO_20261101.md) | 五拨码、按键和 OSD 状态语义 |
+| [AUTO_EXPOSURE](AUTO_EXPOSURE.md) | K3自动曝光、冻结/恢复、资源估计与局部验证 |
 | [CURRENT_ALGORITHMS](CURRENT_ALGORITHMS.md) | 当前图像链路、算法参数和功能边界 |
 | [RESOURCE_USAGE](RESOURCE_USAGE.md) | LUT、Slice、FF、ERAM、DSP、PLL、MCU 占用及比较口径 |
 | [BUILD_AND_PROGRAM](BUILD_AND_PROGRAM.md) | 编译、bit 归档和自行烧录方法 |

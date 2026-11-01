@@ -4,7 +4,7 @@
 
 本版已完成完整 TD 编译和 JTAG SRAM 烧录。用户提供的最新画面中，之前的密集绿色竖条已消失，摄像头画面、状态面板和 Logo 可正常显示。该反馈用于确认显示恢复；本阶段没有进行完整的振动测频精度验收。
 
-当前源码在上述已上板基线上增加同帧关联的 `LAT xxx.x MS` 延迟显示，并缩小 LAT 和左下算法状态面板。测量口径、紧凑布局及本机检查见 [延迟显示说明](LATENCY_DISPLAY.md) 和 [紧凑 OSD 验证](validation/compact_osd_20261101/README.md)。下文 Bit 哈希及资源表保留的是历史已上板基线；当前源码需重新构建，不能用旧 Bit 验收 LAT。自动曝光尚未接入，SW5 仍选择两组固定曝光/增益。
+当前源码在上述已上板基线上增加同帧关联的 `LAT xxx.x MS` 延迟显示，并缩小 LAT 和左下算法状态面板。测量口径、紧凑布局及本机检查见 [延迟显示说明](LATENCY_DISPLAY.md) 和 [紧凑 OSD 验证](validation/compact_osd_20261101/README.md)。下文 Bit 哈希及资源表保留的是历史已上板基线；当前源码需重新构建，不能用旧 Bit 验收 LAT。当前源码另加入前端独立抽样自动曝光，上电默认开启，C7／I_key[3]（K3）切换；操作和验证见 [自动曝光说明](AUTO_EXPOSURE.md)。新 AE 尚未经过 TD 编译和上板验证。
 
 ## 工程基线
 
@@ -24,18 +24,19 @@ cd sc520-vibration-detection
 |---|---|
 | KEY1 | 回到原图／增强彩色模式 |
 | KEY2 | 切换灰度、二值化、Sobel 模式 |
-| KEY3 | 微振动算法开关，上电默认关闭 |
+| KEY3（I_key[2]，B9） | 微振动算法开关，上电默认关闭 |
+| K3（I_key[3]，C7，原 KEY4） | 自动曝光开关，上电默认开启 |
 | SW1 | AWB 白平衡 |
 | SW2 | Gamma＋固定 N1 |
 | SW3 | 水平 Color Shading |
 | SW4 | 去马赛克／RAW Bayer 样本灰度 |
-| SW5 | E900/G12 与旧参考曝光增益切换 |
+| SW5 | 自动曝光关闭后，选择 E900/G12 或 E1991/G24 固定档 |
 
-开关方向以 OSD 的 ON/OFF 为准。SW4 关闭时 AWB/CSC/N1 自动旁路；曝光切换等待 EXP 结束 WAIT。KEY4 没有旧参数菜单，SW6 不使用。详见[队友指南](TEAM_GUIDE.md)和[五拨码说明](FIVE_SWITCH_DEMO_20261101.md)。
+开关方向以 OSD 的 ON/OFF 为准。SW4 关闭时 AWB/CSC/N1 自动旁路；左下 `K3 AE` 显示自动曝光 ON/OFF/WAIT；振动或 RAW 模式暂停自动调整并显示 WAIT。SW6 不使用。详见[队友指南](TEAM_GUIDE.md)和[五拨码说明](FIVE_SWITCH_DEMO_20261101.md)。
 
 ## 编译与下载
 
-先看[编译烧录说明](BUILD_AND_PROGRAM.md)。必须完整执行 `td_project/patch/build_all.ps1` 的 A→B→C，保留加密 HDMI 核的 12 处数据库补丁及当前 34 组独立 CDC 检查。
+先看[编译烧录说明](BUILD_AND_PROGRAM.md)。必须完整执行 `td_project/patch/build_all.ps1` 的 A→B→C，保留加密 HDMI 核的 12 处数据库补丁及当前 40 组独立 CDC 检查。
 
 历史已上板基线 Bit：`td_project/camera_to_dsi_display.bit`，1,789,539 字节。SHA256：
 

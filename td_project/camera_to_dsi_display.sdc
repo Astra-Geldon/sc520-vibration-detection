@@ -67,3 +67,15 @@ set_max_delay -from [get_regs {S_cam_frame_toggle}] -to [get_regs {u_video_laten
 set_max_delay -from [get_regs {u_video_latency/camera_s1}] -to [get_regs {u_video_latency/camera_s2}] 4.0
 set_max_delay -from [get_regs {u_video_latency/output_toggle}] -to [get_regs {u_video_latency/output_s1}] -datapath_only 8.0
 set_max_delay -from [get_regs {u_video_latency/output_s1}] -to [get_regs {u_video_latency/output_s2}] 4.0
+
+# Passive AE brightness classification: held frame-sequence/class payload,
+# handshakes bounded to 8ns and synchronizer stage1 -> stage2 to 4ns.
+set_max_delay -from [get_regs {u_ae_measure_cdc/payload[*]}] -to [get_regs {u_ae_measure_cdc/O_dst_data[*]}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_ae_measure_cdc/request}] -to [get_regs {u_ae_measure_cdc/request_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_ae_measure_cdc/acknowledge}] -to [get_regs {u_ae_measure_cdc/acknowledge_s1}] -datapath_only 8.0
+set_max_delay -from [get_regs {u_ae_measure_cdc/request_s1}] -to [get_regs {u_ae_measure_cdc/request_s2}] 4.0
+set_max_delay -from [get_regs {u_ae_measure_cdc/acknowledge_s1}] -to [get_regs {u_ae_measure_cdc/acknowledge_s2}] 4.0
+
+# K3 is asynchronous only up to the first register. Do not exempt stage2.
+set_false_path -from [get_ports {I_key[3]}] -to [get_regs {u_ae_key/key_meta}]
+set_max_delay -from [get_regs {u_ae_key/key_meta}] -to [get_regs {u_ae_key/key_sync}] 4.0

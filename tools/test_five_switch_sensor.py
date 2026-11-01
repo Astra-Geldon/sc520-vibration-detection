@@ -118,7 +118,7 @@ reg clk=0,rst=0,protect_en=1,done=0,cfg=0;
 always #5 clk=~clk;
 wire req,applied,pending,valid;wire[15:0] ae,ag;
 integer requests=0;
-ae_set dut(.I_clk(clk),.I_rst(rst),.I_protect_en(protect_en),
+ae_set dut(.I_auto_en(1'b0),.I_freeze(1'b0),.I_measure(6'b0),.I_measure_valid(1'b0),.I_clk(clk),.I_rst(rst),.I_protect_en(protect_en),
  .I_ae_cfg_done(done),.I_cam_cfg_done(cfg),.O_ae_req(req),.O_ae(ae),.O_ag(ag),
  .O_protect_applied(applied),.O_pending(pending),.O_valid(valid));
 always @(negedge clk)if(req)requests=requests+1;
@@ -160,7 +160,7 @@ def main():
     hdl = root/'user_source/hdl_source'
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    compiler = Path('D:/FPGA/codex/slice_budget_20261026/tooling/iverilog/app/bin/iverilog.exe')
+    compiler = Path('C:/iverilog/bin/iverilog.exe')
     names = ['uiisp_beta/ae_set.v', 'uics520_cfg/uicfgcs520.v',
              'uics520_cfg/SC520GainTbl.v', 'uics520_cfg/uics520regAE.v',
              'uics520_cfg/uics520reg_720p60.v', 'uics500_cfg/uii2c.v']

@@ -49,7 +49,11 @@ module awb  #(
     output                  O_tuser  ,
     output [95:0]           O_tdata  ,
     output                  O_tvalid ,
-    input                   O_tready
+    input                   O_tready,
+    // Passive metering tap, aligned to the uncorrected d0 RGB beat.
+    output [5:0]            O_ae_luma,
+    output                  O_ae_valid,
+    output                  O_ae_frame_start
 );
 
 /*****************************************************************
@@ -74,6 +78,7 @@ module awb  #(
 
   reg         I_tvalid_r0,I_tvalid_r1;
   reg  [95:0] I_tdata_d0,I_tdata_d1;
+  reg S_ae_frame_start_d0;
 
 
   //累加RGB通道的�??
@@ -106,11 +111,13 @@ always @(posedge I_clk or negedge I_rst_n) begin
         I_tdata_d0  <= 0;
         I_tdata_d1  <= 0;
         {I_tvalid_r0,I_tvalid_r1} <= 0;
+        S_ae_frame_start_d0 <= 1'b0;
     end else begin
         I_tdata_d0  <= I_tdata   ;
         I_tdata_d1  <= I_tdata_d0;
         I_tvalid_r0 <= I_tvalid;
         I_tvalid_r1 <= I_tvalid_r0;
+        S_ae_frame_start_d0 <= I_tuser;
     end
 end
 
@@ -170,6 +177,9 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
                               + { 1'd0, rgb888_g_d0[0], 1'b0 }     // 2G
                               + { 2'd0, rgb888_b_d0[0] };          // 0..1020
         wire [5:0] S_lgray_d0 = S_luma3_d0[9:4];                   // >>4 -> 0..63
+        assign O_ae_luma = S_lgray_d0;
+        assign O_ae_valid = I_tvalid_r0;
+        assign O_ae_frame_start = S_ae_frame_start_d0;
         wire [13:0] S_rl_d0 = rgb888_r_d0[0] * S_lgray_d0;         // 8x6 = 14 位
         wire [13:0] S_gl_d0 = rgb888_g_d0[0] * S_lgray_d0;
         wire [13:0] S_bl_d0 = rgb888_b_d0[0] * S_lgray_d0;

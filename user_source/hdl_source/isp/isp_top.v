@@ -36,7 +36,10 @@ module isp_top (
     output 			O_tlast			,
     output 			O_tuser			,
     output 			O_tvalid		,
-    output 			I_tready
+    output 			I_tready,
+    output [5:0]    O_ae_luma,
+    output          O_ae_valid,
+    output          O_ae_frame_start
 );
  
 wire         m_aixs_tvalid;  //synthesis keep 
@@ -120,6 +123,24 @@ data128_96 u_data128_96 (
     assign awb_O_tlast   = m_aixs_tlast;
     assign awb_O_tuser   = m_aixs_tuser;
     assign awb_O_tvalid  = m_aixs_tvalid;
+    // Keep the optional historical bypass build defined as well. This tap
+    // uses the same pre-gain RGB and adds no video latency/backpressure.
+    reg [95:0] ae_bypass_rgb;
+    reg ae_bypass_valid, ae_bypass_fs;
+    always @(posedge axi4s_video_aclk or negedge I_rst_n)
+        if (!I_rst_n) begin
+            ae_bypass_rgb <= 0; ae_bypass_valid <= 0; ae_bypass_fs <= 0;
+        end else begin
+            ae_bypass_rgb <= m_aixs_tdata_96;
+            ae_bypass_valid <= m_aixs_tvalid;
+            ae_bypass_fs <= m_aixs_tuser;
+        end
+    wire [9:0] ae_bypass_luma = {2'b0, ae_bypass_rgb[23:16]} +
+                               {1'b0, ae_bypass_rgb[15:8], 1'b0} +
+                               {2'b0, ae_bypass_rgb[7:0]};
+    assign O_ae_luma = ae_bypass_luma[9:4];
+    assign O_ae_valid = ae_bypass_valid;
+    assign O_ae_frame_start = ae_bypass_fs;
 `else
 awb #(
     .IMG_HEIGHT(720 ),
@@ -137,7 +158,9 @@ awb #(
     .O_tuser (awb_O_tuser ),
     .O_tdata (awb_O_tdata ),
     .O_tvalid(awb_O_tvalid),
-    .O_tready(awb_O_tready)
+    .O_tready(awb_O_tready),
+    .O_ae_luma(O_ae_luma), .O_ae_valid(O_ae_valid),
+    .O_ae_frame_start(O_ae_frame_start)
 );
 `endif
 

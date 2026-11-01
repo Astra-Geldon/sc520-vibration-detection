@@ -26,72 +26,143 @@
 *7) _r delay or register
 *8) _s state mechine
 *********************************************************************/
-// SW5 selects the accepted highlight-protection parameters or the archived
-// ee675b6 reference. I_protect_en is already debounced and synchronized here.
-// A launch always waits for the real controller's done-low / done-high cycle;
-// its initial done-high after initialization is not an applied-parameter ACK.
+// Manual SW5 selection and low-cost, pre-ISP-statistics automatic exposure.
+// Parameter groups are never acknowledged until the real controller has driven
+// done low and high. Autonomous changes use only fresh, settled frame packets.
+(* dsp_style = "no" *)
 module ae_set (
     input  wire        I_clk,
     input  wire        I_rst,
     input  wire        I_protect_en,
+    input  wire        I_auto_en,
+    input  wire        I_freeze,
+    input  wire [5:0]  I_measure,
+    input  wire        I_measure_valid,
     input  wire        I_ae_cfg_done,
     input  wire        I_cam_cfg_done,
     output reg         O_ae_req = 1'b0,
-    output reg [15:0]  O_ae,
-    output reg [15:0]  O_ag,
+    output reg [15:0]   O_ae,
+    output reg [15:0]   O_ag,
     output reg         O_protect_applied,
+    output reg         O_auto_applied,
     output wire        O_pending,
     output reg         O_valid
 );
     localparam [15:0] FIXED_EXPOSURE = 16'd900;
-    localparam [15:0] FIXED_GAIN = 16'd128; // 8x analog * 1.5x digital = 12x
+    localparam [15:0] FIXED_GAIN = 16'd128;
     localparam [15:0] REFERENCE_EXPOSURE = 16'd1991;
-    localparam [15:0] REFERENCE_GAIN = 16'd160; // archived nominal 24x
-    reg in_flight;
-    reg saw_busy;
-    reg requested_protect;
+    localparam [15:0] REFERENCE_GAIN = 16'd160;
+    localparam [15:0] AUTO_MIN = 16'd128;
+    localparam [15:0] AUTO_MAX = 16'd1991;
+    reg in_flight, saw_busy, requested_protect, requested_auto;
+    reg measure_seen;
+    reg [3:0] last_sequence;
+    reg freeze_d;
+    reg [1:0] settle_frames;
+    reg [1:0] last_direction;
+    reg direction_seen;
+    wire new_measure = I_measure_valid &&
+                       (!measure_seen || I_measure[5:2] != last_sequence);
+    wire [15:0] step = (O_ae < 16'd16) ? 16'd1 : (O_ae >> 4);
+    wire [15:0] raised = O_ae + step;
+    wire [15:0] lowered = O_ae - step;
+    wire [15:0] next_exposure = (I_measure[1:0] == 2'b01) ?
+                ((raised > AUTO_MAX) ? AUTO_MAX : raised) :
+                ((lowered < AUTO_MIN) ? AUTO_MIN : lowered);
 
-    // Retain the last completed selection while pending. A failed/unfinished
-    // group must never turn the requested switch position into an ON/OFF ACK.
+    // Auto mode ignores SW5 until disabled. Mode and selection are published
+    // only after their actual I2C group has completed and settled.
     assign O_pending = in_flight || !O_valid || !I_cam_cfg_done ||
-                       (O_protect_applied != I_protect_en);
+                       (O_auto_applied != I_auto_en) ||
+                       (!I_auto_en && (O_protect_applied != I_protect_en));
 
     always @(posedge I_clk or posedge I_rst) begin
         if (I_rst) begin
             O_ae_req <= 1'b0;
-            // Preserve startup values and force a post-initialization group,
-            // even when the switch starts at its reference/OFF position.
             O_ae <= 16'd1990;
             O_ag <= 16'd17;
             O_protect_applied <= 1'b1;
+            O_auto_applied <= 1'b0;
             O_valid <= 1'b0;
             in_flight <= 1'b0;
             saw_busy <= 1'b0;
             requested_protect <= 1'b1;
+            requested_auto <= 1'b0;
+            measure_seen <= 1'b0;
+            last_sequence <= 0;
+            freeze_d <= 1'b0;
+            settle_frames <= 2'd3;
+            last_direction <= 0;
+            direction_seen <= 0;
         end else begin
             O_ae_req <= 1'b0;
+            freeze_d <= I_freeze;
+            // Always consume mailbox sequences, including during a write or
+            // freeze. A previous frame must never become new feedback later.
+            if (new_measure) begin
+                measure_seen <= 1'b1;
+                last_sequence <= I_measure[5:2];
+            end
+            if (I_freeze || freeze_d || !I_auto_en) begin
+                settle_frames <= 2'd3;
+                direction_seen <= 0;
+            end
             if (in_flight) begin
+                direction_seen <= 0;
                 if (!I_ae_cfg_done) begin
                     saw_busy <= 1'b1;
                 end else if (saw_busy && I_cam_cfg_done) begin
                     O_protect_applied <= requested_protect;
+                    O_auto_applied <= requested_auto;
                     O_valid <= 1'b1;
                     in_flight <= 1'b0;
                     saw_busy <= 1'b0;
+                    settle_frames <= 2'd3;
                 end
             end else if (I_cam_cfg_done && I_ae_cfg_done &&
-                         (!O_valid || (O_protect_applied != I_protect_en))) begin
-                O_ae <= I_protect_en ? FIXED_EXPOSURE : REFERENCE_EXPOSURE;
-                O_ag <= I_protect_en ? FIXED_GAIN : REFERENCE_GAIN;
+                         (!O_valid || O_auto_applied != I_auto_en ||
+                          (!I_auto_en && O_protect_applied != I_protect_en))) begin
+                // Initialization/mode normalization is allowed while frozen;
+                // only autonomous brightness changes are suspended.
+                O_ae <= (I_auto_en || I_protect_en) ? FIXED_EXPOSURE : REFERENCE_EXPOSURE;
+                O_ag <= (I_auto_en || I_protect_en) ? FIXED_GAIN : REFERENCE_GAIN;
                 requested_protect <= I_protect_en;
+                requested_auto <= I_auto_en;
                 O_ae_req <= 1'b1;
                 O_valid <= 1'b0;
                 in_flight <= 1'b1;
                 saw_busy <= 1'b0;
+                direction_seen <= 0;
+                settle_frames <= 2'd3;
+            end else if (I_cam_cfg_done && I_ae_cfg_done && O_valid &&
+                         I_auto_en && O_auto_applied &&
+                         !I_freeze && !freeze_d && new_measure) begin
+                if (settle_frames != 0) begin
+                    settle_frames <= settle_frames - 1'b1;
+                    direction_seen <= 0;
+                end else if (I_measure[1:0] == 2'b01 || I_measure[1:0] == 2'b10) begin
+                    if (direction_seen && last_direction == I_measure[1:0]) begin
+                        direction_seen <= 0;
+                        // At a range limit consume feedback without rewriting
+                        // the same sensor parameters every few frames.
+                        if (next_exposure != O_ae) begin
+                            O_ae <= next_exposure;
+                            O_ag <= FIXED_GAIN;
+                            requested_protect <= I_protect_en;
+                            requested_auto <= 1'b1;
+                            O_ae_req <= 1'b1;
+                            O_valid <= 1'b0;
+                            in_flight <= 1'b1;
+                            saw_busy <= 1'b0;
+                        end
+                    end else begin
+                        direction_seen <= 1;
+                        last_direction <= I_measure[1:0];
+                    end
+                end else begin
+                    direction_seen <= 0;
+                end
             end
-            // No FIFO is required: a stable switch level is the latest target.
-            // If it changes while busy, compare it again after this ACK. If it
-            // returns to this group's selection, do not issue a duplicate.
         end
     end
 endmodule

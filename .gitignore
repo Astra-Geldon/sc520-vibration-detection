@@ -72,3 +72,9 @@ validation/latency_osd_20261101/before/
 validation/latency_osd_20261101/sim_*/
 validation/compact_osd_20261101/before/
 validation/compact_osd_20261101/sim_*/
+
+# AE local backups and generated simulation binaries/benches
+validation/auto_exposure*/before/
+validation/auto_exposure*/sim_*/
+validation/auto_exposure*/**/*.vvp
+validation/auto_exposure*/**/*_tb.v
