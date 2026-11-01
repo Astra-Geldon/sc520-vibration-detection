@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Project Version="3" Minor="2" Path="D:/FPGA/codex/20261029project/td_project">
+<Project Version="3" Minor="2" Path="D:/FPGA/codex_zyj/Final_Project/td_project">
     <Project_Created_Time></Project_Created_Time>
     <TD_Encoding>UTF-8</TD_Encoding>
     <TD_Version>6.2.168116</TD_Version>
@@ -623,4 +623,5 @@
     <Project_Settings>
     </Project_Settings>
 </Project>
+
 

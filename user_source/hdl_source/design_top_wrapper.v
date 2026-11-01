@@ -5,6 +5,28 @@
 `include "fixed_n1_lift.v"
 `include "demo_switch_control.v"
 
+// Integrated vibration chain.  These modules are intentionally included here
+// because the TD project registers only vib_ddr_arb.v; registering an included
+// module a second time would create duplicate definitions.
+`include "vib_prev_frame_ddr.v"
+`include "vibration/vib_video_tap.v"
+`include "vib_gauss3x3.v"
+`include "vibration/vib_lk_grid_multi.v"
+`include "vibration/vib_bbox_grid.v"
+`include "vibration/vib_eram_dp.v"
+`include "vibration/vib_gz_multi.v"
+`include "vibration/vib_gz_peak.v"
+`include "vibration/vib_osd_marker.v"
+`include "uart_tx.v"
+`include "uart_log_debug.v"
+
+// Current backup RTL: 640x360 tap, 8x6 grid, 64-frame window, 27 bins.
+// KEY3 gates the instantiated chain at run time; the image/HDMI path remains
+// the main-project implementation below.
+`define VIB_FRAME_DIFF_ON
+`define VIB_STAGE2_LK_ON
+`define VIB_STAGE2_GZ_ON
+
 module design_top_wrapper (
     input wire        I_sys_clk,
     input wire        I_rst_n,
@@ -165,6 +187,160 @@ module design_top_wrapper (
     wire [127:0] S_vib_ddr_rd_data;
     wire S_osd_vs, S_osd_de;
     wire [23:0] S_osd_data;
+
+    // -----------------------------------------------------------------
+    // Integrated vibration chain signals
+    // -----------------------------------------------------------------
+    wire        S_vib_enable_sys;
+    wire        S_vib_enable_csi;
+    wire        S_vib_enable_ddr;
+    wire        S_vib_enable_hdmi;
+
+    wire [31:0] S_mtr_csi_hz, S_mtr_px_per_sec, S_mtr_fps, S_mtr_px_per_frame;
+    wire        S_vib_px_valid, S_vib_px_frame_start, S_vib_px_line_end;
+    wire [7:0]  S_vib_px_data;
+    wire [31:0] S_vib_tap_px_per_frame, S_vib_tap_px_sum, S_vib_tap_ovf;
+    wire [15:0] S_vib_tap_lines;
+    wire        S_vib_tap_tgl;
+
+    wire        S_g_valid, S_g_frame_start, S_g_line_end;
+    wire [7:0]  S_g_data;
+    wire [31:0] S_g_px;
+    wire [15:0] S_g_lines;
+    wire        S_g_tgl;
+
+    wire        S_pf_wr_en, S_pf_rd_en, S_pf_want;
+    wire [24:0] S_pf_addr;
+    wire [127:0] S_pf_wr_data, S_pf_rd_data;
+    wire        S_pf_ready, S_pf_rd_valid, S_pf_tgl;
+    wire [31:0] S_it_px, S_it_sum, S_it_err, S_it_line_rdy, S_it_state, S_it_lines;
+    wire signed [31:0] S_it_sgn;
+    wire        S_lk_word_valid;
+    wire [127:0] S_lk_cur_w, S_lk_prev;
+
+    wire signed [31:0] S2_axx, S2_ayy, S2_axy, S2_bx, S2_by, S2_en;
+    wire [31:0] S2_px, S2_err, S2_b_itsm, S2_fx_pos;
+    wire [39:0] S2_axx_exp;
+    wire [4:0] S2_agc_exp;
+    wire [255:0] S2_br_bx;
+    wire [2:0] S2_br_row;
+    wire S2_br_tick, S2_tgl, S2_solve_req, S2_fx_tick;
+    wire signed [31:0] S2_fx_bx, S2_fx_by, S2_fx_en;
+    wire signed [32:0] S2_fx_tex;
+    wire signed [31:0] S2_fx_axx, S2_fx_ayy, S2_fx_axy;
+    wire signed [31:0] S2_b_axx, S2_b_ayy, S2_b_axy;
+    wire signed [31:0] S2_b_bx, S2_b_by, S2_b_en;
+    wire [2:0] S2_b_bcol, S2_b_brow;
+    wire [31:0] S2_dbg_unused;
+
+    wire [7:0] S_mb_frm, S_mb_bin, S_mb_rowcnt;
+    wire [5:0] S_mb_blk;
+    wire [31:0] S_mb_rate, S_mb_ticks, S_mb_clrcnt;
+    wire [4:0] S_mb_agc_ref;
+    wire S_mb_tgl, S_mb_busy;
+    wire [10:0] S_pk_addr;
+    wire [63:0] S_pk_data;
+    wire S_pk_done, S_pk_busy, S_pk_trig;
+    wire [5:0] S_pk_ntonal, S_pk_qact, S_pk_bestblk;
+    wire [31:0] S_pk_bestmag, S_pk_scancnt, S_pk_tn, S_pk_raw_hz;
+    wire [4:0] S_pk_bestbin;
+    wire [7:0] S_pk_hz10, S_pk_wincnt;
+    wire [31:0] S_pk_bin0, S_pk_bin12, S_pk_fb2, S_pk_fb4, S_pk_fb8, S_pk_fb12;
+    wire [31:0] S_pk_obj_pos, S_pk_obj_hz10;
+    wire [47:0] S_pk_tonal_map;
+    wire [239:0] S_pk_tonal_bins;
+    wire [127:0] S_pk_obj_pn;
+    wire [31:0] S_pk_fx_pn;
+    wire [5:0] S_pk_fx_sel, S_pk_chal_blk;
+    wire [11:0] S_pk_streak;
+    wire [4:0] S_pk_aexp;
+    wire [2:0] S_pk_confirmed;
+    wire [7:0] S_pk_diag_qual_hz, S_pk_diag_second_hz;
+    wire [31:0] S_pk_diag_qual_mag, S_pk_diag_qual_status, S_pk_diag_second_mag;
+    reg S_pk_done_tgl;
+
+    wire S_bbox_px_valid;
+    wire [8:0] S_bbox_px_diff, S_bbox_px_edge;
+    wire [9:0] S_bbox_px_x, S_bbox_px_y;
+    wire [43:0] S_bbox_x0, S_bbox_x1;
+    wire [39:0] S_bbox_y0, S_bbox_y1;
+    wire [3:0] S_bbox_vld;
+    wire S_bbox_tgl;
+    reg [1:0] S_bbox_tgl_p;
+    reg S_bbox_tgl_d;
+    reg [43:0] S_bbox_x0_p2, S_bbox_x1_p2;
+    reg [39:0] S_bbox_y0_p2, S_bbox_y1_p2;
+    reg [3:0] S_bbox_vld_p2;
+    reg [31:0] S_obj_pos_p2, S_obj_hz_p2;
+    reg [1:0] S_obj_tgl_p;
+    reg S_obj_tgl_d;
+
+    // UART snapshot fields.  The source-domain values are held by the
+    // vibration modules until the next frame/window; the first integration
+    // keeps the diagnostic schema intact while using stable representative
+    // fields for the remaining legacy entries.
+    reg [31:0] c_tap_px, c_tap_lines, c_tap_sum, c_tap_ovf;
+    reg [31:0] c_it_px, c_it_lines, c_it_sum, c_it_err;
+    reg [31:0] c_mb_frm, c_mb_hz10, c_mb_mag, c_mb_scan, c_mb_win;
+    reg [31:0] c_mb_ticks, c_mb_ntonal, c_mb_obj_pos, c_mb_obj_hz10;
+    reg [31:0] c_mb_active, c_mb_agc_ref, c_mb_best_blk, c_mb_streak, c_mb_clr;
+    reg [31:0] c_mb_fxbx, c_mb_fxen, c_mb_b2, c_mb_b4, c_mb_b8, c_mb_b12;
+    reg [47:0] c_tonal_map;
+    reg [127:0] c_obj_pn;
+    reg [31:0] c_chal_blk, c_fx_pn, c_qact, c_raw_bin, c_raw_hz, c_raw_aexp;
+    reg [31:0] c_confirmed, c_tn, c_motion_info;
+    reg [31:0] c_diag_qual_hz, c_diag_qual_mag, c_diag_qual_status;
+    reg [31:0] c_diag_second_hz, c_diag_second_mag, c_wprd;
+    reg        S_vib_enable_sys_reg;
+    reg [2:0]  S_key3_sync;
+    reg        S_key3_stable, S_key3_last;
+    reg [22:0] S_key3_debounce;
+    reg [1:0]  S_vib_csi_sync, S_vib_ddr_sync, S_vib_hdmi_sync;
+
+    assign S_vib_enable_sys = S_vib_enable_sys_reg;
+
+    // KEY3 is an active-low, debounced toggle.  It defaults OFF so the
+    // accepted image-only behavior remains available immediately after reset.
+    always @(posedge I_sys_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            S_key3_sync          <= 3'b111;
+            S_key3_stable        <= 1'b1;
+            S_key3_last          <= 1'b1;
+            S_key3_debounce      <= 23'd0;
+            S_vib_enable_sys_reg <= 1'b0;
+        end else begin
+            S_key3_sync <= {S_key3_sync[1:0], I_key[2]};
+            if (S_key3_sync[2] != S_key3_stable) begin
+                if (S_key3_debounce == 23'd4_999_999) begin
+                    S_key3_stable   <= S_key3_sync[2];
+                    S_key3_debounce <= 23'd0;
+                end else begin
+                    S_key3_debounce <= S_key3_debounce + 1'b1;
+                end
+            end else begin
+                S_key3_debounce <= 23'd0;
+            end
+            S_key3_last <= S_key3_stable;
+            if (S_key3_last && !S_key3_stable)
+                S_vib_enable_sys_reg <= ~S_vib_enable_sys_reg;
+        end
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if (!S_rst_n) S_vib_csi_sync <= 2'b00;
+        else         S_vib_csi_sync <= {S_vib_csi_sync[0], S_vib_enable_sys};
+    end
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if (!S_rst_n) S_vib_ddr_sync <= 2'b00;
+        else         S_vib_ddr_sync <= {S_vib_ddr_sync[0], S_vib_enable_sys};
+    end
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) S_vib_hdmi_sync <= 2'b00;
+        else               S_vib_hdmi_sync <= {S_vib_hdmi_sync[0], S_vib_enable_sys};
+    end
+    assign S_vib_enable_csi  = S_vib_csi_sync[1];
+    assign S_vib_enable_ddr  = S_vib_ddr_sync[1];
+    assign S_vib_enable_hdmi = S_vib_hdmi_sync[1];
 
     wire        S_init_calib_complete; 
     wire[24:0]  S_mc_app_addr;          
@@ -819,14 +995,291 @@ isp_top u_isp_top (
         .O_hdmi_data     ( S_hdmi_out_data    )
     );
 
-    assign S_vib_ddr_wr_en = 1'b0;
-    assign S_vib_ddr_rd_en = 1'b0;
-    assign S_vib_ddr_addr = 25'd0;
-    assign S_vib_ddr_wr_data = 128'd0;
-    assign S_vib_ddr_want = 1'b0;
-    assign S_osd_vs = S_hdmi_out_vsync;
-    assign S_osd_de = S_hdmi_out_de;
-    assign S_osd_data = S_hdmi_out_data;
+    // -----------------------------------------------------------------
+    // Vibration path from the backup branch.  The tap is passive: it sees
+    // the ISP stream but has no ready/feedback path into the display chain.
+    // Every algorithm stage is held in reset while KEY3 is OFF.
+    // -----------------------------------------------------------------
+    vib_video_tap u_vib_video_tap (
+        .clk            ( S_csi_rx_clk          ),
+        .rst_n          ( S_rst_n & S_vib_enable_csi ),
+        .in_valid       ( S_ISP_O_tvalid & S_vib_enable_csi ),
+        .in_data        ( S_ISP_O_tdata           ),
+        .in_frame_start ( S_ISP_O_tuser & S_vib_enable_csi ),
+        .in_line_end    ( S_ISP_O_tlast           ),
+        .px_valid       ( S_vib_px_valid          ),
+        .px_data        ( S_vib_px_data           ),
+        .px_frame_start ( S_vib_px_frame_start    ),
+        .px_line_end    ( S_vib_px_line_end       ),
+        .st_frame_px    ( S_vib_tap_px_per_frame  ),
+        .st_frame_ln    ( S_vib_tap_lines         ),
+        .st_px_sum      ( S_vib_tap_px_sum        ),
+        .st_ovf         ( S_vib_tap_ovf            ),
+        .st_tgl         ( S_vib_tap_tgl            )
+    );
+
+    vib_gauss3x3 u_vib_gauss3x3 (
+        .clk            ( S_csi_rx_clk          ),
+        .rst_n          ( S_rst_n & S_vib_enable_csi ),
+        .px_valid       ( S_vib_px_valid         ),
+        .px_data        ( S_vib_px_data          ),
+        .px_frame_start ( S_vib_px_frame_start   ),
+        .px_line_end    ( S_vib_px_line_end      ),
+        .g_valid        ( S_g_valid              ),
+        .g_data         ( S_g_data               ),
+        .g_frame_start  ( S_g_frame_start        ),
+        .g_line_end     ( S_g_line_end           ),
+        .st_g_px        ( S_g_px                 ),
+        .st_g_lines     ( S_g_lines              ),
+        .st_tgl         ( S_g_tgl                )
+    );
+
+    vib_prev_frame_ddr u_vib_prev_frame_ddr (
+        .csi_clk        ( S_csi_rx_clk          ),
+        .csi_rst_n      ( S_rst_n & S_vib_enable_csi ),
+        .px_valid       ( S_g_valid              ),
+        .px_data        ( S_g_data               ),
+        .px_frame_start ( S_g_frame_start        ),
+        .px_line_end    ( S_g_line_end           ),
+        .clk            ( S_ddr_clk              ),
+        .rst_n          ( S_rst_n & S_vib_enable_ddr ),
+        .O_wr_en        ( S_pf_wr_en             ),
+        .O_rd_en        ( S_pf_rd_en             ),
+        .O_addr         ( S_pf_addr              ),
+        .O_wr_data      ( S_pf_wr_data           ),
+        .I_ready        ( S_pf_ready             ),
+        .I_rd_valid     ( S_pf_rd_valid          ),
+        .I_rd_data      ( S_pf_rd_data           ),
+        .O_want         ( S_pf_want              ),
+        .st_it_px       ( S_it_px                ),
+        .st_it_sum      ( S_it_sum               ),
+        .st_it_sgn      ( S_it_sgn               ),
+        .st_lines       ( S_it_lines             ),
+        .st_err         ( S_it_err               ),
+        .st_line_rdy    ( S_it_line_rdy          ),
+        .st_state       ( S_it_state             ),
+        .st_tgl         ( S_pf_tgl               ),
+        .lk_word_valid  ( S_lk_word_valid        ),
+        .lk_cur_w       ( S_lk_cur_w             ),
+        .lk_prev_w      ( S_lk_prev               )
+    );
+
+    (* keep_hierarchy = "yes" *) vib_lk_grid_multi u_vib_lk_grid_multi (
+        .clk            ( S_ddr_clk              ),
+        .rst_n          ( S_rst_n & S_vib_enable_ddr ),
+        .word_valid     ( S_lk_word_valid        ),
+        .word_cur       ( S_lk_cur_w             ),
+        .word_prev      ( S_lk_prev              ),
+        .st_axx         ( S2_axx                 ),
+        .st_ayy         ( S2_ayy                 ),
+        .st_axy         ( S2_axy                 ),
+        .st_bx          ( S2_bx                  ),
+        .st_by          ( S2_by                  ),
+        .st_en          ( S2_en                  ),
+        .st_px          ( S2_px                  ),
+        .st_err         ( S2_err                 ),
+        .st_tgl         ( S2_tgl                 ),
+        .st_b_itsm      ( S2_b_itsm              ),
+        .i_it_sum       ( S_it_sum               ),
+        .st_br_bx       ( S2_br_bx               ),
+        .st_br_row      ( S2_br_row              ),
+        .st_br_tick     ( S2_br_tick             ),
+        .st_fx_pos      ( S2_fx_pos              ),
+        .st_fx_bx       ( S2_fx_bx               ),
+        .st_fx_by       ( S2_fx_by               ),
+        .st_fx_en       ( S2_fx_en               ),
+        .st_fx_tex      ( S2_fx_tex              ),
+        .st_fx_axx      ( S2_fx_axx              ),
+        .st_fx_ayy      ( S2_fx_ayy              ),
+        .st_fx_axy      ( S2_fx_axy              ),
+        .st_fx_tick     ( S2_fx_tick             ),
+        .st_b_axx       ( S2_b_axx               ),
+        .st_b_ayy       ( S2_b_ayy               ),
+        .st_b_axy       ( S2_b_axy               ),
+        .st_b_bx        ( S2_b_bx                ),
+        .st_b_by        ( S2_b_by                ),
+        .st_b_en        ( S2_b_en                ),
+        .st_b_bcol      ( S2_b_bcol              ),
+        .st_b_brow      ( S2_b_brow              ),
+        .st_solve_req   ( S2_solve_req           ),
+        .st_solve_ack   ( 1'b0                   ),
+        .o_px_valid     ( S_bbox_px_valid        ),
+        .o_px_it        ( S_bbox_px_diff         ),
+        .o_px_edge      ( S_bbox_px_edge         ),
+        .o_px_x         ( S_bbox_px_x             ),
+        .o_px_y         ( S_bbox_px_y             ),
+        .o_axx_exp      ( S2_axx_exp             ),
+        .o_agc_exp      ( S2_agc_exp             )
+    );
+
+    vib_gz_multi #(.NFRM(64), .NBIN(27), .NROW(6), .NCOL(8)) u_vib_gz_multi (
+        .clk         ( S_ddr_clk       ),
+        .rst_n       ( S_rst_n & S_vib_enable_ddr ),
+        .i_bx8       ( S2_br_bx        ),
+        .i_agc_exp   ( S2_agc_exp      ),
+        .i_row       ( S2_br_row       ),
+        .i_tick      ( S2_br_tick      ),
+        .o_frm       ( S_mb_frm        ),
+        .o_frm_tgl   ( S_mb_tgl        ),
+        .o_busy      ( S_mb_busy       ),
+        .o_dbg_blk   ( S_mb_blk        ),
+        .o_dbg_bin   ( S_mb_bin        ),
+        .o_dbg_rate  ( S_mb_rate       ),
+        .o_dbg_rowcnt( S_mb_rowcnt     ),
+        .o_tick_cnt  ( S_mb_ticks      ),
+        .i_pk_done   ( S_pk_done       ),
+        .o_clr_cnt   ( S_mb_clrcnt     ),
+        .o_dbg_agc_ref( S_mb_agc_ref   ),
+        .pk_b_addr   ( S_pk_addr       ),
+        .pk_b_data   ( S_pk_data       )
+    );
+
+    reg [1:0] S_mb_tgl_s;
+    wire S_mb_tgl_p = S_mb_tgl_s[1] ^ S_mb_tgl_s[0];
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_mb_tgl_s   <= 2'b00;
+            S_pk_done_tgl <= 1'b0;
+        end else begin
+            S_mb_tgl_s <= {S_mb_tgl_s[0], S_mb_tgl};
+            if (!S_vib_enable_ddr) S_pk_done_tgl <= 1'b0;
+            else if (S_pk_done) S_pk_done_tgl <= ~S_pk_done_tgl;
+        end
+    end
+    assign S_pk_trig = S_mb_tgl_p & ~S_pk_busy;
+
+    vib_gz_peak #(.NBIN(27), .NB(48), .BIN_MIN(0), .TONE_RATIO(0), .COMMON_MOTION_ON(0)) u_vib_gz_peak (
+        .clk        ( S_ddr_clk       ),
+        .rst_n      ( S_rst_n & S_vib_enable_ddr ),
+        .trig       ( S_pk_trig       ),
+        .i_motion_veto( 1'b0          ),
+        .i_fx_blk   ( S2_fx_pos[5:0]  ),
+        .i_axx_exp  ( S2_axx_exp      ),
+        .i_tick     ( S2_br_tick      ),
+        .i_row      ( S2_br_row       ),
+        .st_addr    ( S_pk_addr       ),
+        .st_data    ( S_pk_data       ),
+        .busy       ( S_pk_busy       ),
+        .done       ( S_pk_done       ),
+        .o_ntonal   ( S_pk_ntonal     ),
+        .o_qact     ( S_pk_qact       ),
+        .o_best_blk ( S_pk_bestblk    ),
+        .o_best_mag ( S_pk_bestmag    ),
+        .o_best_bin ( S_pk_bestbin    ),
+        .o_best_hz10( S_pk_hz10       ),
+        .o_mb_bin0  ( S_pk_bin0       ),
+        .o_mb_b12   ( S_pk_bin12      ),
+        .o_fb2       ( S_pk_fb2       ),
+        .o_fb4       ( S_pk_fb4       ),
+        .o_fb8       ( S_pk_fb8       ),
+        .o_fb12      ( S_pk_fb12      ),
+        .o_tn        ( S_pk_tn        ),
+        .o_raw_hz    ( S_pk_raw_hz    ),
+        .o_trk_pos   (                ),
+        .o_bb_x0     (                ),
+        .o_bb_y0     (                ),
+        .o_bb_x1     (                ),
+        .o_bb_y1     (                ),
+        .o_bb_vld    (                ),
+        .o_obj_pos   ( S_pk_obj_pos   ),
+        .o_obj_hz10  ( S_pk_obj_hz10  ),
+        .o_tonal_map ( S_pk_tonal_map ),
+        .o_tonal_bins( S_pk_tonal_bins),
+        .o_obj_pn    ( S_pk_obj_pn    ),
+        .o_fx_pn     ( S_pk_fx_pn     ),
+        .o_scan_cnt  ( S_pk_scancnt   ),
+        .o_win_cnt   ( S_pk_wincnt    ),
+        .o_dbg_fx_sel( S_pk_fx_sel    ),
+        .o_dbg_chal_blk( S_pk_chal_blk ),
+        .o_dbg_streak( S_pk_streak    ),
+        .o_dbg_aexp  ( S_pk_aexp      ),
+        .o_confirmed ( S_pk_confirmed ),
+        .o_dbg_qual_hz10 ( S_pk_diag_qual_hz ),
+        .o_dbg_qual_mag  ( S_pk_diag_qual_mag ),
+        .o_dbg_qual_status( S_pk_diag_qual_status ),
+        .o_dbg_second_hz10( S_pk_diag_second_hz ),
+        .o_dbg_second_mag( S_pk_diag_second_mag )
+    );
+
+    vib_bbox_grid u_vib_bbox_grid (
+        .clk        ( S_ddr_clk       ),
+        .rst_n      ( S_rst_n & S_vib_enable_ddr ),
+        .i_px_valid ( S_bbox_px_valid ),
+        .i_px_diff  ( S_bbox_px_diff  ),
+        .i_px_edge  ( S_bbox_px_edge  ),
+        .i_px_x     ( S_bbox_px_x     ),
+        .i_px_y     ( S_bbox_px_y     ),
+        .i_obj_pos  ( S_pk_obj_pos    ),
+        .i_tonal_map( S_pk_tonal_map  ),
+        .i_tonal_bins( S_pk_tonal_bins ),
+        .o_x0       ( S_bbox_x0       ),
+        .o_y0       ( S_bbox_y0       ),
+        .o_x1       ( S_bbox_x1       ),
+        .o_y1       ( S_bbox_y1       ),
+        .o_vld      ( S_bbox_vld      ),
+        .o_tgl      ( S_bbox_tgl      )
+    );
+
+    assign S_pf_ready    = S_vib_ddr_ready & S_vib_enable_ddr;
+    assign S_pf_rd_valid = S_vib_ddr_rd_valid & S_vib_enable_ddr;
+    assign S_pf_rd_data  = S_vib_ddr_rd_data;
+    assign S_vib_ddr_wr_en   = S_pf_wr_en & S_vib_enable_ddr;
+    assign S_vib_ddr_rd_en   = S_pf_rd_en & S_vib_enable_ddr;
+    assign S_vib_ddr_addr    = S_pf_addr;
+    assign S_vib_ddr_wr_data = S_pf_wr_data;
+    assign S_vib_ddr_want    = S_pf_want & S_vib_enable_ddr;
+
+    // CDC of the stable bounding-box/result buses into the HDMI domain.
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) begin
+            S_obj_pos_p2 <= 32'd0;
+            S_obj_hz_p2  <= 32'd0;
+            S_obj_tgl_p  <= 2'b00;
+            S_obj_tgl_d  <= 1'b0;
+            S_bbox_tgl_p <= 2'b00;
+            S_bbox_tgl_d <= 1'b0;
+            S_bbox_x0_p2 <= 44'd0; S_bbox_x1_p2 <= 44'd0;
+            S_bbox_y0_p2 <= 40'd0; S_bbox_y1_p2 <= 40'd0;
+            S_bbox_vld_p2 <= 4'd0;
+        end else begin
+            S_obj_tgl_p <= {S_obj_tgl_p[0], S_pk_done_tgl};
+            S_obj_tgl_d <= S_obj_tgl_p[1];
+            if (S_obj_tgl_p[1] != S_obj_tgl_d) begin
+                S_obj_pos_p2 <= S_pk_obj_pos;
+                S_obj_hz_p2  <= S_pk_obj_hz10;
+            end
+            S_bbox_tgl_p <= {S_bbox_tgl_p[0], S_bbox_tgl};
+            S_bbox_tgl_d <= S_bbox_tgl_p[1];
+            if (S_bbox_tgl_p[1] != S_bbox_tgl_d) begin
+                S_bbox_x0_p2 <= S_bbox_x0; S_bbox_x1_p2 <= S_bbox_x1;
+                S_bbox_y0_p2 <= S_bbox_y0; S_bbox_y1_p2 <= S_bbox_y1;
+                S_bbox_vld_p2 <= S_bbox_vld;
+            end
+        end
+    end
+
+    wire S_vib_marker_vs, S_vib_marker_de;
+    wire [23:0] S_vib_marker_data;
+    vib_osd_marker u_vib_osd_marker (
+        .clk       ( S_hdmi_pixel_clk ),
+        .rst_n     ( S_hdmi_rst_n & S_vib_enable_hdmi ),
+        .I_vs      ( S_hdmi_out_vsync ),
+        .I_de      ( S_hdmi_out_de    ),
+        .I_data    ( S_hdmi_out_data  ),
+        .I_obj_pos ( S_obj_pos_p2     ),
+        .I_obj_hz10( S_obj_hz_p2      ),
+        .I_bbox_x0 ( S_bbox_x0_p2     ),
+        .I_bbox_y0 ( S_bbox_y0_p2     ),
+        .I_bbox_x1 ( S_bbox_x1_p2     ),
+        .I_bbox_y1 ( S_bbox_y1_p2     ),
+        .I_bbox_vld( S_bbox_vld_p2    ),
+        .O_vs      ( S_vib_marker_vs  ),
+        .O_de      ( S_vib_marker_de  ),
+        .O_data    ( S_vib_marker_data )
+    );
+    assign S_osd_vs   = S_vib_enable_hdmi ? S_vib_marker_vs  : S_hdmi_out_vsync;
+    assign S_osd_de   = S_vib_enable_hdmi ? S_vib_marker_de  : S_hdmi_out_de;
+    assign S_osd_data = S_vib_enable_hdmi ? S_vib_marker_data : S_hdmi_out_data;
 
     hdmi_tx u_hdmi_tx(
         .I_pixel_clk        ( S_hdmi_pixel_clk  ),
@@ -861,6 +1314,89 @@ isp_top u_isp_top (
 
 
 
-    // UART logging removed; keep the external TX pin at its idle level.
-    assign O_uart_tx = 1'b1;
+    // UART diagnostic snapshot.  The fields are sampled in the existing
+    // 50 MHz system-clock domain and retain the backup branch's 115200 8N1
+    // format.  This stage has no influence on the HDMI or DDR arbitration.
+    always @(posedge I_sys_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            c_tap_px <= 0; c_tap_lines <= 0; c_tap_sum <= 0; c_tap_ovf <= 0;
+            c_it_px <= 0; c_it_lines <= 0; c_it_sum <= 0; c_it_err <= 0;
+            c_mb_frm <= 0; c_mb_hz10 <= 0; c_mb_mag <= 0; c_mb_scan <= 0;
+            c_mb_win <= 0; c_mb_ticks <= 0; c_mb_ntonal <= 0;
+            c_mb_obj_pos <= 0; c_mb_obj_hz10 <= 0; c_mb_active <= 0;
+            c_mb_agc_ref <= 0; c_mb_best_blk <= 0; c_mb_streak <= 0; c_mb_clr <= 0;
+            c_mb_fxbx <= 0; c_mb_fxen <= 0; c_mb_b2 <= 0; c_mb_b4 <= 0;
+            c_mb_b8 <= 0; c_mb_b12 <= 0; c_tonal_map <= 0; c_obj_pn <= 0;
+            c_chal_blk <= 0; c_fx_pn <= 0; c_qact <= 0; c_raw_bin <= 0;
+            c_raw_hz <= 0; c_raw_aexp <= 0; c_confirmed <= 0; c_tn <= 0;
+            c_motion_info <= 0; c_diag_qual_hz <= 0; c_diag_qual_mag <= 0;
+            c_diag_qual_status <= 0; c_diag_second_hz <= 0; c_diag_second_mag <= 0;
+            c_wprd <= 0;
+        end else begin
+            c_tap_px <= S_vib_tap_px_per_frame;
+            c_tap_lines <= {16'd0, S_vib_tap_lines};
+            c_tap_sum <= S_vib_tap_px_sum;
+            c_tap_ovf <= S_vib_tap_ovf;
+            c_it_px <= S_it_px; c_it_lines <= S_it_lines;
+            c_it_sum <= S_it_sum; c_it_err <= S_it_err;
+            c_mb_frm <= {24'd0, S_mb_frm};
+            c_mb_hz10 <= {24'd0, S_pk_hz10};
+            c_mb_mag <= S_pk_bestmag;
+            c_mb_scan <= S_pk_scancnt;
+            c_mb_win <= {24'd0, S_pk_wincnt};
+            c_mb_ticks <= S_mb_ticks;
+            c_mb_ntonal <= {26'd0, S_pk_ntonal};
+            c_mb_obj_pos <= S_pk_obj_pos;
+            c_mb_obj_hz10 <= S_pk_obj_hz10;
+            c_mb_active <= {26'd0, S_pk_ntonal};
+            c_mb_agc_ref <= {27'd0, S_mb_agc_ref};
+            c_mb_best_blk <= {26'd0, S_pk_bestblk};
+            c_mb_streak <= {20'd0, S_pk_streak};
+            c_mb_clr <= S_mb_clrcnt;
+            c_mb_fxbx <= 0; c_mb_fxen <= 0;
+            c_mb_b2 <= S_pk_fb2; c_mb_b4 <= S_pk_fb4;
+            c_mb_b8 <= S_pk_fb8; c_mb_b12 <= S_pk_fb12;
+            c_tonal_map <= S_pk_tonal_map; c_obj_pn <= S_pk_obj_pn;
+            c_chal_blk <= {26'd0, S_pk_chal_blk}; c_fx_pn <= S_pk_fx_pn;
+            c_qact <= {26'd0, S_pk_qact}; c_raw_bin <= {27'd0, S_pk_bestbin};
+            c_raw_hz <= S_pk_raw_hz; c_raw_aexp <= {27'd0, S_pk_aexp};
+            c_confirmed <= {29'd0, S_pk_confirmed}; c_tn <= S_pk_tn;
+            c_motion_info <= 0;
+            c_diag_qual_hz <= {24'd0, S_pk_diag_qual_hz};
+            c_diag_qual_mag <= S_pk_diag_qual_mag;
+            c_diag_qual_status <= S_pk_diag_qual_status;
+            c_diag_second_hz <= {24'd0, S_pk_diag_second_hz};
+            c_diag_second_mag <= S_pk_diag_second_mag;
+        end
+    end
+
+    uart_log_debug #(.CLK_HZ(50_000_000), .BAUD(115200)) u_uart_log_debug (
+        .clk(I_sys_clk), .rst_n(I_rst_n), .pll_lock(S_pll_lock),
+        .ddr_init_done(S_init_calib_complete), .cam_cfg_done(S_cam_cfg_done),
+        .cam_i2c_error(S_cam_i2c_error), .sensor_id(S_cam_sensor_id),
+        .sensor_id_ok(S_cam_sensor_id_ok), .mipi_diag_status(4'd0),
+        .hs_seen(S_hs_rx_valid), .csi_frame_seen(S_csi_frame_start),
+        .raw10_seen(S_raw10_valid),
+        .video_nonzero_seen(S_hdmi_window_rd_en && (S_video_rd_data != 24'd0)),
+        .tap_px_per_frame(c_tap_px), .tap_lines(c_tap_lines),
+        .it_px(c_it_px), .it_lines(c_it_lines), .vsum(c_tap_sum),
+        .mb_frm(c_mb_frm), .mb_active(c_mb_active), .mb_obj_hz10(c_mb_obj_hz10),
+        .mb_agc_ref(c_mb_agc_ref), .mb_best_blk(c_mb_best_blk),
+        .mb_streak(c_mb_streak), .mb_clr(c_mb_clr), .mb_mag(c_mb_mag),
+        .fx_bx(c_mb_fxbx), .fx_en(c_mb_fxen), .b2(c_mb_b2), .b4(c_mb_b4),
+        .b8(c_mb_b8), .b12(c_mb_b12),
+        .tonal_map_lo(c_tonal_map[31:0]),
+        .tonal_map_hi({16'd0, c_tonal_map[47:32]}),
+        .obj_pos(c_mb_obj_pos), .fx_pn(c_fx_pn),
+        .obj_pn0(c_obj_pn[31:0]), .obj_pn1(c_obj_pn[63:32]),
+        .obj_pn2(c_obj_pn[95:64]), .obj_pn3(c_obj_pn[127:96]),
+        .chal_blk(c_chal_blk), .qact(c_qact), .wprd(c_wprd),
+        .tap_ovf(c_tap_ovf), .it_err(c_it_err), .mb_scan(c_mb_scan),
+        .mb_win(c_mb_win), .raw_bin(c_raw_bin), .raw_hz(c_raw_hz),
+        .raw_aexp(c_raw_aexp), .confirmed(c_confirmed), .tn_status(c_tn),
+        .motion_info(c_motion_info), .diag_qual_hz(c_diag_qual_hz),
+        .diag_qual_mag(c_diag_qual_mag), .diag_qual_status(c_diag_qual_status),
+        .diag_second_hz(c_diag_second_hz), .diag_second_mag(c_diag_second_mag),
+        .tx(O_uart_tx)
+    );
 endmodule

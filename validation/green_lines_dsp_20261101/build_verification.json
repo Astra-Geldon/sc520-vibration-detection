@@ -1,0 +1,66 @@
+{
+  "build_passed": true,
+  "checked_at": "2026-11-01T15:56:12.200857+08:00",
+  "only_one_attribute_changed": true,
+  "source_files_checked": 242,
+  "required_markers": {
+    "pA.log": [
+      "PHASE_A_DONE ERR=0",
+      "DEMO_CDC_REGISTERS_PASS groups=25"
+    ],
+    "pB.log": [
+      "PATCH_FINISHED",
+      "VERIFIED_COUNTER_SELECTORS12"
+    ],
+    "pC.log": [
+      "CHECK valid_2d=2 valid_3d=14",
+      "No need to merge 9x9 Dsps.",
+      "DEMO_PRODUCTION_TIMING_PASS",
+      "DEMO_CDC_PHYSICAL_PASS groups=25",
+      "PHASE_D_DONE",
+      "PHASE_C_DONE ERR=0",
+      "eco open net = 0"
+    ]
+  },
+  "bbox_dsp": 0,
+  "no_dsp_merging": true,
+  "no_physical_undriven_or_skipped_nets": true,
+  "eco_open_nets": 0,
+  "resources": {
+    "lut6": {
+      "used": 18362,
+      "available": 21216
+    },
+    "slice": {
+      "used": 19163,
+      "available": 21216
+    },
+    "eram": {
+      "used": 66,
+      "available": 108
+    },
+    "dsp": {
+      "used": 40,
+      "available": 40
+    },
+    "pll": {
+      "used": 3,
+      "available": 6
+    },
+    "mcu": {
+      "used": 1,
+      "available": 1
+    }
+  },
+  "timing_ns": {
+    "SWNS": 0.121,
+    "STNS": 0.0,
+    "HWNS": 0.02,
+    "HTNS": 0.0
+  },
+  "bit": "D:\\FPGA\\codex_zyj\\Final_Project\\td_project\\camera_to_dsi_display.bit",
+  "archived_bit": "D:\\FPGA\\codex_zyj\\Final_Project\\validation\\green_lines_dsp_20261101\\Final_Project_bbox_lut_20261101.bit",
+  "sha256": "a2ca15e1bc1a57199d6171230e50bcb8df6f2c4f75635cf387b6bb1ab753b4e1",
+  "bit_bytes": 1789539,
+  "hardware_image_result": "User screenshot confirms prior dense green vertical stripes are no longer visible; see user_feedback.json. Complete vibration metrology acceptance was not performed."
+}

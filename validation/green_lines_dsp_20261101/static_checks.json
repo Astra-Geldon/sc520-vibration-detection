@@ -1,0 +1,25 @@
+{
+  "passed": [
+    "check_ports.py",
+    "check_divider_inst.py",
+    "lint_duplicate_decl.py",
+    "lint_proc_assign.py",
+    "lint_multidriver.py",
+    "verify_all.py"
+  ],
+  "legacy_failures": [
+    {
+      "script": "check_all_inst.py",
+      "exit_code": 1,
+      "message": "O_ae_req reported missing",
+      "disposition": "Parser false positive: actual ae_set.v line 39 declares output reg O_ae_req with an initializer; parser requires bare identifier."
+    },
+    {
+      "script": "verify_diag.py",
+      "exit_code": 1,
+      "message": "Six display-disabled diagnostic assertions failed",
+      "disposition": "Historical no-display build assumptions conflict with the authorized HDMI-enabled integration; referenced top and legacy LK files are unchanged."
+    }
+  ],
+  "validation_to_follow": "TD actual elaboration, full A-B-C, HDMI patch and CDC, physical resources, routing and setup/hold; no RTL changes for legacy check scripts."
+}

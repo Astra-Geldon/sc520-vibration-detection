@@ -1,0 +1,7 @@
+{
+  "changed_inputs": [
+    "user_source/hdl_source/vibration/vib_bbox_grid.v"
+  ],
+  "only_attribute_added": true,
+  "bbox_after_sha256": "7e721eaba4e53561d76d98f338df8c36d40a260300136c94659a06807680e38b"
+}

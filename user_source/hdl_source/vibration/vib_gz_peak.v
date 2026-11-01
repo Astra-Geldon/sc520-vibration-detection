@@ -49,6 +49,9 @@ module vib_gz_peak #(
     output reg o_bb_vld,
     output reg [31:0] o_obj_pos, o_obj_hz10,
     output reg [47:0] o_tonal_map,
+    // Per-parent-cell qualified frequency bins.  Entry n is 5 bits at
+    // [n*5 +: 5]; 31 means that the cell did not pass qualification.
+    output reg [239:0] o_tonal_bins,
     output reg [127:0] o_obj_pn, // compatibility name; RAW peak>>8, not normalized
     output reg [31:0] o_fx_pn,  // compatibility name; same RAW scale as PKMG
     output reg [31:0] o_scan_cnt,
@@ -168,6 +171,7 @@ module vib_gz_peak #(
     endgenerate
     wire qualified=(final_pk32>TONE_MIN)&&ratio_ok;
     reg [47:0] qualified_map;
+    reg [239:0] qualified_bin_map;
     reg [5:0] raw_count,qual_count;
     reg [58:0] global_peak;
     reg [5:0] global_blk,qual_best_blk;
@@ -270,7 +274,7 @@ module vib_gz_peak #(
             blk<=0; bin<=0; base<=0; scan_blk<=0; scan_count<=0; coef<=0;
             cs1<=0; cs12<=0; sq1<=0; energy<=0;
             block_peak<=0; block_bin<=0; block_sum<=0;
-            qualified_map<=0; raw_count<=0; qual_count<=0;
+            qualified_map<=0; qualified_bin_map<=0; raw_count<=0; qual_count<=0;
             global_peak<=0; global_blk<=0; global_bin<=0; global_qualified<=0;
             qual_best_mag<=0; qual_best_blk<=63; qual_best_bin<=0;
             second_peak<=0; second_bin<=0;
@@ -288,7 +292,7 @@ module vib_gz_peak #(
             o_fb2<=0; o_fb4<=0; o_fb8<=0; o_fb12<=0;
             o_tn<=0; o_raw_hz<=0; o_trk_pos<=0;
             o_bb_x0<=0; o_bb_y0<=0; o_bb_x1<=0; o_bb_y1<=0; o_bb_vld<=0;
-            o_obj_pos<=0; o_obj_hz10<=0; o_tonal_map<=0; o_obj_pn<=0; o_fx_pn<=0;
+            o_obj_pos<=0; o_obj_hz10<=0; o_tonal_map<=0; o_tonal_bins<=0; o_obj_pn<=0; o_fx_pn<=0;
             o_scan_cnt<=0; o_win_cnt<=0; o_dbg_fx_sel<=0; o_dbg_chal_blk<=63;
             o_dbg_streak<=0; o_dbg_aexp<=0; o_confirmed<=0;
             for(j=0;j<4;j=j+1) begin
@@ -320,6 +324,7 @@ module vib_gz_peak #(
                 global_peak<=0; global_blk<=0; global_bin<=0; global_qualified<=0;
                 qual_best_mag<=0; qual_best_blk<=63; qual_best_bin<=0;
                 second_peak<=0; second_bin<=0;
+                qualified_bin_map<=240'd0;
                 qual_selected_mask<=0; qual_confirmed_mask<=0; qual_near_mask<=0; occupied_mask<=0;
                 global0<=0; global4<=0; global6<=0; global8<=0; global10<=0;
                 frequency_pending_mask<=0;
@@ -346,6 +351,7 @@ module vib_gz_peak #(
                     result_addr<=blk; result_in<={final_peak,final_bin};
                     if(final_pk32>TONE_MIN) raw_count<=raw_count+6'd1;
                     qualified_map[blk]<=qualified;
+                    qualified_bin_map[(blk*5)+:5] <= qualified ? final_bin : 5'd31;
                     if(qualified) begin
                         qual_count<=qual_count+6'd1;
                         if(final_pk32>qual_best_mag) begin
@@ -476,6 +482,7 @@ module vib_gz_peak #(
             FIN: begin
                 busy<=0; done<=1; o_win_cnt<=o_win_cnt+8'd1; o_scan_cnt<=scan_count;
                 o_ntonal<=raw_count; o_qact<=qual_count; o_tonal_map<=qualified_map;
+                o_tonal_bins<=qualified_bin_map;
                 o_best_blk<=global_blk; o_dbg_fx_sel<=global_blk; o_best_bin<=global_bin;
                 o_best_mag<=report_mag(global_peak); o_fx_pn<=report_mag(global_peak);
                 o_raw_hz<=(global_peak!=0)?{24'd0,hz_of(global_bin)}:32'd0;

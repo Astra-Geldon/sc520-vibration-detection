@@ -1,0 +1,10 @@
+﻿{
+    "success":  true,
+    "bit":  "D:\\FPGA\\codex_zyj\\Final_Project\\validation\\green_lines_dsp_20261101\\Final_Project_bbox_lut_20261101.bit",
+    "sha256":  "a2ca15e1bc1a57199d6171230e50bcb8df6f2c4f75635cf387b6bb1ab753b4e1",
+    "started_utc":  "2026-11-01T07:56:23.7565537Z",
+    "finished_utc":  "2026-11-01T07:56:33.5820558Z",
+    "exit_code":  0,
+    "method":  "JTAG SRAM; no Flash write or MCU firmware load",
+    "log_directory":  "D:\\FPGA\\codex_zyj\\_build\\Final_Project\\bbox-lut-programming\\20261101-155623-741-5361bac7"
+}

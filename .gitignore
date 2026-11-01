@@ -59,3 +59,10 @@ td_project/tmp.err
 td_project/.lock.f
 td_project/.recent_user_depot.ini
 td_project/build_history/
+
+# Generated CDC view and local execution/source snapshots
+td_project/demo_cdc_physical_view.sdc
+validation/green_lines_dsp_20261101/program.err
+validation/green_lines_dsp_20261101/program.tcl
+validation/green_lines_dsp_20261101/vib_bbox_grid.before.v
+validation/green_lines_dsp_20261101/vib_bbox_grid.after.v

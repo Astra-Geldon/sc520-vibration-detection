@@ -1,6 +1,6 @@
 # MCU 当前状态与扩展方法
 
-适用最终五拨码版 `demo-five-switch-20261101`。先说明实际范围：**MCU硬核已例化，但没有运行项目固件，没有接管曝光、拨码、AWB、DDR或HDMI。** 本文的后续扩展步骤是建议，不能当作最终镜像已经实现的功能。
+适用当前 Final_Project 图像与微振动整合版，发布目标为 Gitee `main`。**MCU 硬核已例化，但没有运行项目固件，没有接管曝光、拨码、图像处理、微振动、DDR 或 HDMI。** KEY3 与振动算法、UART 诊断仍由 FPGA 逻辑实现。本文的后续扩展步骤是建议，不代表当前镜像已实现。
 
 ## 当前连接
 
@@ -15,7 +15,7 @@
 | APB返回 | prdata0、pready1、pslverr0 |
 | GPIO0/1输入 | 旧I_button[0/1]；输出与方向不控制图像链 |
 | GPIO2～7输入 | 常量0 |
-| UART | RX空闲高，TX未接板级输出 |
+| MCU UART | RX空闲高，TX未接板级输出；当前板级振动诊断 UART 来自 FPGA 逻辑 |
 | I²C | 输入空闲高，输出悬空；摄像头由FPGA uicfgcs520独占 |
 | QSPI | 未使用 |
 | MCU固件 | 本发布未装载ELF/BIN；bit中没有本项目应用程序 |
@@ -29,7 +29,7 @@
 - `user_source/ip_source/MCU/Design.xml`、`DesignConfiguration.xml`：IP定义/配置。
 - [ps_wrapper.v](user_source/hdl_source/ps_wrapper.v)：保留的通用包装，不是当前顶层活动实例。
 
-当前正常视频不需要FD、OpenOCD或ELF，直接下载匹配的bit即可。位置和操作见 [BUILD_AND_PROGRAM](BUILD_AND_PROGRAM.md)。
+当前正常视频和微振动链路不需要 FD、OpenOCD 或 ELF，直接下载匹配的 Bit 即可。当前版本的位置、SHA256 和烧录命令见[本次修复档案](validation/green_lines_dsp_20261101/README.md)。
 
 ## 真正使用MCU的最小路线
 
@@ -46,6 +46,8 @@
 
 ## 编译、烧录与资源
 
-图像工程构建必须保留HDMI数据库补丁及生产时钟/CDC检查，步骤见 [编译说明](BUILD_AND_PROGRAM.md)。本最终版占用1个MCU硬核、31个DSP；硬核占用不能与Slice相加，也不能据此声称计算已经搬到MCU。
+整合工程构建必须保留 HDMI 数据库补丁及生产时钟/CDC 检查，步骤见 [编译说明](BUILD_AND_PROGRAM.md)。当前占用 1 个 MCU 硬核、40 个 DSP，其中原图像 31 个 DSP 保持独立；bbox 已改用 LUT/Slice。硬核占用不能与 Slice 相加，也不能据此声称计算已经搬到 MCU。
+
+当前 Bit SHA256 为 `A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1`，2026-11-01 15:56:33（北京时间）已完成 JTAG SRAM 下载。用户截图已无此前绿色竖条；未装载 MCU 固件，亦未完成完整微振动频率识别验收。
 
 实际开发经验与常见错误见 [MCU_LESSONS](MCU_LESSONS.md)，当前算法见 [CURRENT_ALGORITHMS](CURRENT_ALGORITHMS.md)。

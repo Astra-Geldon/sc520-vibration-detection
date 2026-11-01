@@ -102,6 +102,7 @@ module vib_lk_grid_multi (
     // ---- 行列投影用的逐像素流（只读引出，不改变任何既有逻辑）----
     output wire              o_px_valid,   // = proc_en
     output wire [8:0]        o_px_it,      // = |It| (dit_abs)
+    output wire [8:0]        o_px_edge,    // = |dIx|+|dIy|, aligned with o_px_it
     output wire [9:0]        o_px_x,       // = px_now 0..639
     output wire [9:0]        o_px_y,       // = mrow 0..359
     // 8 个块纹理能量 acc_axx 的对数（4 倍粒度），给峰值扫描做亮度归一化
@@ -272,9 +273,18 @@ module vib_lk_grid_multi (
     (* multstyle = "dsp" *) wire signed [17:0] p_by = dIy * dit;
     wire        [8:0]  dit_abs = dit[8] ? (~dit + 9'd1) : dit;   // <= 255
 
+    // The LK gradients are already computed in the same pixel/DDR cycle as
+    // the frame difference.  Reusing them as a lightweight edge measure keeps
+    // the new bounding-box path aligned with the motion path and avoids
+    // importing the unrelated 1280x720 HDMI Sobel pipeline.
+    wire [8:0] dIx_abs = dIx[8] ? (~dIx + 9'd1) : dIx;
+    wire [8:0] dIy_abs = dIy[8] ? (~dIy + 9'd1) : dIy;
+    wire [9:0] edge_sum = {1'b0,dIx_abs} + {1'b0,dIy_abs};
+
     // ---- 行列投影流（只读，不影响下面的累加器）----
     assign o_px_valid = proc_en;
     assign o_px_it    = dit_abs;
+    assign o_px_edge  = edge_sum[8:0];
     assign o_px_x     = px_now;
     assign o_px_y     = mrow;
 

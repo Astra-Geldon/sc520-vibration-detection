@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-01",
+  "source": "User-supplied screenshot and request to save final version and push main",
+  "user_message": "这应该没有问题了吧。本地提交一版“最终版”，然后gitee上推一版本到main",
+  "screenshot": "board_user_feedback_20261101.jpg",
+  "screenshot_sha256": "7a8f6c0e5934d3b793d32ea5bbe09905ed89c960f98bf3b9a29387ea78ee0bf6",
+  "observed": "The previously reported dense green vertical stripes are no longer visible; camera image, status panel and logo are visible.",
+  "scope": "Visual feedback for this frame; complete vibration frequency accuracy validation was not requested or performed.",
+  "bit_sha256": "a2ca15e1bc1a57199d6171230e50bcb8df6f2c4f75635cf387b6bb1ab753b4e1"
+}

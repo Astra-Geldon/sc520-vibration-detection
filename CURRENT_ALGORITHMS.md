@@ -1,6 +1,6 @@
 # 当前算法与实际数据链路
 
-适用最终五拨码版，活动生产源码 `85c7f7d`。本说明以顶层实例和有效代码为准；某些保留的模块默认参数或旧源码注释描述了历史能力，不等于当前开启。
+适用当前 Final_Project 整合版：图像采集、基础处理、增强与 HDMI 沿用 `20261029project`，微振动链路沿用 `backup-vibration-20261030`。本说明以顶层实例和有效代码为准；旧模块默认参数或注释不代表当前配置。发布目标为 Gitee `main`，当前 Bit SHA256 为 `A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1`。
 
 ## 活动链路与算法位置
 
@@ -10,9 +10,12 @@ SC520CS RAW10 → MIPI CSI → BGGR双线性去马赛克（SW4）
 → AWB（SW1）→ Gamma（SW2）→ RGB打包/DDR帧缓存
 → Color Shading（SW3）→ img_proc模式 → 固定N1（SW2）
 → 状态/模式名/安路Logo OSD → HDMI
+
+ISP被动抽头 → 640×360微振动链路 → 结果标记叠加至HDMI
+                               └→ UART诊断
 ```
 
-源代码入口：[顶层](user_source/hdl_source/design_top_wrapper.v)、[ISP](user_source/hdl_source/isp/isp_top.v)。单帧流式处理；沿用原DDR视频缓存，无交替曝光或新增整帧缓存。六项展示能力分别是DEM/AWB/GAM/CSC/N1/EXP，其中Gamma和N1共用SW2。
+源代码入口：[顶层](user_source/hdl_source/design_top_wrapper.v)、[ISP](user_source/hdl_source/isp/isp_top.v)。图像路径保持原流式处理和 DDR 视频缓存，无交替曝光；振动路径另用外部 DDR 保存上一帧。六项图像展示能力为 DEM/AWB/GAM/CSC/N1/EXP，其中 Gamma 和 N1 共用 SW2。KEY3 独立控制微振动算法，默认 OFF。
 
 ## 1. 去马赛克与RAW展示（SW4）
 
@@ -61,7 +64,7 @@ R/B使用Q8增益，G直通。顶层强度固定k=0.75，SW3在校正输出和�
 | 191 | 257 | 约1.004 |
 | ≥192 | 256 | 1.0，精确保持 |
 
-乘法用显式移位/加法树实现，当前完整编译确认总DSP仍31。N1仅在彩色模式、SW2开启、SW4为正常彩色时参与；不改变视频同步延迟。
+乘法用显式移位/加法树实现，不额外占用 DSP。当前整合版总 DSP 为 40，原图像处理仍保留独立的 31 个。N1仅在彩色模式、SW2开启、SW4为正常彩色时参与；不改变视频同步延迟。
 
 它是逐像素亮度曲线，不是H1分区掩模、局部平均、自适应HDR或色度降噪。保护的是“进入N1时peak≥192不再被N1增亮”，不能保证传感器或前级永远不饱和，也不能消除低曝光提亮后的噪声。
 
@@ -88,4 +91,14 @@ E是控制参数，不是毫秒；寄存器表列的是请求写入值，不是�
 
 ## 已退出当前链路的历史实验
 
-H1掩模、C0～C3补偿、D降噪、P肩部/W颜色保护、E/G/N候选菜单、交替曝光和大诊断逻辑均不属于当前活动实现。微振动测频当前也未启用。历史记录见 [文档索引](DOCUMENTATION_INDEX.md)，实际资源见 [RESOURCE_USAGE](RESOURCE_USAGE.md)。
+H1掩模、C0～C3补偿、D降噪、P肩部/W颜色保护、E/G/N候选菜单、交替曝光和旧大诊断逻辑均不属于当前活动实现。历史记录见 [文档索引](DOCUMENTATION_INDEX.md)，实际资源见 [RESOURCE_USAGE](RESOURCE_USAGE.md)。
+
+## 微振动识别与结果输出
+
+活动链路复用备份工程的被动抽头、帧差/预处理、分块 LK、Goertzel 频率分析、峰值确认及包围框标记。实际 RTL 为 **640×360、8×6 分块、64 帧窗口、27 个频点，2～15 Hz、间隔 0.5 Hz**。沿用实际 RTL，未改为规划文档中的 320×180 方案。
+
+KEY3 默认 OFF；关闭时算法链保持复位，振动 DDR 请求被门控，HDMI 振动标记旁路。开启后运行识别并将结果标记叠加到 HDMI，保留 UART 诊断输出。抽头不向图像路径施加反压，DDR 调度以 HDMI 连续输出为优先。
+
+为避免 DSP 不足时合并主图像乘法器，`vib_bbox_grid` 仅增加 `(* dsp_style = "no" *)`，将本模块 6 个 DSP 运算映射到 LUT/Slice；未改算法公式、位宽或流水节拍。最终全工程 DSP 为 40，图像 31 个 DSP 保持独立，原 5 条物理浮空网警告已消失。
+
+当前 Bit 于 2026-11-01 15:56:33（北京时间）烧录成功，用户随后截图已无此前绿色竖条。完整频率识别验收尚未进行；构建与烧录证据见[本次修复档案](validation/green_lines_dsp_20261101/README.md)。

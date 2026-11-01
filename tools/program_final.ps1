@@ -4,12 +4,17 @@
 param(
     [Parameter(Mandatory = $true)][string]$Bit,
     [string]$TdExe = 'D:\Anlogic\TD6.2.1\bin\td_commands_prompt.exe',
-    [string]$ExpectedSha256 = '4d3e193aa914d10deed1493e32bebb461fea994d957756b77819ecc7fe7ebcdb',
-    [string]$OutputRoot = 'D:\FPGA\codex\_build\20261029project\manual-programming',
+    [string]$ExpectedSha256 = 'A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1',
+    [string]$OutputRoot = 'D:\FPGA\codex_zyj\_build\Final_Project\manual-programming',
     [int]$Spd = 7,
     [int]$Cable = 0
 )
 $ErrorActionPreference = 'Stop'
+$staleHwservers = Get-Process -Name hwserver -ErrorAction SilentlyContinue
+if ($staleHwservers) {
+    $staleHwservers | Stop-Process -Force
+    Start-Sleep -Milliseconds 200
+}
 $bitPath = (Resolve-Path -LiteralPath $Bit).Path
 $tdPath = (Resolve-Path -LiteralPath $TdExe).Path
 $hash = (Get-FileHash -LiteralPath $bitPath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -29,7 +34,7 @@ $tcl = Join-Path $runDir 'program.tcl'
 $stdout = Join-Path $runDir 'program.log'
 $stderr = Join-Path $runDir 'program.err'
 @(
-    'connect_cable -host_name 127.0.0.1:5555 -open -auto_start',
+    'connect_cable -host_name 127.0.0.1:5555 -usr_args "-f 12 -i 0" -open -auto_start',
     'connect_cable -current',
     ('download -bit {{{0}}} -mode jtag -spd {1} -cable {2}' -f $bitFwd, $Spd, $Cable),
     'connect_cable -close',
