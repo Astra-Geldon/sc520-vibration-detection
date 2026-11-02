@@ -1,8 +1,7 @@
-// Five-switch demo built on the accepted E900/G12/N1 startup fix.
-// KEY1/KEY2 retain colour/gray/binary/Sobel; SW6 is not connected or modified.
-// Camera power-up, ISP, DDR and HDMI clocks/wiring preserve b8407f8.
-// No parameter menus, statistics tap or UART; only compact applied-state OSD.
-`include "fixed_n1_lift.v"
+// KEY4控制融合AE，SW5允许按需补偿降曝损失，SW2只控制Gamma。
+// KEY1/KEY2保留彩色/灰度/二值化/Sobel，KEY3保留振动，SW6不使用。
+// 摄像头上电、ISP、DDR及HDMI时钟沿用既有实现。
+`include "fusion_shadow_lift.v"
 `include "demo_switch_control.v"
 
 // Integrated vibration chain.  These modules are intentionally included here
@@ -38,9 +37,9 @@ module design_top_wrapper (
       
     inout wire [1:0]  I_button,
 
-    // Active-low KEY1/KEY2 select image modes; KEY3/KEY4 are unused.
+    // 低有效KEY1/KEY2选择图像模式，KEY3控制振动，KEY4控制AE。
     input wire [3:0]  I_key,
-    // SW1 AWB, SW2 Gamma+N1, SW3 shading, SW4 demosaic, SW5 exposure.
+    // SW1控制AWB，SW2控制Gamma，SW3控制CSC，SW4控制去马赛克，SW5允许自动补亮。
     input wire [4:0]  I_sw,
 
     output wire       O_screen_pwm,
@@ -374,19 +373,20 @@ module design_top_wrapper (
 
     wire[23:0]  S_video_rd_data;
 
-    // Original four image modes; fixed N1 is applied only to colour.
+    // 保留原有四种图像模式，融合补亮只处理正常彩色画面。
     localparam integer IMG_MODE = 0;
     wire [23:0] S_imgp_data, S_awb_data, S_csc_data, S_csc_corrected, S_osd_mix;
     wire [2:0] S_img_mode;
     wire [23:0] S_lift_data, S_tone_stage_data;
-    wire [3:0] S_n1_extra_strength;
+    wire [4:0] S_fusion_strength;
+    wire S_fusion_triggered;
     wire S_tone_stage_de, S_tone_stage_vs;
     wire [23:0] S_post_stage_data, S_post_lift_data;
     wire S_post_stage_de, S_post_stage_vs;
-    reg [7:0] S_post_stage_peak;
+    reg [23:0] S_post_stage_original;
     reg [2:0] S_post_stage_mode;
     reg S_post_stage_enable;
-    reg [3:0] S_post_stage_strength;
+    reg [4:0] S_post_stage_strength;
     reg [5:0] S_post_alg_state, S_post_alg_pending;
     reg [15:0] S_post_latency_bcd;
     reg S_post_latency_valid;
@@ -403,15 +403,17 @@ module design_top_wrapper (
     wire [4:0] S_demo_switches, S_demo_mipi, S_demo_mipi_status;
     wire [5:0] S_demo_hdmi;
     wire S_demo_switch_valid, S_demo_mipi_valid, S_demo_hdmi_valid, S_demo_mipi_status_valid;
-    wire [3:0] S_demo_sensor_controls;
+    wire [2:0] S_demo_sensor_controls;
     wire S_demo_sensor_controls_valid;
     wire S_ae_enable_sys, S_auto_applied;
     wire [5:0] S_ae_luma, S_ae_measure_mipi, S_ae_measure_sensor;
     wire S_ae_luma_valid, S_ae_luma_fs, S_ae_measure_valid, S_ae_measure_sensor_valid;
-    wire S_protect_applied, S_protect_pending, S_protect_valid;
-    wire S_ae_paused = S_demo_sensor_controls[1] &&
-                       (S_demo_sensor_controls[2] || S_demo_sensor_controls[3]);
-    wire [3:0] S_demo_sensor_status;
+    wire S_exposure_pending, S_exposure_valid, S_exposure_stable;
+    wire [15:0] S_applied_exposure;
+    wire S_ae_paused = S_demo_sensor_controls[0] &&
+                       (S_demo_sensor_controls[1] || S_demo_sensor_controls[2]);
+    // 高11位是已完成真实组写/生效等待的E，低4位携带同一次快照的状态。
+    wire [14:0] S_demo_sensor_status;
     wire S_demo_sensor_status_valid;
     reg S_demo_vs_d;
     wire S_demo_frame_apply = S_hdmi_vsync && !S_demo_vs_d;
@@ -423,7 +425,7 @@ module design_top_wrapper (
         .I_clk(I_sys_clk), .I_rst_n(S_rst_n), .I_async(I_sw),
         .O_state(S_demo_switches), .O_valid(S_demo_switch_valid)
     );
-    // C7 / I_key[3]: active-low K3, one toggle per debounced press.
+    // KEY4对应I_key[3]，低有效，每次完整去抖按下只切换一次AE。
     ae_key_toggle #(.DEFAULT_ENABLE(1'b1)) u_ae_key (
         .I_clk(I_sys_clk), .I_rst_n(S_rst_n), .I_key_n(I_key[3]),
         .O_enable(S_ae_enable_sys)
@@ -440,9 +442,9 @@ module design_top_wrapper (
         .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
         .O_dst_data(S_demo_hdmi), .O_dst_valid(S_demo_hdmi_valid)
     );
-    demo_control_cdc #(.WIDTH(4), .INITIAL(4'b0011)) u_demo_sensor_controls (
+    demo_control_cdc #(.WIDTH(3), .INITIAL(3'b001)) u_demo_sensor_controls (
         .I_src_clk(I_sys_clk), .I_src_rst_n(S_rst_n),
-        .I_src_data({~S_demo_switches[3], S_vib_enable_sys, S_ae_enable_sys, S_demo_switches[4]}),
+        .I_src_data({~S_demo_switches[3], S_vib_enable_sys, S_ae_enable_sys}),
         .I_src_valid(S_demo_switch_valid),
         .I_dst_clk(S_24m_clk), .I_dst_rst_n(S_rst_n), .I_dst_apply(1'b1),
         .O_dst_data(S_demo_sensor_controls), .O_dst_valid(S_demo_sensor_controls_valid)
@@ -454,17 +456,39 @@ module design_top_wrapper (
         .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
         .O_dst_data(S_demo_mipi_status), .O_dst_valid(S_demo_mipi_status_valid)
     );
-    demo_control_cdc #(.WIDTH(4), .INITIAL(4'b0110)) u_demo_sensor_status (
+    demo_control_cdc #(.WIDTH(15), .INITIAL(15'd2)) u_demo_sensor_status (
         .I_src_clk(S_24m_clk), .I_src_rst_n(S_rst_n),
-        .I_src_data({S_auto_applied, S_protect_applied, (S_protect_pending || S_ae_paused), S_protect_valid}), .I_src_valid(1'b1),
+        .I_src_data({S_applied_exposure[10:0], S_exposure_stable, S_auto_applied,
+                     (S_exposure_pending || S_ae_paused), S_exposure_valid}), .I_src_valid(1'b1),
         .I_dst_clk(S_hdmi_pixel_clk), .I_dst_rst_n(S_hdmi_rst_n), .I_dst_apply(S_demo_frame_apply),
         .O_dst_data(S_demo_sensor_status), .O_dst_valid(S_demo_sensor_status_valid)
     );
     wire S_demo_raw = !S_demo_mipi_status[3];
+    wire S_fusion_enable = S_demo_hdmi_valid && S_demo_mipi_status_valid &&
+                          S_demo_hdmi[4] && !S_demo_raw && (S_tone_stage_mode == 0);
+    // E状态不是逐像素标签。状态变化后跳过两个完整显示帧，避免旧DDR画面
+    // 与新曝光混合统计；现有AE等待与曝光完整帧检查共同隔离过渡期。
+    reg [11:0] S_fusion_exposure_snapshot;
+    reg [1:0] S_fusion_exposure_guard;
+    wire [11:0] S_fusion_exposure_now = {S_demo_sensor_status[14:4], S_demo_sensor_status[3]};
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) begin
+            S_fusion_exposure_snapshot <= 0;
+            S_fusion_exposure_guard <= 2;
+        end else if (S_fusion_exposure_now != S_fusion_exposure_snapshot ||
+                     !S_demo_sensor_status_valid || !S_demo_sensor_status[3]) begin
+            S_fusion_exposure_snapshot <= S_fusion_exposure_now;
+            S_fusion_exposure_guard <= 2;
+        end else if (S_demo_frame_apply && S_fusion_exposure_guard != 0) begin
+            S_fusion_exposure_guard <= S_fusion_exposure_guard - 1'b1;
+        end
+    end
+    wire S_fusion_exposure_ready = S_demo_sensor_status_valid && S_demo_sensor_status[3] &&
+                                   (S_fusion_exposure_guard == 0);
     wire [5:0] S_demo_alg_state = {
         S_demo_mipi_status[3],
-        S_demo_sensor_status[3],
-        S_demo_hdmi[1] && !S_demo_raw && (S_tone_stage_mode == 0),
+        S_demo_sensor_status[2],
+        S_fusion_enable,
         S_demo_hdmi[2] && !S_demo_raw && ((S_tone_stage_mode == 0) || (S_tone_stage_mode == 2)),
         S_demo_mipi_status[1],
         S_demo_mipi_status[0] && !S_demo_raw
@@ -472,10 +496,10 @@ module design_top_wrapper (
     wire [5:0] S_demo_alg_pending = {
         !S_demo_mipi_status_valid || (S_demo_mipi_status[3] != S_demo_hdmi[3]),
         !S_demo_hdmi_valid || !S_demo_sensor_status_valid || !S_demo_sensor_status[0] || S_demo_sensor_status[1] ||
-            (S_demo_sensor_status[3] != S_demo_hdmi[5]) ||
-            (!S_demo_hdmi[5] && (S_demo_sensor_status[2] != S_demo_hdmi[4])),
+            (S_demo_sensor_status[2] != S_demo_hdmi[5]),
         !S_demo_hdmi_valid || !S_demo_mipi_status_valid ||
-            (S_demo_mipi_status[3:1] != S_demo_hdmi[3:1]),
+            (S_demo_mipi_status[3] != S_demo_hdmi[3]) ||
+            (S_fusion_enable && !S_fusion_exposure_ready),
         !S_demo_hdmi_valid || !S_demo_mipi_status_valid ||
             (S_demo_mipi_status[3] != S_demo_hdmi[3]),
         !S_demo_mipi_status_valid || (S_demo_mipi_status[1] != S_demo_hdmi[1]),
@@ -537,20 +561,20 @@ module design_top_wrapper (
 	
 
   
-  ae_set u_ae_set (
+  fusion_exposure_control u_fusion_exposure_control (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
-      .I_protect_en(S_demo_sensor_controls[0]),
-      .I_auto_en(S_demo_sensor_controls[1]),
-      .I_freeze(S_demo_sensor_controls[2] || S_demo_sensor_controls[3]),
+      .I_auto_en(S_demo_sensor_controls[0]),
+      .I_freeze(S_demo_sensor_controls[1] || S_demo_sensor_controls[2]),
       .I_measure(S_ae_measure_sensor), .I_measure_valid(S_ae_measure_sensor_valid),
       .O_ae_req(S_ae_req),
       .O_ae(S_ae),
       .O_ag(S_ag),
-      .O_protect_applied(S_protect_applied), .O_pending(S_protect_pending), .O_valid(S_protect_valid),
-      .O_auto_applied(S_auto_applied)
+      .O_pending(S_exposure_pending), .O_valid(S_exposure_valid),
+      .O_auto_applied(S_auto_applied), .O_applied_exposure(S_applied_exposure),
+      .O_exposure_valid(S_exposure_stable)
   );
   
     uicfgcs520 #(
@@ -1004,7 +1028,7 @@ isp_top u_isp_top (
     //  OSD 叠加：右上角安路 Logo + 左上角算法名
     //    纯组合 3 选 1，数据零延迟，mixer 的 2 级对齐不受影响
     //------------------------------------------------------------------
-    // Reuse the mixer's existing first pixel register; metadata aligns with it.
+    // 复用混合器既有的第一级像素寄存器，模式和峰值同步对齐。
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_tone_stage_mode <= 3'd0;
@@ -1014,39 +1038,44 @@ isp_top u_isp_top (
             S_tone_stage_peak <= S_tone_input_peak;
         end
     end
-    adaptive_n1_control u_adaptive_n1_control (
+    fusion_lift_control u_fusion_lift_control (
         .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
-        .I_vs(S_tone_stage_vs), .I_de(S_tone_stage_de),
-        .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
-        .I_data(S_tone_stage_data), .O_strength(S_n1_extra_strength)
+        .I_vs(S_post_stage_vs), .I_de(S_post_stage_de),
+        .I_enable(S_post_stage_enable),
+        // 两组数据已过既有寄存器，统计路径不再串接N1组合运算。
+        .I_data(S_post_stage_original), .I_envelope_data(S_post_stage_data),
+        .I_exposure({5'd0, S_demo_sensor_status[14:4]}), .I_exposure_valid(S_fusion_exposure_ready),
+        .O_strength(S_fusion_strength), .O_triggered(S_fusion_triggered),
+        .O_reference_exposure(), .O_reference_luma()
     );
-    // 原N1和额外补亮分别占用混合器已有的两个寄存间隔，总延迟不变。
-    fixed_n1_lift u_n1_lift (
-        .I_de(S_tone_stage_de), .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
+    // 第一段计算最大自然补亮包络，第二段按参考亮度需要混合原图与包络。
+    // 两段各占用混合器已有的寄存间隔，总视频延迟与DDR读请求不变。
+    fusion_n1_envelope u_fusion_n1_envelope (
+        .I_de(S_tone_stage_de), .I_enable(S_fusion_enable),
         .I_data(S_tone_stage_data), .I_peak(S_tone_stage_peak),
-        .I_extra_strength(4'd0), .O_data(S_lift_data)
+        .O_data(S_lift_data)
     );
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
-            S_post_stage_peak <= 0; S_post_stage_mode <= 0;
+            S_post_stage_original <= 0; S_post_stage_mode <= 0;
             S_post_stage_enable <= 0; S_post_stage_strength <= 0;
             S_post_alg_state <= 0; S_post_alg_pending <= 0;
             S_post_latency_bcd <= 0; S_post_latency_valid <= 0;
         end else begin
-            S_post_stage_peak <= S_tone_stage_peak;
+            S_post_stage_original <= S_tone_stage_data;
             S_post_stage_mode <= S_tone_stage_mode;
-            S_post_stage_enable <= (S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw;
-            S_post_stage_strength <= S_n1_extra_strength;
+            S_post_stage_enable <= S_fusion_enable;
+            S_post_stage_strength <= S_fusion_strength;
             S_post_alg_state <= S_demo_alg_state;
             S_post_alg_pending <= S_demo_alg_pending;
             S_post_latency_bcd <= S_latency_bcd;
             S_post_latency_valid <= S_latency_valid;
         end
     end
-    fixed_n1_extra_lift u_n1_extra_lift (
+    fusion_lift_blend u_fusion_lift_blend (
         .I_de(S_post_stage_de), .I_enable(S_post_stage_enable),
-        .I_data(S_post_stage_data), .I_peak(S_post_stage_peak),
-        .I_extra_strength(S_post_stage_strength), .O_data(S_post_lift_data)
+        .I_original(S_post_stage_original), .I_envelope(S_post_stage_data),
+        .I_strength(S_post_stage_strength), .O_data(S_post_lift_data)
     );
     osd_overlay #(
         .OSD_EN(1), .LOGO_EN(1), .H_ACTIVE(1280), .V_ACTIVE(720),
@@ -1057,6 +1086,7 @@ isp_top u_isp_top (
         .I_de(S_post_stage_de), .I_vs(S_post_stage_vs), .I_mode(S_post_stage_mode),
         .I_latency_bcd(S_post_latency_bcd), .I_latency_valid(S_post_latency_valid),
         .I_alg_state(S_post_alg_state), .I_alg_pending(S_post_alg_pending),
+        .I_n1_active(S_post_stage_strength != 0),
         .I_data(S_post_lift_data), .O_data(S_osd_mix)
     );
 

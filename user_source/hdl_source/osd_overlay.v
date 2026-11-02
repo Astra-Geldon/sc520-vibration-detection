@@ -28,11 +28,11 @@ module osd_overlay #(
     input  wire        I_de,        // 像素有效
     input  wire        I_vs,        // 场同步（用来清行计数）
     input  wire [ 2:0] I_mode,      // 当前算法（来自 img_mode_sel，3 bit）
-    // Applied states, not physical switch requests.  Bit 0..5:
-    // AWB, Gamma, Color Shading, N1, exposure protection, demosaic.
-    // SW2 jointly controls Gamma and N1; each still shows its effective state.
+    // 生效状态，bit0..5依次为AWB、Gamma、CSC、SW5补亮允许、AE和去马赛克。
+    // SW2只控制Gamma，SW5允许但尚未实际补亮时显示ARM。
     input  wire [ 5:0] I_alg_state,
     input  wire [ 5:0] I_alg_pending,
+    input  wire        I_n1_active,
     input  wire        I_latency_valid,
     input  wire [15:0] I_latency_bcd, // Four BCD digits, xxx.x milliseconds.
     input  wire [23:0] I_data,      // 来自 img_proc
@@ -169,8 +169,8 @@ module osd_overlay #(
 
     //------------------------------------------------------------------
     // Lower-left applied-state panel. 3 columns x 2 rows, 96x16 per item.
-    // Each label identifies the physical switch, e.g. "S2 GAM ON" and
-    // "S2 N1 ON".  WAIT takes priority over the last confirmed ON/OFF state.
+    // 标签对应实体键，例如S2 GAM、S5 N1及K4 AE。
+    // WAIT优先，其后补亮项区分允许待命ARM和实际补亮ON。
     // Coordinates and font selection are shared across all six entries.
     //------------------------------------------------------------------
     localparam integer STATUS_X = 24;
@@ -214,6 +214,7 @@ module osd_overlay #(
     wire [2:0] S_status_row = S_status_dy[2:0];
     wire S_status_pending = I_alg_pending[S_status_item];
     wire S_status_enabled = I_alg_state[S_status_item];
+    wire S_status_armed = (S_status_item == 3'd3) && S_status_enabled && !I_n1_active;
 
     function [7:0] status_label;
         input [2:0] item;
@@ -239,18 +240,19 @@ module osd_overlay #(
             4'd0: S_status_ascii = (S_status_item == 3'd4) ? "K" : "S";
             4'd1: case (S_status_item)
                 3'd0:S_status_ascii="1";
-                3'd1,3'd3:S_status_ascii="2";
+                3'd1:S_status_ascii="2";
+                3'd3:S_status_ascii="5";
                 3'd2:S_status_ascii="3";
-                3'd4:S_status_ascii="3";
+                3'd4:S_status_ascii="4";
                 3'd5:S_status_ascii="4";
                 default:S_status_ascii=" ";
             endcase
             4'd3:S_status_ascii=status_label(S_status_item,2'd0);
             4'd4:S_status_ascii=status_label(S_status_item,2'd1);
             4'd5:S_status_ascii=status_label(S_status_item,2'd2);
-            4'd7:S_status_ascii=S_status_pending ? "W" : "O";
-            4'd8:S_status_ascii=S_status_pending ? "A" : (S_status_enabled ? "N" : "F");
-            4'd9:S_status_ascii=S_status_pending ? "I" : (S_status_enabled ? " " : "F");
+            4'd7:S_status_ascii=S_status_pending ? "W" : (S_status_armed ? "A" : "O");
+            4'd8:S_status_ascii=S_status_pending ? "A" : (S_status_armed ? "R" : (S_status_enabled ? "N" : "F"));
+            4'd9:S_status_ascii=S_status_pending ? "I" : (S_status_armed ? "M" : (S_status_enabled ? " " : "F"));
             4'd10:S_status_ascii=S_status_pending ? "T" : " ";
             default:S_status_ascii=" ";
         endcase
@@ -317,6 +319,7 @@ module osd_overlay #(
                 "N":status_glyph=35'b10001_11001_10101_10011_10001_10001_10001;
                 "O":status_glyph=35'b01110_10001_10001_10001_10001_10001_01110;
                 "P":status_glyph=35'b11110_10001_10001_11110_10000_10000_10000;
+                "R":status_glyph=35'b11110_10001_10001_11110_10100_10010_10001;
                 "S":status_glyph=35'b01111_10000_10000_01110_00001_00001_11110;
                 "T":status_glyph=35'b11111_00100_00100_00100_00100_00100_00100;
                 "W":status_glyph=35'b10001_10001_10001_10101_10101_11011_10001;

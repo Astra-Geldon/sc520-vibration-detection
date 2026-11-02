@@ -214,7 +214,7 @@
                     <Attr Name="CompileOrder" Val="40"/>
                 </FileInfo>
             </File>
-            <File Path="../user_source/hdl_source/uiisp_beta/ae_set.v">
+            <File Path="../user_source/hdl_source/fusion_exposure_control.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>

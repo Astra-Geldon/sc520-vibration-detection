@@ -1,60 +1,76 @@
-# Final_Project · 最终版
+# SC520CS图像处理与微振动识别
 
-安路 HX1P35A 开发板（PH1P35MDG324，-3）与 SC520CS 摄像头的图像处理、微振动识别及 HDMI 整合工程。发布分支为 `main`，日期 2026-11-01。
+安路HX1P35A开发板（PH1P35MDG324，-3）与SC520CS摄像头的图像处理、微振动识别及HDMI整合工程。
 
-本版已完成完整 TD 编译和 JTAG SRAM 烧录。用户提供的最新画面中，之前的密集绿色竖条已消失，摄像头画面、状态面板和 Logo 可正常显示。该反馈用于确认显示恢复；本阶段没有进行完整的振动测频精度验收。
-
-当前源码在上述已上板基线上增加同帧关联的 `LAT xxx.x MS` 延迟显示，并缩小 LAT 和左下算法状态面板。测量口径、紧凑布局及本机检查见 [延迟显示说明](LATENCY_DISPLAY.md) 和 [紧凑 OSD 验证](validation/compact_osd_20261101/README.md)。下文 Bit 哈希及资源表保留的是历史已上板基线；当前源码需重新构建，不能用旧 Bit 验收 LAT。当前源码另加入前端独立抽样自动曝光，上电默认开启，C7／I_key[3]（K3）切换；操作和验证见 [自动曝光说明](AUTO_EXPOSURE.md)。新 AE 尚未经过 TD 编译和上板验证。
-
-## 工程基线
-
-- 摄像头、基础图像处理、图像增强、视频缓存与 HDMI：沿用 `20261029project`。
-- 微振动识别：接入 `backup-vibration-20261030` 的实际 RTL，640×360 抽头、8×6 分块、64 帧窗口、2～15 Hz/0.5 Hz 频点链路。
-- HDMI 优先；ISP 抽头为被动监听。保留振动 HDMI 标记和 FPGA UART 诊断。
-- 为避免 DSP 紧张引起图像模块自动合并，仅给 `vib_bbox_grid` 添加 `dsp_style="no"` 资源属性，不改算法公式、位宽或流水节拍。原图像 DSP 保持独立。
+当前源码分支为`codex/fusion-exposure-linked-lift`，在已上板融合版`d755598`上改为“自动曝光＋按曝光损失自动补亮”。本轮只修改源码并进行Icarus局部验证，**尚未完整TD编译、生成新bitstream或烧录**。目录中的旧Bit不包含本轮新按键逻辑，不能用它验收下表功能。融合原理及版本区分见[融合说明](FUSION_EXPOSURE_LINKED.md)。
 
 ## 获取与操作
 
 ```powershell
-git clone --branch main https://gitee.com/wang-zhanheng/sc520-vibration-detection.git
+git clone https://gitee.com/wang-zhanheng/sc520-vibration-detection.git
 cd sc520-vibration-detection
 ```
 
-| 输入 | 功能 |
+上述命令取得远端默认分支，不保证包含当前本地测试分支；本轮尚未推送远端。使用队友提供的工程时，先确认分支、提交和Bit来源。
+
+| 输入 | 当前源码功能 |
 |---|---|
 | KEY1 | 回到原图／增强彩色模式 |
-| KEY2 | 切换灰度、二值化、Sobel 模式 |
+| KEY2 | 切换灰度、二值化、Sobel模式 |
 | KEY3（I_key[2]，B9） | 微振动算法开关，上电默认关闭 |
-| K3（I_key[3]，C7，原 KEY4） | 自动曝光开关，上电默认开启 |
-| SW1 | AWB 白平衡 |
-| SW2 | Gamma＋固定 N1 |
-| SW3 | 水平 Color Shading |
-| SW4 | 去马赛克／RAW Bayer 样本灰度 |
-| SW5 | 自动曝光关闭后，选择 E900/G12 或 E1991/G24 固定档 |
+| KEY4（I_key[3]，C7） | 自动曝光开关，上电默认开启 |
+| SW1 | AWB白平衡 |
+| SW2 | Gamma |
+| SW3 | 水平Color Shading |
+| SW4 | 去马赛克／RAW Bayer样本灰度 |
+| SW5 | 允许按需自动补亮；不改变传感器曝光或增益 |
 
-开关方向以 OSD 的 ON/OFF 为准。SW4 关闭时 AWB/CSC/N1 自动旁路；左下 `K3 AE` 显示自动曝光 ON/OFF/WAIT；振动或 RAW 模式暂停自动调整并显示 WAIT。SW6 不使用。详见[队友指南](TEAM_GUIDE.md)和[五拨码说明](FIVE_SWITCH_DEMO_20261101.md)。
+KEY4开启时只自动调整曝光时间参数E，范围128～1991，传感器增益固定G12；关闭后恢复E900/G12。SW5开启不代表立即提亮：检测到明暗区域并存时先保存参考曝光和中暗部亮度，连续有效帧确认后，只补偿E下降造成的中暗部损失；光源离开后自主渐退，E回升时减弱。SW2与补亮独立。
 
-## 编译与下载
+左下`K4 AE`显示ON/OFF/WAIT；`S5 N1`显示OFF（关闭或当前模式旁路）、ARM（已允许但没有实际补偿）、ON（正在补亮）、WAIT（控制或状态未就绪）。开关方向以OSD为准。SW4关闭时AWB/CSC/N1旁路，Gamma仍随SW2；振动或RAW模式暂停自动曝光。SW6不使用。详见[队友指南](TEAM_GUIDE.md)和[五拨码说明](FIVE_SWITCH_DEMO_20261101.md)。
 
-先看[编译烧录说明](BUILD_AND_PROGRAM.md)。必须完整执行 `td_project/patch/build_all.ps1` 的 A→B→C，保留加密 HDMI 核的 12 处数据库补丁及当前 40 组独立 CDC 检查。
+## 工程范围与构建
 
-历史已上板基线 Bit：`td_project/camera_to_dsi_display.bit`，1,789,539 字节。SHA256：
+图像采集、基础处理、视频缓存和HDMI沿用`20261029project`；微振动接入`backup-vibration-20261030`的实际RTL：640×360抽头、8×6分块、64帧窗口、2～15Hz/0.5Hz频点链路。KEY3、振动算法、摄像头启动和HDMI修复不属于本轮融合改动。HDMI优先，振动抽头保持被动监听。
+
+当前工程只接入一个融合曝光控制器和一个融合补亮控制器。旧`ae_set.v`、`fixed_n1_lift.v`保留作历史参考，已退出活动编译入口。延迟显示口径见[延迟显示说明](LATENCY_DISPLAY.md)。
+
+完整构建按[编译烧录说明](BUILD_AND_PROGRAM.md)执行`td_project/patch/build_all.ps1`的A→B→C，保留加密HDMI核12处数据库补丁和CDC审计。Icarus通过不能替代布局布线、资源及物理CDC检查。
+
+## 已烧录旧融合版与资源
+
+可回滚的旧源码提交为`d755598`。已烧录Bit为`td_project/camera_to_dsi_display_ae_shadow_fusion_20261102.bit`，1,789,539字节，SHA256：
 
 ```text
-A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1
+908e5c61e438f0c32dd2b8335234ba548e73360c325c11255fb950cae2110db6
 ```
 
-Git 保存源码和验证摘要；Bit、数据库及完整工具报告保留本地，克隆后需自行构建或取得上述已验证 Bit。日期等 Bit 元数据会使重新构建的 SHA256 改变，应核验新构建来源后再下载。JTAG SRAM 配置掉电丢失。
+**以下全部是旧融合版的物理资源，本轮新源码的资源和时序尚未测得。**旧版报告见[构建记录](validation/ae_shadow_fusion_build_20261102/build_result.json)。
 
-| 历史已上板基线物理资源 | 已用／总量 |
-|---|---|
-| LUT6 | 18,362 / 21,216 |
-| Slice | 19,163 / 21,216，90.32% |
-| FF | 16,778 / 42,432 |
-| ERAM | 66 / 108 |
-| DSP | 40 / 40 |
-| PLL / MCU | 3 / 6；1 / 1 |
+| 旧融合版资源 | 已用／总量 | 占用率 |
+|---|---:|---:|
+| IO | 68／160 | 42.50% |
+| LUT6 | 17,570／21,216 | 82.81% |
+| FF（Slice寄存器） | 17,696／42,432 | 41.70% |
+| Slice | 18,510／21,216 | 87.25% |
+| F7MUX | 265／10,608 | 2.50% |
+| F8MUX | 84／5,304 | 1.58% |
+| ERAM20K | 66／108 | 61.11% |
+| DSP | 40／40 | 100.00% |
+| MCU | 1／1 | 100.00% |
+| DDR_BYTE | 6／12 | 50.00% |
+| MIPI_TX | 0／2 | 0.00% |
+| MIPI_RX | 1／2 | 50.00% |
+| PAD | 27／160 | 16.88% |
+| PLL | 3／6 | 50.00% |
+| GCLK | 10／32 | 31.25% |
+| LCLK | 0／12 | 0.00% |
+| SCLK | 28／48 | 58.33% |
+| MLCLK | 2／6 | 33.33% |
+| IOCLK | 4／18 | 22.22% |
 
-SWNS +0.121 ns、HWNS +0.020 ns，STNS/HTNS 均为 0。MCU 仅被动接入，未加载应用固件；UART 诊断由 FPGA 实现。
+旧融合版SWNS为+0.103ns、HWNS为+0.020ns，STNS/HTNS为0，40组CDC检查通过。旧版DSP已满；本轮新增运算采用移位加法和串行控制，最终DSP映射仍须由新TD报告确认。MCU被动接入，未加载应用固件；UART诊断由FPGA实现。
 
-[验证档案及用户画面](validation/green_lines_dsp_20261101/README.md) · [整合决定与待研究事项](INTEGRATION_NOTES.md) · [算法](CURRENT_ALGORITHMS.md) · [资源](RESOURCE_USAGE.md) · [文档索引](DOCUMENTATION_INDEX.md)
+更早的图像/整合版本资源保留在[资源档案](RESOURCE_USAGE.md)，不能当成本轮资源结果。Git保存源码和验证摘要；Bit、数据库及完整工具报告保留本地。JTAG SRAM配置掉电丢失。
+
+[当前算法](CURRENT_ALGORITHMS.md)·[自动曝光](AUTO_EXPOSURE.md)·[整合记录](INTEGRATION_NOTES.md)·[文档索引](DOCUMENTATION_INDEX.md)

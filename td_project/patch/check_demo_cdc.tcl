@@ -25,9 +25,9 @@ set demo_cdc_paths 0
 foreach {inst width} {
     u_demo_mipi_controls 5
     u_demo_hdmi_controls 6
-    u_demo_sensor_controls 4
+    u_demo_sensor_controls 3
     u_demo_mipi_status 5
-    u_demo_sensor_status 4
+    u_demo_sensor_status 15
     u_video_latency/u_result_cdc 17
     u_ae_measure_cdc 6
 } {
