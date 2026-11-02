@@ -1,0 +1,485 @@
+{
+  "pass": true,
+  "status": "完整生产编译通过，独立CDC因中文路径启动失败后单独补跑通过",
+  "verified_at": "2026-11-02T16:47:11.40153+08:00",
+  "reference_commit": "38413764adee46320d03507684ba582ea9073d10",
+  "branch": "codex/ae-highlight-shadow-fusion",
+  "source_manifest": "source_manifest.json",
+  "source_manifest_sha256": "8cc873d9e304525d12df60f97495b700c7a9ce945e9b435bea5efc42a2803526",
+  "build_inputs_count": 265,
+  "synthesis_inputs_unchanged": true,
+  "post_build_process_fix": [
+    {
+      "path": "td_project/patch/phaseC_build_from_patched.tcl",
+      "at_build_sha256": "b7de6103ac7d2913b92aac05a090e8fcfeb0b78bedcb4db137b2eb8ba18af55e",
+      "after_build_sha256": "75e7261dfbee62b2f3f6da360d0b79e8817a23c7409715ed17802b51078c0495"
+    }
+  ],
+  "post_build_fix_scope": "仅把独立CDC子进程脚本路径改为相对路径，不修改RTL、IP、SDC、路由数据库或Bit",
+  "original_phaseC_exit_code": 1,
+  "original_phaseC_success_marker": false,
+  "original_phaseC_failures": [
+    "demo_cdc : Independent DEMO CDC audit failed; see demo_cdc_audit.log"
+  ],
+  "cdc_recovery_exit_code": 0,
+  "cdc_recovery_marker": "FUSION_CDC_RECOVERY_PASS",
+  "no_resynthesis_or_reroute_for_recovery": true,
+  "bit": {
+    "path": "td_project/camera_to_dsi_display.bit",
+    "named_copy": "td_project/camera_to_dsi_display_ae_shadow_fusion_20261102.bit",
+    "bytes": 1789539,
+    "sha256": "908e5c61e438f0c32dd2b8335234ba548e73360c325c11255fb950cae2110db6"
+  },
+  "routed_db_sha256": "f6e37c387c863b5330b20b53c3fd23483df1c88e3c1c48876308a8d147c27814",
+  "timing_ns": {
+    "SWNS": 0.103,
+    "STNS": 0.0,
+    "HWNS": 0.02,
+    "HTNS": 0.0
+  },
+  "sta_coverage_percent": 97.12,
+  "resources": {
+    "IO": {
+      "used": 68,
+      "total": 160,
+      "percent": 42.5
+    },
+    "lut6": {
+      "used": 17570,
+      "total": 21216,
+      "percent": 82.81
+    },
+    "slice reg": {
+      "used": 17696,
+      "total": 42432,
+      "percent": 41.7
+    },
+    "slice": {
+      "used": 18510,
+      "total": 21216,
+      "percent": 87.25
+    },
+    "f7mux": {
+      "used": 265,
+      "total": 10608,
+      "percent": 2.5
+    },
+    "f8mux": {
+      "used": 84,
+      "total": 5304,
+      "percent": 1.58
+    },
+    "eram": {
+      "used": 66,
+      "total": 108,
+      "percent": 61.11
+    },
+    "dsp": {
+      "used": 40,
+      "total": 40,
+      "percent": 100.0
+    },
+    "mcu": {
+      "used": 1,
+      "total": 1,
+      "percent": 100.0
+    },
+    "ddr_byte": {
+      "used": 6,
+      "total": 12,
+      "percent": 50.0
+    },
+    "mipi_tx": {
+      "used": 0,
+      "total": 2,
+      "percent": 0.0
+    },
+    "mipi_rx": {
+      "used": 1,
+      "total": 2,
+      "percent": 50.0
+    },
+    "pad": {
+      "used": 27,
+      "total": 160,
+      "percent": 16.88
+    },
+    "pll": {
+      "used": 3,
+      "total": 6,
+      "percent": 50.0
+    },
+    "gclk": {
+      "used": 10,
+      "total": 32,
+      "percent": 31.25
+    },
+    "lclk": {
+      "used": 0,
+      "total": 12,
+      "percent": 0.0
+    },
+    "sclk": {
+      "used": 28,
+      "total": 48,
+      "percent": 58.33
+    },
+    "mlclk": {
+      "used": 2,
+      "total": 6,
+      "percent": 33.33
+    },
+    "ioclk": {
+      "used": 4,
+      "total": 18,
+      "percent": 22.22
+    }
+  },
+  "physical_statistics_raw": "standard\r\n***Report Model: design_top_wrapper Device: PH1P35MDG324***\r\n\r\nDesign Statistics\r\n#IO                        68   out of    160   42.50%\r\n  #input                   11\r\n  #output                  32\r\n  #inout                   25\r\n#lut6                   17570   out of  21216   82.81%\r\n#reg                    17696\r\n  #slice reg            17696   out of  42432   41.70%\r\n  #pad reg                  0\r\n\r\nUtilization Statistics\r\n#slice                  18510   out of  21216   87.25%\r\n  #used ram              1784\r\n    #dram lut            1768\r\n    #shifter lut           16\r\n  #used logic           16726\r\n    #with luts          13200\r\n    #with adder          2586\r\n    #reg only             940\r\n#feedthrough             4063\r\n#f7mux                    265   out of  10608    2.50%\r\n#f8mux                     84   out of   5304    1.58%\r\n#eram                      66   out of    108   61.11%\r\n  #eram20k                 66\r\n  #fifo20k                  0\r\n#dsp                       40   out of     40  100.00%\r\n#mcu                        1   out of      1  100.00%\r\n#ddr_byte                   6   out of     12   50.00%\r\n#mipi_tx                    0   out of      2    0.00%\r\n#mipi_rx                    1   out of      2   50.00%\r\n#pad                       27   out of    160   16.88%\r\n#pll                        3   out of      6   50.00%\r\n#gclk                      10   out of     32   31.25%\r\n#lclk                       0   out of     12    0.00%\r\n#sclk                      28   out of     48   58.33%\r\n#mlclk                      2   out of      6   33.33%\r\n#ioclk                      4   out of     18   22.22%\r\n\r\n\r\n",
+  "checks": {
+    "phaseA": true,
+    "hdmi_patch_12": true,
+    "production_clocks_and_timing": true,
+    "dsp_not_merged": true,
+    "no_physical_floating_nets_or_routing_skips": true,
+    "cdc_registers_40": true,
+    "cdc_physical_40": true,
+    "pipeline_equivalence": true,
+    "region_equivalence": true
+  },
+  "cdc_groups": [
+    {
+      "group": "u_demo_mipi_controls_payload_all__O_dst_data_all_",
+      "source_count": 5,
+      "target_count": 5,
+      "max_data_delay_ns": 1.967,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_mipi_controls_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.941,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_mipi_controls_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.807,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_mipi_controls_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.307,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_mipi_controls_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.495,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_hdmi_controls_payload_all__O_dst_data_all_",
+      "source_count": 6,
+      "target_count": 6,
+      "max_data_delay_ns": 1.227,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_hdmi_controls_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.533,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_hdmi_controls_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.868,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_hdmi_controls_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.792,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_hdmi_controls_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.598,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_sensor_controls_payload_all__O_dst_data_all_",
+      "source_count": 4,
+      "target_count": 4,
+      "max_data_delay_ns": 0.892,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_sensor_controls_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 1.231,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_sensor_controls_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 1.008,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_sensor_controls_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.783,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_sensor_controls_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.865,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_mipi_status_payload_all__O_dst_data_all_",
+      "source_count": 5,
+      "target_count": 4,
+      "max_data_delay_ns": 1.11,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_mipi_status_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.591,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_mipi_status_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.519,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_mipi_status_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.405,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_mipi_status_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.405,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_sensor_status_payload_all__O_dst_data_all_",
+      "source_count": 4,
+      "target_count": 4,
+      "max_data_delay_ns": 1.614,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_sensor_status_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 1.297,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_sensor_status_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 1.008,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_demo_sensor_status_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.686,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_demo_sensor_status_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.307,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_video_latency_u_result_cdc_payload_all__O_dst_data_all_",
+      "source_count": 17,
+      "target_count": 17,
+      "max_data_delay_ns": 1.807,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_video_latency_u_result_cdc_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.533,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_video_latency_u_result_cdc_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 1.13,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_video_latency_u_result_cdc_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.307,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_video_latency_u_result_cdc_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.405,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_ae_measure_cdc_payload_all__O_dst_data_all_",
+      "source_count": 6,
+      "target_count": 6,
+      "max_data_delay_ns": 1.119,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_ae_measure_cdc_request_request_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.863,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_ae_measure_cdc_acknowledge_acknowledge_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.737,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_ae_measure_cdc_request_s1_request_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.405,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_ae_measure_cdc_acknowledge_s1_acknowledge_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.783,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "S_cam_frame_toggle_u_video_latency_camera_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.844,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_video_latency_camera_s1_u_video_latency_camera_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.553,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_video_latency_output_toggle_u_video_latency_output_s1",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.646,
+      "limit_ns": 8.0
+    },
+    {
+      "group": "u_video_latency_output_s1_u_video_latency_output_s2",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.495,
+      "limit_ns": 4.0
+    },
+    {
+      "group": "u_ae_key_key_meta_u_ae_key_key_sync",
+      "source_count": 1,
+      "target_count": 1,
+      "max_data_delay_ns": 0.585,
+      "limit_ns": 4.0
+    }
+  ],
+  "reports_sha256": {
+    "pA.log": "855ad4758797c787ab8fb550f0aef45183398a18b79465ef0a4b4ab5a6c460fa",
+    "pB.log": "6df6a6862b92b3125c0cd5d8037b9238b5cfb523b80d3d5c4a1844144e47c0d6",
+    "pC.log": "7d56588a222730b090688c1104a96832d1f7d10913d93322e7ef13d4e9c08f71",
+    "camera_to_dsi_display_phy.ts": "8cb2b405009e30cf846ebba4026fdf9e7a991fc42f3c19c149921b45e3839e89",
+    "patched_final_timing.rpt": "b93799dcd98770112ee2994989ac7282a4cefa6ce3be694fac2aed71985c8521",
+    "camera_to_dsi_display_phy.area": "b33572cfb53780399e9b45626806b46c876a863fe0146bfb0892a425dd1b0b9c",
+    "camera_to_dsi_display_gate.area": "d65f43f499a1b75b93cd68729af36216e7697bd5effb778a2d433eed25571cab",
+    "demo_cdc_audit.log": "846007a30409569aa4bfc6c2c8fb433e97a0e8b7b451bb3aa1fb51c1ce29b25c",
+    "demo_cdc_S_cam_frame_toggle_u_video_latency_camera_s1.rpt": "65465e018a181f7c1d085697e33b49b506075b3bd040652cc25d389c52cbb2f4",
+    "demo_cdc_u_ae_key_key_meta_u_ae_key_key_sync.rpt": "eff3e918eed3353ba94179ce47e6cef2bc0f9f4282590cd6f01bb915d61cc143",
+    "demo_cdc_u_ae_measure_cdc_acknowledge_acknowledge_s1.rpt": "0cc60fa4dcdccd6e7ee789f2afddb6a2820cc624a3dc6f85afca6c5acb748443",
+    "demo_cdc_u_ae_measure_cdc_acknowledge_s1_acknowledge_s2.rpt": "7800e439f34ce6165a06d5bdadc3c2ec9f048f8469c11e2bb7a2fc1d8e2ff184",
+    "demo_cdc_u_ae_measure_cdc_payload_all__O_dst_data_all_.rpt": "d8202ea4c320fec46f5478b5d7a33b8372b0bf5657bcc94655a4dcb628ce33f7",
+    "demo_cdc_u_ae_measure_cdc_request_request_s1.rpt": "fc36e1f0bb4f7b285ef00b71b647af4e86cd8e995e1856c2c136a56f990f4ecc",
+    "demo_cdc_u_ae_measure_cdc_request_s1_request_s2.rpt": "7c5314230fe8fa53a173d4c1bda2c41245bcc7484b2fbdb0b46f0ff2b76ef58f",
+    "demo_cdc_u_demo_hdmi_controls_acknowledge_acknowledge_s1.rpt": "d687f76ece517c791f17cfc23245dd60a04ef4340b38214f24d8475ab533d377",
+    "demo_cdc_u_demo_hdmi_controls_acknowledge_s1_acknowledge_s2.rpt": "39bf0cc3a9aefca4ef74ddeae2dd03cc4b80ad2e72f8291a68b035c002cc8b2b",
+    "demo_cdc_u_demo_hdmi_controls_payload_all__O_dst_data_all_.rpt": "f8f0fed9e526e6f418e7a417894401c4fb19e44be2b88a3113cd648cd097bda0",
+    "demo_cdc_u_demo_hdmi_controls_request_request_s1.rpt": "8f7d8fde817667619d430a53c42576d7e748cd81c35f8b4f1d1483317a502d9c",
+    "demo_cdc_u_demo_hdmi_controls_request_s1_request_s2.rpt": "32561af93dba601065c3fca94c8600454d4516cd32182d36b56dadb651849091",
+    "demo_cdc_u_demo_mipi_controls_acknowledge_acknowledge_s1.rpt": "ff220e9f4ad3f1cfaf95c3a695ce6316512590339d6dbb1c566fa596a3d10e24",
+    "demo_cdc_u_demo_mipi_controls_acknowledge_s1_acknowledge_s2.rpt": "67b6f19a77d0d0a519b1a612616065b7eb65468487e909b8b392fdd389ad5490",
+    "demo_cdc_u_demo_mipi_controls_payload_all__O_dst_data_all_.rpt": "3753dd0291bd4f251c6f149a01bbf9aa3feaaaec6a379d36fe74cbf0429a79c5",
+    "demo_cdc_u_demo_mipi_controls_request_request_s1.rpt": "7d35ef62e9da1675ef17973be8955b983265a504d7a6f68dc3b66daeff470196",
+    "demo_cdc_u_demo_mipi_controls_request_s1_request_s2.rpt": "799d2a0b1d6c56558cbaa6f9895aa91058a05bdbb4c987962ab6b2aff4f10aec",
+    "demo_cdc_u_demo_mipi_status_acknowledge_acknowledge_s1.rpt": "4e74296297bb116cb27810610087dd3a3f7ebb2e4c80318f71fb24c5bc46f915",
+    "demo_cdc_u_demo_mipi_status_acknowledge_s1_acknowledge_s2.rpt": "14900be83324f2e22f4f3f4d8687b8ccfcb929cc99699a57529b1affe0f01c35",
+    "demo_cdc_u_demo_mipi_status_payload_all__O_dst_data_all_.rpt": "79b65bc478dcac3b53070cf59551c0a0bc0594b5818bea5fee457a5738f48f60",
+    "demo_cdc_u_demo_mipi_status_request_request_s1.rpt": "06dd7d92a46ace2d56274f6aeb1a20f5611903c38fb21126b63c8b33bedf9312",
+    "demo_cdc_u_demo_mipi_status_request_s1_request_s2.rpt": "f995d607c0052497c65ddfe3bbedea091d504b55c17e0e3facb16926fa4b796d",
+    "demo_cdc_u_demo_sensor_controls_acknowledge_acknowledge_s1.rpt": "2b52ca97e275aebb3d2ea0a5f7451aeb791901193214258efee71f3aaf8f4da6",
+    "demo_cdc_u_demo_sensor_controls_acknowledge_s1_acknowledge_s2.rpt": "307a75b4bec380237dfa5fb224abf4052fa997ad9f3a9ba30a8202bbc90039f1",
+    "demo_cdc_u_demo_sensor_controls_payload_all__O_dst_data_all_.rpt": "23e41f0e65784e5c041f6d69fcb238d00417016a0aa1c183642529c3d51d4fd1",
+    "demo_cdc_u_demo_sensor_controls_request_request_s1.rpt": "a06b225bd1f49da6f8b9ac567833451af32ccb54463a4da4bce0f612c7f5c661",
+    "demo_cdc_u_demo_sensor_controls_request_s1_request_s2.rpt": "420957b6ecc63a91ccd23ac89a82119c569ca816459903f04574d93e0448206f",
+    "demo_cdc_u_demo_sensor_status_acknowledge_acknowledge_s1.rpt": "b8e09e034e0e4b23796fdcd5d417f8009d778d6d71c412cb5a1b151c57d883fd",
+    "demo_cdc_u_demo_sensor_status_acknowledge_s1_acknowledge_s2.rpt": "450b280f6c0d3e7a799762b3d8d6e61a4e14a3dd8ca2f60185ad8b52ad01f96d",
+    "demo_cdc_u_demo_sensor_status_payload_all__O_dst_data_all_.rpt": "472aedad111151f497993affb428c87051cacb8dec1ad24759c3d6858d7deb26",
+    "demo_cdc_u_demo_sensor_status_request_request_s1.rpt": "1e67d11a789c539006dddf213fc13aade97bfb171f2f6ec85b090c73e39958d9",
+    "demo_cdc_u_demo_sensor_status_request_s1_request_s2.rpt": "0e40d7443079d2e3674c15187dd0a64c5b3e1a3bc87f9b23332d4ccba8f2bb25",
+    "demo_cdc_u_video_latency_camera_s1_u_video_latency_camera_s2.rpt": "6accf9c6866d3488e950290b19611da14e266cd5cb13f4d1b91dbe69f20328cf",
+    "demo_cdc_u_video_latency_output_s1_u_video_latency_output_s2.rpt": "ce98ca6c6ca5a3a6e7c2a4094d536d6bddc53a3e6be2f6548c98c247021ac1ba",
+    "demo_cdc_u_video_latency_output_toggle_u_video_latency_output_s1.rpt": "bb62379432b47f12a0991e2e5db14f90897366dfd85ae5d6c145e36021f3fb1e",
+    "demo_cdc_u_video_latency_u_result_cdc_acknowledge_acknowledge_s1.rpt": "7b0743ef89915f9550e9b1eedb91aa3b3ac4fed19150994cb0812b8ca9eb2497",
+    "demo_cdc_u_video_latency_u_result_cdc_acknowledge_s1_acknowledge_s2.rpt": "fec1f575b030ef3e61a2fc95869338418e6d7744647209de5a30aa90a69367f1",
+    "demo_cdc_u_video_latency_u_result_cdc_payload_all__O_dst_data_all_.rpt": "9196b2aa01f996e9cead4e0a290fb5636fa1ae7f9d8f1ed41de08efefcadc56d",
+    "demo_cdc_u_video_latency_u_result_cdc_request_request_s1.rpt": "c40ffe40830a88eabca21177885fe48955c7c6c2b607de4c591e0dce20dae704",
+    "demo_cdc_u_video_latency_u_result_cdc_request_s1_request_s2.rpt": "9def32fa7d6df94ec3c918d18d11e59726be2b8a453993e45d0faa88d21234d3"
+  },
+  "programmed": true,
+  "remote_pushed": false,
+  "scope": "仅融合模块时序修复及中文路径检查流程修复，Gamma/曝光参数/振动算法保持原样"
+}

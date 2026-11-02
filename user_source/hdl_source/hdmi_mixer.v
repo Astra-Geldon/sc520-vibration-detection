@@ -5,7 +5,9 @@ module hdmi_mixer #(
     parameter IMG_HEIGHT = 900,
     // Optional combinational processor between the EXISTING data registers.
     // Read requests, all sync registers and total pixel latency stay intact.
-    parameter integer PIXEL_STAGE_EN = 0
+    parameter integer PIXEL_STAGE_EN = 0,
+    // 复用原输出寄存器作为第二处理段，不增加像素或同步延迟。
+    parameter integer POST_STAGE_EN = 0
 )(
     input wire        I_clk,
     input wire        I_rst_n,
@@ -24,6 +26,11 @@ module hdmi_mixer #(
     output wire       O_stage_de,
     output wire       O_stage_vs,
     input wire[23:0]  I_stage_result,
+
+    output wire[23:0] O_post_stage_data,
+    output wire       O_post_stage_de,
+    output wire       O_post_stage_vs,
+    input wire[23:0]  I_post_stage_result,
 
     output reg        O_hdmi_vsync,
     output reg        O_hdmi_hsync,
@@ -58,6 +65,9 @@ module hdmi_mixer #(
     assign O_stage_data = S_video_data_1d;
     assign O_stage_de = S_video_de_1d;
     assign O_stage_vs = S_video_vsync_1d;
+    assign O_post_stage_data = S_video_data_2d;
+    assign O_post_stage_de = S_video_de_2d;
+    assign O_post_stage_vs = S_video_vsync_2d;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if(!I_rst_n) begin
@@ -109,7 +119,8 @@ module hdmi_mixer #(
             S_video_data_1d  <= I_video_rd_data;
             S_video_data_2d  <= (PIXEL_STAGE_EN != 0) ? I_stage_result : S_video_data_1d;
 
-            O_hdmi_data <= S_window_active_2d ? S_video_data_2d : 24'd0;
+            O_hdmi_data <= S_window_active_2d ?
+                          ((POST_STAGE_EN != 0) ? I_post_stage_result : S_video_data_2d) : 24'd0;
         end
     end
 

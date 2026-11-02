@@ -381,6 +381,15 @@ module design_top_wrapper (
     wire [23:0] S_lift_data, S_tone_stage_data;
     wire [3:0] S_n1_extra_strength;
     wire S_tone_stage_de, S_tone_stage_vs;
+    wire [23:0] S_post_stage_data, S_post_lift_data;
+    wire S_post_stage_de, S_post_stage_vs;
+    reg [7:0] S_post_stage_peak;
+    reg [2:0] S_post_stage_mode;
+    reg S_post_stage_enable;
+    reg [3:0] S_post_stage_strength;
+    reg [5:0] S_post_alg_state, S_post_alg_pending;
+    reg [15:0] S_post_latency_bcd;
+    reg S_post_latency_valid;
     wire [7:0] S_lift_rg_max = (S_imgp_data[23:16] > S_imgp_data[15:8]) ?
                                S_imgp_data[23:16] : S_imgp_data[15:8];
     wire [7:0] S_tone_input_peak = (S_lift_rg_max > S_imgp_data[7:0]) ?
@@ -1011,10 +1020,33 @@ isp_top u_isp_top (
         .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
         .I_data(S_tone_stage_data), .O_strength(S_n1_extra_strength)
     );
-    fixed_n1_lift #(.ADAPTIVE(1)) u_n1_lift (
+    // 原N1和额外补亮分别占用混合器已有的两个寄存间隔，总延迟不变。
+    fixed_n1_lift u_n1_lift (
         .I_de(S_tone_stage_de), .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
         .I_data(S_tone_stage_data), .I_peak(S_tone_stage_peak),
-        .I_extra_strength(S_n1_extra_strength), .O_data(S_lift_data)
+        .I_extra_strength(4'd0), .O_data(S_lift_data)
+    );
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) begin
+            S_post_stage_peak <= 0; S_post_stage_mode <= 0;
+            S_post_stage_enable <= 0; S_post_stage_strength <= 0;
+            S_post_alg_state <= 0; S_post_alg_pending <= 0;
+            S_post_latency_bcd <= 0; S_post_latency_valid <= 0;
+        end else begin
+            S_post_stage_peak <= S_tone_stage_peak;
+            S_post_stage_mode <= S_tone_stage_mode;
+            S_post_stage_enable <= (S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw;
+            S_post_stage_strength <= S_n1_extra_strength;
+            S_post_alg_state <= S_demo_alg_state;
+            S_post_alg_pending <= S_demo_alg_pending;
+            S_post_latency_bcd <= S_latency_bcd;
+            S_post_latency_valid <= S_latency_valid;
+        end
+    end
+    fixed_n1_extra_lift u_n1_extra_lift (
+        .I_de(S_post_stage_de), .I_enable(S_post_stage_enable),
+        .I_data(S_post_stage_data), .I_peak(S_post_stage_peak),
+        .I_extra_strength(S_post_stage_strength), .O_data(S_post_lift_data)
     );
     osd_overlay #(
         .OSD_EN(1), .LOGO_EN(1), .H_ACTIVE(1280), .V_ACTIVE(720),
@@ -1022,10 +1054,10 @@ isp_top u_isp_top (
         .TEXT_X(24), .TEXT_Y(24), .BOX_PAD(8)
     )u_osd_overlay(
         .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
-        .I_de(S_tone_stage_de), .I_vs(S_tone_stage_vs), .I_mode(S_tone_stage_mode),
-        .I_latency_bcd(S_latency_bcd), .I_latency_valid(S_latency_valid),
-        .I_alg_state(S_demo_alg_state), .I_alg_pending(S_demo_alg_pending),
-        .I_data(S_lift_data), .O_data(S_osd_mix)
+        .I_de(S_post_stage_de), .I_vs(S_post_stage_vs), .I_mode(S_post_stage_mode),
+        .I_latency_bcd(S_post_latency_bcd), .I_latency_valid(S_post_latency_valid),
+        .I_alg_state(S_post_alg_state), .I_alg_pending(S_post_alg_pending),
+        .I_data(S_post_lift_data), .O_data(S_osd_mix)
     );
 
     hdmi_mixer #(
@@ -1033,7 +1065,8 @@ isp_top u_isp_top (
         .V_OFFSET   ( 0    ),
         .IMG_WIDTH  ( 1280 ),
         .IMG_HEIGHT ( 720  ),
-        .PIXEL_STAGE_EN ( 1 )
+        .PIXEL_STAGE_EN ( 1 ),
+        .POST_STAGE_EN ( 1 )
     )u_hdmi_mixer(
         .I_clk           ( S_hdmi_pixel_clk   ),
         .I_rst_n         ( S_hdmi_rst_n       ),
@@ -1047,7 +1080,11 @@ isp_top u_isp_top (
         .O_stage_data    ( S_tone_stage_data ),
         .O_stage_de      ( S_tone_stage_de   ),
         .O_stage_vs      ( S_tone_stage_vs   ),
-        .I_stage_result  ( S_osd_mix         ),
+        .I_stage_result  ( S_lift_data       ),
+        .O_post_stage_data ( S_post_stage_data ),
+        .O_post_stage_de ( S_post_stage_de   ),
+        .O_post_stage_vs ( S_post_stage_vs   ),
+        .I_post_stage_result ( S_osd_mix     ),
         .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
         .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
         .O_hdmi_de       ( S_hdmi_out_de      ),

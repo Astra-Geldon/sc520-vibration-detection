@@ -293,6 +293,14 @@ module fixed_n1_adaptive_channel(input wire [7:0] I_pixel,
     input wire [3:0] I_strength, output wire [7:0] O_pixel);
     wire [7:0] base_pixel;
     fixed_n1_channel u_base(.I_pixel(I_pixel), .I_gain(I_base_gain), .O_pixel(base_pixel));
+    fixed_n1_extra_channel u_extra(.I_base_pixel(base_pixel), .I_peak(I_peak),
+        .I_strength(I_strength), .O_pixel(O_pixel));
+endmodule
+
+// 只处理原N1已经完成取整的8位结果，便于跨既有寄存器拆分计算。
+module fixed_n1_extra_channel(input wire [7:0] I_base_pixel,
+    input wire [7:0] I_peak, input wire [3:0] I_strength, output wire [7:0] O_pixel);
+    wire [7:0] base_pixel = I_base_pixel;
     // 按strength/128计算附加提亮，使用显式移位加法，避免新增乘法器。
     wire [11:0] p0 = I_strength[0] ? {4'd0, base_pixel} : 12'd0;
     wire [11:0] p1 = I_strength[1] ? {3'd0, base_pixel, 1'd0} : 12'd0;
@@ -302,6 +310,19 @@ module fixed_n1_adaptive_channel(input wire [7:0] I_pixel,
     wire [8:0] boosted = {1'b0, base_pixel} + ((extra_num + 12'd64) >> 7);
     wire [8:0] limited = (I_peak < 8'd192 && boosted > 9'd192) ? 9'd192 : boosted;
     assign O_pixel = (I_peak >= 8'd192 || I_strength == 0) ? base_pixel : limited[7:0];
+endmodule
+
+module fixed_n1_extra_lift(input wire I_de, input wire I_enable,
+    input wire [23:0] I_data, input wire [7:0] I_peak,
+    input wire [3:0] I_extra_strength, output wire [23:0] O_data);
+    wire [23:0] lifted;
+    fixed_n1_extra_channel r(.I_base_pixel(I_data[23:16]), .I_peak(I_peak),
+        .I_strength(I_extra_strength), .O_pixel(lifted[23:16]));
+    fixed_n1_extra_channel g(.I_base_pixel(I_data[15:8]), .I_peak(I_peak),
+        .I_strength(I_extra_strength), .O_pixel(lifted[15:8]));
+    fixed_n1_extra_channel b(.I_base_pixel(I_data[7:0]), .I_peak(I_peak),
+        .I_strength(I_extra_strength), .O_pixel(lifted[7:0]));
+    assign O_data = (!I_de || !I_enable) ? I_data : lifted;
 endmodule
 
 module fixed_n1_lift #(parameter integer ADAPTIVE = 0) (
@@ -359,6 +380,26 @@ module adaptive_n1_control #(
     reg [SUM_W-1:0] region_sum [0:11];
     integer i;
     reg [SUM_W-1:0] min_sum, max_sum;
+    // 平衡比较树分三拍归约。每64像素采样一次，最后样本距行尾仍有63拍，
+    // 因而完整帧在场首读取到的极值及门限结果与原算法相同。
+    wire [SUM_W-1:0] min01 = (region_sum[0] < region_sum[1]) ? region_sum[0] : region_sum[1];
+    wire [SUM_W-1:0] min23 = (region_sum[2] < region_sum[3]) ? region_sum[2] : region_sum[3];
+    wire [SUM_W-1:0] min45 = (region_sum[4] < region_sum[5]) ? region_sum[4] : region_sum[5];
+    wire [SUM_W-1:0] min67 = (region_sum[6] < region_sum[7]) ? region_sum[6] : region_sum[7];
+    wire [SUM_W-1:0] min89 = (region_sum[8] < region_sum[9]) ? region_sum[8] : region_sum[9];
+    wire [SUM_W-1:0] minAB = (region_sum[10] < region_sum[11]) ? region_sum[10] : region_sum[11];
+    reg [SUM_W-1:0] min0123, min4567, min89AB;
+    wire [SUM_W-1:0] min01234567 = (min0123 < min4567) ? min0123 : min4567;
+    wire [SUM_W-1:0] min_tree = (min01234567 < min89AB) ? min01234567 : min89AB;
+    wire [SUM_W-1:0] max01 = (region_sum[0] > region_sum[1]) ? region_sum[0] : region_sum[1];
+    wire [SUM_W-1:0] max23 = (region_sum[2] > region_sum[3]) ? region_sum[2] : region_sum[3];
+    wire [SUM_W-1:0] max45 = (region_sum[4] > region_sum[5]) ? region_sum[4] : region_sum[5];
+    wire [SUM_W-1:0] max67 = (region_sum[6] > region_sum[7]) ? region_sum[6] : region_sum[7];
+    wire [SUM_W-1:0] max89 = (region_sum[8] > region_sum[9]) ? region_sum[8] : region_sum[9];
+    wire [SUM_W-1:0] maxAB = (region_sum[10] > region_sum[11]) ? region_sum[10] : region_sum[11];
+    reg [SUM_W-1:0] max0123, max4567, max89AB;
+    wire [SUM_W-1:0] max01234567 = (max0123 > max4567) ? max0123 : max4567;
+    wire [SUM_W-1:0] max_tree = (max01234567 > max89AB) ? max01234567 : max89AB;
     reg [SUM_W-1:0] range_sum;
     reg contrast_enter, contrast_exit;
     reg [2:0] rise_wait, fall_wait;
@@ -374,14 +415,25 @@ module adaptive_n1_control #(
     wire frame_geometry_good = (x == 0) && (y == V_ACTIVE-1);
     wire frame_good = active && !overflow && (sample_count == EXPECTED_SAMPLES) && frame_geometry_good;
 
-    always @(*) begin
-        min_sum = region_sum[0];
-        max_sum = region_sum[0];
-        for (i = 1; i < 12; i = i + 1) begin
-            if (region_sum[i] < min_sum) min_sum = region_sum[i];
-            if (region_sum[i] > max_sum) max_sum = region_sum[i];
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            min0123 <= 0; min4567 <= 0; min89AB <= 0;
+            max0123 <= 0; max4567 <= 0; max89AB <= 0;
+            min_sum <= 0; max_sum <= 0; range_sum <= 0;
+        end else begin
+            min0123 <= (min01 < min23) ? min01 : min23;
+            min4567 <= (min45 < min67) ? min45 : min67;
+            min89AB <= (min89 < minAB) ? min89 : minAB;
+            max0123 <= (max01 > max23) ? max01 : max23;
+            max4567 <= (max45 > max67) ? max45 : max67;
+            max89AB <= (max89 > maxAB) ? max89 : maxAB;
+            min_sum <= min_tree;
+            max_sum <= max_tree;
+            range_sum <= max_sum - min_sum;
         end
-        range_sum = max_sum - min_sum;
+    end
+
+    always @(*) begin
         contrast_enter = frame_good && (range_sum >= (REGION_RANGE * REGION_SAMPLES)) &&
                          (bright_count >= MIX_COUNT) && (shadow_count >= SHADOW_COUNT);
         contrast_exit = !contrast_enter || (range_sum < (REGION_RANGE * EXIT_REGION_SAMPLES)) ||

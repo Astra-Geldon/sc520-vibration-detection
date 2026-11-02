@@ -1,0 +1,240 @@
+diff --git a/user_source/hdl_source/design_top_wrapper.v b/user_source/hdl_source/design_top_wrapper.v
+index 0ec6122..f3d94e5 100644
+--- a/user_source/hdl_source/design_top_wrapper.v
++++ b/user_source/hdl_source/design_top_wrapper.v
+@@ -381,6 +381,15 @@ module design_top_wrapper (
+     wire [23:0] S_lift_data, S_tone_stage_data;
+     wire [3:0] S_n1_extra_strength;
+     wire S_tone_stage_de, S_tone_stage_vs;
++    wire [23:0] S_post_stage_data, S_post_lift_data;
++    wire S_post_stage_de, S_post_stage_vs;
++    reg [7:0] S_post_stage_peak;
++    reg [2:0] S_post_stage_mode;
++    reg S_post_stage_enable;
++    reg [3:0] S_post_stage_strength;
++    reg [5:0] S_post_alg_state, S_post_alg_pending;
++    reg [15:0] S_post_latency_bcd;
++    reg S_post_latency_valid;
+     wire [7:0] S_lift_rg_max = (S_imgp_data[23:16] > S_imgp_data[15:8]) ?
+                                S_imgp_data[23:16] : S_imgp_data[15:8];
+     wire [7:0] S_tone_input_peak = (S_lift_rg_max > S_imgp_data[7:0]) ?
+@@ -1011,10 +1020,33 @@ isp_top u_isp_top (
+         .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
+         .I_data(S_tone_stage_data), .O_strength(S_n1_extra_strength)
+     );
+-    fixed_n1_lift #(.ADAPTIVE(1)) u_n1_lift (
++    // 原N1和额外补亮分别占用混合器已有的两个寄存间隔，总延迟不变。
++    fixed_n1_lift u_n1_lift (
+         .I_de(S_tone_stage_de), .I_enable((S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw),
+         .I_data(S_tone_stage_data), .I_peak(S_tone_stage_peak),
+-        .I_extra_strength(S_n1_extra_strength), .O_data(S_lift_data)
++        .I_extra_strength(4'd0), .O_data(S_lift_data)
++    );
++    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
++        if (!S_hdmi_rst_n) begin
++            S_post_stage_peak <= 0; S_post_stage_mode <= 0;
++            S_post_stage_enable <= 0; S_post_stage_strength <= 0;
++            S_post_alg_state <= 0; S_post_alg_pending <= 0;
++            S_post_latency_bcd <= 0; S_post_latency_valid <= 0;
++        end else begin
++            S_post_stage_peak <= S_tone_stage_peak;
++            S_post_stage_mode <= S_tone_stage_mode;
++            S_post_stage_enable <= (S_tone_stage_mode == 3'd0) && S_demo_hdmi[1] && !S_demo_raw;
++            S_post_stage_strength <= S_n1_extra_strength;
++            S_post_alg_state <= S_demo_alg_state;
++            S_post_alg_pending <= S_demo_alg_pending;
++            S_post_latency_bcd <= S_latency_bcd;
++            S_post_latency_valid <= S_latency_valid;
++        end
++    end
++    fixed_n1_extra_lift u_n1_extra_lift (
++        .I_de(S_post_stage_de), .I_enable(S_post_stage_enable),
++        .I_data(S_post_stage_data), .I_peak(S_post_stage_peak),
++        .I_extra_strength(S_post_stage_strength), .O_data(S_post_lift_data)
+     );
+     osd_overlay #(
+         .OSD_EN(1), .LOGO_EN(1), .H_ACTIVE(1280), .V_ACTIVE(720),
+@@ -1022,10 +1054,10 @@ isp_top u_isp_top (
+         .TEXT_X(24), .TEXT_Y(24), .BOX_PAD(8)
+     )u_osd_overlay(
+         .I_clk(S_hdmi_pixel_clk), .I_rst_n(S_hdmi_rst_n),
+-        .I_de(S_tone_stage_de), .I_vs(S_tone_stage_vs), .I_mode(S_tone_stage_mode),
+-        .I_latency_bcd(S_latency_bcd), .I_latency_valid(S_latency_valid),
+-        .I_alg_state(S_demo_alg_state), .I_alg_pending(S_demo_alg_pending),
+-        .I_data(S_lift_data), .O_data(S_osd_mix)
++        .I_de(S_post_stage_de), .I_vs(S_post_stage_vs), .I_mode(S_post_stage_mode),
++        .I_latency_bcd(S_post_latency_bcd), .I_latency_valid(S_post_latency_valid),
++        .I_alg_state(S_post_alg_state), .I_alg_pending(S_post_alg_pending),
++        .I_data(S_post_lift_data), .O_data(S_osd_mix)
+     );
+ 
+     hdmi_mixer #(
+@@ -1033,7 +1065,8 @@ isp_top u_isp_top (
+         .V_OFFSET   ( 0    ),
+         .IMG_WIDTH  ( 1280 ),
+         .IMG_HEIGHT ( 720  ),
+-        .PIXEL_STAGE_EN ( 1 )
++        .PIXEL_STAGE_EN ( 1 ),
++        .POST_STAGE_EN ( 1 )
+     )u_hdmi_mixer(
+         .I_clk           ( S_hdmi_pixel_clk   ),
+         .I_rst_n         ( S_hdmi_rst_n       ),
+@@ -1047,7 +1080,11 @@ isp_top u_isp_top (
+         .O_stage_data    ( S_tone_stage_data ),
+         .O_stage_de      ( S_tone_stage_de   ),
+         .O_stage_vs      ( S_tone_stage_vs   ),
+-        .I_stage_result  ( S_osd_mix         ),
++        .I_stage_result  ( S_lift_data       ),
++        .O_post_stage_data ( S_post_stage_data ),
++        .O_post_stage_de ( S_post_stage_de   ),
++        .O_post_stage_vs ( S_post_stage_vs   ),
++        .I_post_stage_result ( S_osd_mix     ),
+         .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
+         .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
+         .O_hdmi_de       ( S_hdmi_out_de      ),
+diff --git a/user_source/hdl_source/fixed_n1_lift.v b/user_source/hdl_source/fixed_n1_lift.v
+index a1b1a2b..3554822 100644
+--- a/user_source/hdl_source/fixed_n1_lift.v
++++ b/user_source/hdl_source/fixed_n1_lift.v
+@@ -293,6 +293,14 @@ module fixed_n1_adaptive_channel(input wire [7:0] I_pixel,
+     input wire [3:0] I_strength, output wire [7:0] O_pixel);
+     wire [7:0] base_pixel;
+     fixed_n1_channel u_base(.I_pixel(I_pixel), .I_gain(I_base_gain), .O_pixel(base_pixel));
++    fixed_n1_extra_channel u_extra(.I_base_pixel(base_pixel), .I_peak(I_peak),
++        .I_strength(I_strength), .O_pixel(O_pixel));
++endmodule
++
++// 只处理原N1已经完成取整的8位结果，便于跨既有寄存器拆分计算。
++module fixed_n1_extra_channel(input wire [7:0] I_base_pixel,
++    input wire [7:0] I_peak, input wire [3:0] I_strength, output wire [7:0] O_pixel);
++    wire [7:0] base_pixel = I_base_pixel;
+     // 按strength/128计算附加提亮，使用显式移位加法，避免新增乘法器。
+     wire [11:0] p0 = I_strength[0] ? {4'd0, base_pixel} : 12'd0;
+     wire [11:0] p1 = I_strength[1] ? {3'd0, base_pixel, 1'd0} : 12'd0;
+@@ -304,6 +312,19 @@ module fixed_n1_adaptive_channel(input wire [7:0] I_pixel,
+     assign O_pixel = (I_peak >= 8'd192 || I_strength == 0) ? base_pixel : limited[7:0];
+ endmodule
+ 
++module fixed_n1_extra_lift(input wire I_de, input wire I_enable,
++    input wire [23:0] I_data, input wire [7:0] I_peak,
++    input wire [3:0] I_extra_strength, output wire [23:0] O_data);
++    wire [23:0] lifted;
++    fixed_n1_extra_channel r(.I_base_pixel(I_data[23:16]), .I_peak(I_peak),
++        .I_strength(I_extra_strength), .O_pixel(lifted[23:16]));
++    fixed_n1_extra_channel g(.I_base_pixel(I_data[15:8]), .I_peak(I_peak),
++        .I_strength(I_extra_strength), .O_pixel(lifted[15:8]));
++    fixed_n1_extra_channel b(.I_base_pixel(I_data[7:0]), .I_peak(I_peak),
++        .I_strength(I_extra_strength), .O_pixel(lifted[7:0]));
++    assign O_data = (!I_de || !I_enable) ? I_data : lifted;
++endmodule
++
+ module fixed_n1_lift #(parameter integer ADAPTIVE = 0) (
+     input wire I_de, input wire I_enable,
+     input wire [23:0] I_data, input wire [7:0] I_peak,
+@@ -359,6 +380,26 @@ module adaptive_n1_control #(
+     reg [SUM_W-1:0] region_sum [0:11];
+     integer i;
+     reg [SUM_W-1:0] min_sum, max_sum;
++    // 平衡比较树分三拍归约。每64像素采样一次，最后样本距行尾仍有63拍，
++    // 因而完整帧在场首读取到的极值及门限结果与原算法相同。
++    wire [SUM_W-1:0] min01 = (region_sum[0] < region_sum[1]) ? region_sum[0] : region_sum[1];
++    wire [SUM_W-1:0] min23 = (region_sum[2] < region_sum[3]) ? region_sum[2] : region_sum[3];
++    wire [SUM_W-1:0] min45 = (region_sum[4] < region_sum[5]) ? region_sum[4] : region_sum[5];
++    wire [SUM_W-1:0] min67 = (region_sum[6] < region_sum[7]) ? region_sum[6] : region_sum[7];
++    wire [SUM_W-1:0] min89 = (region_sum[8] < region_sum[9]) ? region_sum[8] : region_sum[9];
++    wire [SUM_W-1:0] minAB = (region_sum[10] < region_sum[11]) ? region_sum[10] : region_sum[11];
++    reg [SUM_W-1:0] min0123, min4567, min89AB;
++    wire [SUM_W-1:0] min01234567 = (min0123 < min4567) ? min0123 : min4567;
++    wire [SUM_W-1:0] min_tree = (min01234567 < min89AB) ? min01234567 : min89AB;
++    wire [SUM_W-1:0] max01 = (region_sum[0] > region_sum[1]) ? region_sum[0] : region_sum[1];
++    wire [SUM_W-1:0] max23 = (region_sum[2] > region_sum[3]) ? region_sum[2] : region_sum[3];
++    wire [SUM_W-1:0] max45 = (region_sum[4] > region_sum[5]) ? region_sum[4] : region_sum[5];
++    wire [SUM_W-1:0] max67 = (region_sum[6] > region_sum[7]) ? region_sum[6] : region_sum[7];
++    wire [SUM_W-1:0] max89 = (region_sum[8] > region_sum[9]) ? region_sum[8] : region_sum[9];
++    wire [SUM_W-1:0] maxAB = (region_sum[10] > region_sum[11]) ? region_sum[10] : region_sum[11];
++    reg [SUM_W-1:0] max0123, max4567, max89AB;
++    wire [SUM_W-1:0] max01234567 = (max0123 > max4567) ? max0123 : max4567;
++    wire [SUM_W-1:0] max_tree = (max01234567 > max89AB) ? max01234567 : max89AB;
+     reg [SUM_W-1:0] range_sum;
+     reg contrast_enter, contrast_exit;
+     reg [2:0] rise_wait, fall_wait;
+@@ -374,14 +415,25 @@ module adaptive_n1_control #(
+     wire frame_geometry_good = (x == 0) && (y == V_ACTIVE-1);
+     wire frame_good = active && !overflow && (sample_count == EXPECTED_SAMPLES) && frame_geometry_good;
+ 
+-    always @(*) begin
+-        min_sum = region_sum[0];
+-        max_sum = region_sum[0];
+-        for (i = 1; i < 12; i = i + 1) begin
+-            if (region_sum[i] < min_sum) min_sum = region_sum[i];
+-            if (region_sum[i] > max_sum) max_sum = region_sum[i];
++    always @(posedge I_clk or negedge I_rst_n) begin
++        if (!I_rst_n) begin
++            min0123 <= 0; min4567 <= 0; min89AB <= 0;
++            max0123 <= 0; max4567 <= 0; max89AB <= 0;
++            min_sum <= 0; max_sum <= 0; range_sum <= 0;
++        end else begin
++            min0123 <= (min01 < min23) ? min01 : min23;
++            min4567 <= (min45 < min67) ? min45 : min67;
++            min89AB <= (min89 < minAB) ? min89 : minAB;
++            max0123 <= (max01 > max23) ? max01 : max23;
++            max4567 <= (max45 > max67) ? max45 : max67;
++            max89AB <= (max89 > maxAB) ? max89 : maxAB;
++            min_sum <= min_tree;
++            max_sum <= max_tree;
++            range_sum <= max_sum - min_sum;
+         end
+-        range_sum = max_sum - min_sum;
++    end
++
++    always @(*) begin
+         contrast_enter = frame_good && (range_sum >= (REGION_RANGE * REGION_SAMPLES)) &&
+                          (bright_count >= MIX_COUNT) && (shadow_count >= SHADOW_COUNT);
+         contrast_exit = !contrast_enter || (range_sum < (REGION_RANGE * EXIT_REGION_SAMPLES)) ||
+diff --git a/user_source/hdl_source/hdmi_mixer.v b/user_source/hdl_source/hdmi_mixer.v
+index b6e22f0..fef97a7 100644
+--- a/user_source/hdl_source/hdmi_mixer.v
++++ b/user_source/hdl_source/hdmi_mixer.v
+@@ -5,7 +5,9 @@ module hdmi_mixer #(
+     parameter IMG_HEIGHT = 900,
+     // Optional combinational processor between the EXISTING data registers.
+     // Read requests, all sync registers and total pixel latency stay intact.
+-    parameter integer PIXEL_STAGE_EN = 0
++    parameter integer PIXEL_STAGE_EN = 0,
++    // 复用原输出寄存器作为第二处理段，不增加像素或同步延迟。
++    parameter integer POST_STAGE_EN = 0
+ )(
+     input wire        I_clk,
+     input wire        I_rst_n,
+@@ -25,6 +27,11 @@ module hdmi_mixer #(
+     output wire       O_stage_vs,
+     input wire[23:0]  I_stage_result,
+ 
++    output wire[23:0] O_post_stage_data,
++    output wire       O_post_stage_de,
++    output wire       O_post_stage_vs,
++    input wire[23:0]  I_post_stage_result,
++
+     output reg        O_hdmi_vsync,
+     output reg        O_hdmi_hsync,
+     output reg        O_hdmi_de,
+@@ -58,6 +65,9 @@ module hdmi_mixer #(
+     assign O_stage_data = S_video_data_1d;
+     assign O_stage_de = S_video_de_1d;
+     assign O_stage_vs = S_video_vsync_1d;
++    assign O_post_stage_data = S_video_data_2d;
++    assign O_post_stage_de = S_video_de_2d;
++    assign O_post_stage_vs = S_video_vsync_2d;
+ 
+     always @(posedge I_clk or negedge I_rst_n) begin
+         if(!I_rst_n) begin
+@@ -109,7 +119,8 @@ module hdmi_mixer #(
+             S_video_data_1d  <= I_video_rd_data;
+             S_video_data_2d  <= (PIXEL_STAGE_EN != 0) ? I_stage_result : S_video_data_1d;
+ 
+-            O_hdmi_data <= S_window_active_2d ? S_video_data_2d : 24'd0;
++            O_hdmi_data <= S_window_active_2d ?
++                          ((POST_STAGE_EN != 0) ? I_post_stage_result : S_video_data_2d) : 24'd0;
+         end
+     end
+ 

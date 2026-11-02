@@ -1,0 +1,42 @@
+{
+  "pass": true,
+  "scope": "当前区域三拍归约与HEAD原控制器逐周期O_strength及帧末极值/门限对照；不执行TD编译",
+  "reference_commit": "38413764adee46320d03507684ba582ea9073d10",
+  "source_sha256": "ea826eb12caae71eeb8d6f1202129a60240ca3688032b1e7671ef8037bcae113",
+  "reference_sha256": "d5d4f85f75c8acd0f88cd2e3ff4fe2b9776a9ab99f5d845e1254492a4d3525b2",
+  "sample_log2": 6,
+  "cases": {
+    "small": {
+      "pass": true,
+      "width": 128,
+      "height": 12,
+      "cycles": 301661,
+      "checks": 301652,
+      "frames": 196,
+      "valid_frames": 168,
+      "min_sample_gap": 65,
+      "max_strength": 8,
+      "changes": 22,
+      "short_frames": 12,
+      "long_frames": 12,
+      "mid_switch_frames": 1,
+      "reset_frames": 1
+    },
+    "full720p": {
+      "pass": true,
+      "width": 1280,
+      "height": 720,
+      "cycles": 9216047,
+      "checks": 9216041,
+      "frames": 10,
+      "valid_frames": 9,
+      "min_sample_gap": 65,
+      "max_strength": 2,
+      "changes": 2,
+      "short_frames": 0,
+      "long_frames": 0,
+      "mid_switch_frames": 0,
+      "reset_frames": 0
+    }
+  }
+}

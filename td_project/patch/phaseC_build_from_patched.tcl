@@ -49,7 +49,8 @@ step bitgen   { bitgen -bit camera_to_dsi_display.bit }
 puts ""
 # The child can alter its own reporting constraints without touching this session.
 step demo_cdc {
-    set child [file normalize patch/phaseD_audit_demo_cdc.tcl]
+    # 保留相对路径，避免Windows旧版Tcl启动子进程时损坏中文工作区路径。
+    set child [file join patch phaseD_audit_demo_cdc.tcl]
     exec [info nameofexecutable] $child > demo_cdc_audit.log 2>@1
     set fd [open demo_cdc_audit.log r]
     set audit_log [read $fd]

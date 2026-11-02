@@ -1,0 +1,44 @@
+{
+  "pass": true,
+  "scope": "当前top实际流水与HEAD归档融合RTL逐拍对照，无TD编译或上板",
+  "reference_commit": "38413764adee46320d03507684ba582ea9073d10",
+  "source_sha256": {
+    "user_source\\hdl_source\\design_top_wrapper.v": "3efe2e441546795b214025b1f00d4ef9151674ff725e7f1129e638795843498b",
+    "user_source\\hdl_source\\fixed_n1_lift.v": "ea826eb12caae71eeb8d6f1202129a60240ca3688032b1e7671ef8037bcae113",
+    "user_source\\hdl_source\\hdmi_mixer.v": "f138dbaea070d89b6e6ca0f0c7b72e5db45a5f422ebd42a37ce21456019aa7a4",
+    "user_source\\hdl_source\\osd_overlay.v": "a625fb636727e7b9fc3c479918cfc522c0e994e556934c029047a681f4582855",
+    "user_source\\hdl_source\\osd_font_rom.v": "e61828ec464d7e4181de82b5e9e83a8153f98ef4f779cd7ccc2a140086ee27cc",
+    "user_source\\hdl_source\\osd_logo_rom.v": "4f0fc2c4f38e7d81f8d4c2ed100f5db816f605f90a637859dc7286647bdf9385"
+  },
+  "compared_cycles": 2669105,
+  "active_pixel_checks": 2641920,
+  "ddr_read_requests": 2641920,
+  "full_720p_frames": 2,
+  "short_frames_1280x48": 13,
+  "strengths": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "mode_coverage": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "checks": [
+    "逐像素含Logo/OSD输出",
+    "DE/VS/HS逐拍",
+    "DDR读请求与每帧数量",
+    "复位及消隐",
+    "开关及RAW旁路",
+    "总流水延迟一致"
+  ]
+}

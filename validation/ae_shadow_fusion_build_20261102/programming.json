@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "bit": "E:\\杂七杂八\\4竞赛\\FPGA\\sc520-vibration-detection\\td_project\\camera_to_dsi_display_ae_shadow_fusion_20261102.bit",
+  "sha256": "908e5c61e438f0c32dd2b8335234ba548e73360c325c11255fb950cae2110db6",
+  "started_utc": "2026-11-02T09:03:22.9056451Z",
+  "finished_utc": "2026-11-02T09:03:36.0052517Z",
+  "exit_code": 0,
+  "method": "JTAG SRAM; no Flash write or MCU firmware load",
+  "log_directory": "D:\\FPGA\\codex\\_build\\ae_shadow_fusion_20261102\\programming\\20261102-170322-869-99faf928"
+}
