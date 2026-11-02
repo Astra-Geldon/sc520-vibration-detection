@@ -1,14 +1,14 @@
 {
   "pass": true,
   "td_run": false,
-  "reference": "External frame pixels and validity, independent unbounded sums",
-  "source_sha256": "ce6236b140dedd71e336c4142862da8531eebf0dd16be068ca46ce734c1016a2",
+  "reference": "External frame pixels and validity, independent 8-bin background P60 model",
+  "source_sha256": "017be7e5136a3d77fbc917e3feb2bb385eeb4245d4a75b6737cb5af4bb8d7dbc",
   "cases": [
     {
       "case": "edge_cases",
       "pass": true,
-      "cycles": 2431,
-      "published_frames": 35
+      "cycles": 2719,
+      "published_frames": 39
     },
     {
       "case": "no_decimation",

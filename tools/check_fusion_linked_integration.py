@@ -59,16 +59,16 @@ def main():
         assert ".I_key_n(I_key[3])" in top
         assert "S_key3_sync[1:0], I_key[2]" in top
         # 无关生产RTL与已烧录留档逐字节一致。
-        unchanged = ["video_in.v", "video_out.v", "hdmi_mixer.v", "ae_luma_sampler.v",
+        unchanged = ["video_in.v", "video_out.v", "hdmi_mixer.v",
                      "ae_key_toggle.v", "demo_switch_control.v", "img_proc.v",
                      "uics520_cfg/uicfgcs520.v"]
         for name in unchanged:
             path = HDL / name
-            old = subprocess.check_output(["git", "show", "d755598:" + path.relative_to(ROOT).as_posix()], cwd=ROOT)
+            old = subprocess.check_output(["git", "show", "9d930ed:" + path.relative_to(ROOT).as_posix()], cwd=ROOT)
             assert old.replace(b"\r\n", b"\n") == path.read_bytes().replace(b"\r\n", b"\n"), name
-        old_top = subprocess.check_output(["git", "show", "d755598:user_source/hdl_source/design_top_wrapper.v"], cwd=ROOT).decode("utf-8")
+        old_top = subprocess.check_output(["git", "show", "9d930ed:user_source/hdl_source/design_top_wrapper.v"], cwd=ROOT).decode("utf-8")
         marker = "    // Vibration path from the backup branch."
-        assert old_top[old_top.index(marker):] == top_text[top_text.index(marker):]
+        assert old_top[old_top.index(marker):].replace("\r\n", "\n") == top_text[top_text.index(marker):].replace("\r\n", "\n")
         # IP不提供可仿真模型，因此只解析顶层及本次活动模块，缺失IP保留黑盒。
         compiled = subprocess.run([str(IV), "-g2012", "-i", "-Wall", "-I", str(HDL),
             "-s", "design_top_wrapper", "-o", str(OUT / "top_syntax.vvp"), str(top_file),

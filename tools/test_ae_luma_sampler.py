@@ -1,8 +1,9 @@
-"""External-stream checks for the passive exposure meter; never launches TD.
+"""外部视频流测试：独立复现8桶背景P60测光，不启动TD。
 
-The reference stores a frame's supplied valid pixels and independently selects
-every Nth item. It does not read the DUT's counters or accumulator. Full 720p
-frames exercise the default 20-bit sum / 14-bit sample count as well.
+参考模型保存每帧有效像素并独立执行每N个像素抽样；背景P60排除56以上
+高光，P60低于22增曝、高于30减曝，近饱和达到10%时紧急减曝，背景
+有效样本不足40%时保持。测试同时覆盖边界帧长、禁用帧、序号回卷和完整
+720p帧，不读取DUT计数器或累加器。
 """
 from pathlib import Path
 import hashlib
@@ -18,6 +19,13 @@ SOURCE = ROOT / "user_source/hdl_source/ae_luma_sampler.v"
 
 
 class Stream:
+    HIGHLIGHT_EXCLUDE = 56
+    NEAR_CLIP_LUMA = 60
+    BG_LOW_LUMA = 22
+    BG_HIGH_LUMA = 30
+    EMERGENCY_CLIP_PERCENT = 10
+    BACKGROUND_MIN_PERCENT = 40
+
     def __init__(self, expected, log2):
         self.expected = expected
         self.period = 1 << log2
@@ -44,9 +52,31 @@ class Stream:
                     if not exact_length or not self.enabled:
                         state = 3
                     else:
-                        total = sum(self.pixels[::self.period])
-                        state = 1 if total < self.expected * 16 else (
-                            2 if total > self.expected * 24 else 0)
+                        samples = self.pixels[::self.period]
+                        bins = [0] * 8
+                        near_clip = 0
+                        for value in samples:
+                            if value >= self.HIGHLIGHT_EXCLUDE:
+                                bins[7] += 1
+                            else:
+                                bins[min(value >> 3, 6)] += 1
+                            near_clip += value >= self.NEAR_CLIP_LUMA
+                        background = sum(bins[:7])
+                        if near_clip >= (self.expected * self.EMERGENCY_CLIP_PERCENT + 99) // 100:
+                            state = 2
+                        elif background < (self.expected * self.BACKGROUND_MIN_PERCENT + 99) // 100:
+                            state = 0
+                        else:
+                            cumulative = 0
+                            p60 = 59
+                            representatives = (3, 11, 19, 27, 35, 43, 51)
+                            for index in range(7):
+                                cumulative += bins[index]
+                                if cumulative * 5 >= background * 3:
+                                    p60 = representatives[index]
+                                    break
+                            state = 1 if p60 < self.BG_LOW_LUMA else (
+                                2 if p60 > self.BG_HIGH_LUMA else 0)
                     sequence = ((self.packet >> 2) + 1) % 16
                     self.packet = sequence * 4 + state
                     self.output_valid = True
@@ -125,18 +155,20 @@ def run(name, stream, log2):
     vectors = folder / "vectors.hex"
     vectors.write_text("".join(f"{v:08x}\n" for v in stream.words), encoding="ascii")
     bench = folder / "tb.v"
-    bench.write_text(TB.replace("__VECTORS__", vectors.as_posix()), encoding="utf-8")
+    # Icarus在$readmemh中对非ASCII绝对路径处理不稳定，仿真工作目录固定在
+    # case目录并只传入ASCII文件名。
+    bench.write_text(TB.replace("__VECTORS__", vectors.name), encoding="utf-8")
     executable = folder / "sampler.vvp"
-    iv = shutil.which("iverilog") or r"C:\iverilog\bin\iverilog.exe"
-    vvp = shutil.which("vvp") or r"C:\iverilog\bin\vvp.exe"
+    iv = shutil.which("iverilog") or r"C:\Users\lenovo\AppData\Local\iverilog\bin\iverilog.exe"
+    vvp = shutil.which("vvp") or r"C:\Users\lenovo\AppData\Local\iverilog\bin\vvp.exe"
     compile_result = subprocess.run([
         iv, "-g2012", "-Wall", "-s", "tb", f"-Ptb.EXPECTED={stream.expected}",
         f"-Ptb.LOG2={log2}", f"-Ptb.VECTORS={len(stream.words)}", "-o", str(executable),
-        str(bench), str(SOURCE),
-    ], cwd=ROOT, capture_output=True, text=True, timeout=60)
+        bench.name, str(SOURCE),
+    ], cwd=folder, capture_output=True, text=True, timeout=60)
     (folder / "compile.log").write_text(compile_result.stdout + compile_result.stderr, encoding="utf-8")
     compile_result.check_returncode()
-    result = subprocess.run([vvp, str(executable)], cwd=ROOT,
+    result = subprocess.run([vvp, executable.name], cwd=folder,
                             capture_output=True, text=True, timeout=120)
     (folder / "result.log").write_text(result.stdout + result.stderr, encoding="utf-8")
     print(result.stdout, end="", flush=True)
@@ -157,8 +189,16 @@ def main():
     small.frame([16], held_fs=True)
     small.frame([24])
     small.frame([25])
+    # P60代表值35越过30阈值，触发普通减E（不依赖近饱和保护）。
+    small.frame([32])
+    # 56以上高光不进入背景；全帧高光但未达到近饱和门限时保持。
+    small.frame([56])
     small.frame([63])
     small.frame([8, 24, 16, 16])
+    # 背景恰好达到40%时有效，只有两点背景时P60仍按背景分布计算。
+    small.frame([56, 56, 16, 16])
+    # 背景只有25%时保持。
+    small.frame([56, 56, 56, 16])
     small.frame([20], beats=63)
     small.frame([20], beats=48)
     small.frame([20], beats=65)
@@ -169,7 +209,8 @@ def main():
     for _ in range(20):
         small.frame([20], blanks=False)
     small.tick(fs=1)
-    expected_classes = [1, 1, 0, 0, 2, 2, 0, 3, 3, 3, 3, 3, 3, 0] + [0] * 20
+    expected_classes = [1, 1, 1, 0, 0, 2, 0, 2, 1, 1, 0,
+                        3, 3, 3, 3, 3, 3, 1] + [1] * 20
     assert [state for _, state in small.publications] == expected_classes
     assert any(seq == 0 for seq, _ in small.publications), "Sequence wrap not exercised"
     # Reset halfway into acquisition discards partial history and publication.
@@ -178,26 +219,26 @@ def main():
     small.tick(reset_n=0)
     small.frame([16])
     small.tick(fs=1)
-    assert small.publications[-1] == (1, 0)
+    assert small.publications[-1] == (1, 1)
 
     no_decimation = Stream(4, 0)
     no_decimation.tick(reset_n=0)
     no_decimation.frame([0, 63, 0, 63], blanks=False)
     no_decimation.frame([16], held_fs=True)
     no_decimation.tick(fs=1)
-    assert no_decimation.publications == [(1, 2), (2, 0)]
+    assert no_decimation.publications == [(1, 2), (2, 1)]
 
     full = Stream(14400, 4)
     full.tick(reset_n=0)
     full.frame([63], blanks=False)
     full.frame([16], coincident=False, blanks=False)
     full.tick(fs=1)
-    assert full.publications == [(1, 2), (2, 0)]
+    assert full.publications == [(1, 2), (2, 1)]
 
     results = [run("edge_cases", small, 4), run("no_decimation", no_decimation, 0),
                run("720p", full, 4)]
     summary = {"pass": True, "td_run": False,
-               "reference": "External frame pixels and validity, independent unbounded sums",
+               "reference": "External frame pixels and validity, independent 8-bin background P60 model",
                "source_sha256": hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
                "cases": results}
     (OUT.parent / "sampler_checks.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

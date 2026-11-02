@@ -263,18 +263,54 @@ module fusion_n1_gain(input wire [7:0] I_peak, output reg [10:0] O_gain);
     end
 endmodule
 
-// 该组合包络复用已经验收的N1增益表及RGB公共增益，不增加像素拍数。
+// Gamma之后的残余色调曲线：暗部提升，中间调平滑，高光进入肩部压缩。
+// 16段线性插值只使用移位加法，不新增DSP；255保持白点。
+module fusion_tone_lut(input wire [7:0] I_value, output wire [7:0] O_value);
+    // 函数加连续赋值保证输入在时间0为0时也立即得到确定输出，避免仿真器
+    // 因组合always块没有经历输入跳变而保留X；综合后仍是相同的移位加法网络。
+    function [7:0] tone_map;
+        input [7:0] value;
+        reg [7:0] base, delta;
+        reg [11:0] product;
+        begin
+            case (value[7:4])
+                4'd0:  begin base=8'd0;   delta=8'd18; end
+                4'd1:  begin base=8'd18;  delta=8'd18; end
+                4'd2:  begin base=8'd36;  delta=8'd18; end
+                4'd3:  begin base=8'd54;  delta=8'd18; end
+                4'd4:  begin base=8'd72;  delta=8'd18; end
+                4'd5:  begin base=8'd90;  delta=8'd18; end
+                4'd6:  begin base=8'd108; delta=8'd16; end
+                4'd7:  begin base=8'd124; delta=8'd15; end
+                4'd8:  begin base=8'd139; delta=8'd14; end
+                4'd9:  begin base=8'd153; delta=8'd13; end
+                4'd10: begin base=8'd166; delta=8'd12; end
+                4'd11: begin base=8'd178; delta=8'd10; end
+                4'd12: begin base=8'd188; delta=8'd10; end
+                4'd13: begin base=8'd198; delta=8'd12; end
+                4'd14: begin base=8'd210; delta=8'd15; end
+                default: begin base=8'd225; delta=8'd30; end
+            endcase
+            product = (value[0] ? {4'd0,delta} : 12'd0) +
+                      (value[1] ? {3'd0,delta,1'd0} : 12'd0) +
+                      (value[2] ? {2'd0,delta,2'd0} : 12'd0) +
+                      (value[3] ? {1'd0,delta,3'd0} : 12'd0) + 12'd8;
+            tone_map = (value == 8'hff) ? 8'hff : base + product[11:4];
+        end
+    endfunction
+    assign O_value = tone_map(I_value);
+endmodule
+
+// 组合包络复用统一的高光压缩/暗部提升曲线，不增加像素拍数。
 module fusion_n1_envelope(
     input wire I_de, input wire I_enable,
     input wire [23:0] I_data, input wire [7:0] I_peak,
     output wire [23:0] O_data
 );
-    wire [10:0] gain;
     wire [23:0] lifted;
-    fusion_n1_gain u_gain(.I_peak(I_peak), .O_gain(gain));
-    fusion_n1_channel u_r(.I_pixel(I_data[23:16]), .I_gain(gain), .O_pixel(lifted[23:16]));
-    fusion_n1_channel u_g(.I_pixel(I_data[15:8]), .I_gain(gain), .O_pixel(lifted[15:8]));
-    fusion_n1_channel u_b(.I_pixel(I_data[7:0]), .I_gain(gain), .O_pixel(lifted[7:0]));
+    fusion_tone_lut u_r(.I_value(I_data[23:16]), .O_value(lifted[23:16]));
+    fusion_tone_lut u_g(.I_value(I_data[15:8]), .O_value(lifted[15:8]));
+    fusion_tone_lut u_b(.I_value(I_data[7:0]), .O_value(lifted[7:0]));
     assign O_data = (!I_de || !I_enable) ? I_data : lifted;
 endmodule
 
@@ -289,12 +325,14 @@ module fusion_lift_blend(
         input [7:0] original_pixel, envelope_pixel;
         input [4:0] strength;
         reg [7:0] delta;
+        reg direction;
         reg [12:0] p0, p1, p2, p3, p4;
         reg [12:0] a0, a1, product;
         reg [8:0] result;
         begin
-            // 包络保证不低于原值；防御性处理异常包络，避免无符号下溢。
-            delta = (envelope_pixel >= original_pixel) ? envelope_pixel-original_pixel : 8'd0;
+            // 支持正负差值：暗部提升走加法，高光肩部压缩走减法。
+            direction = (envelope_pixel >= original_pixel);
+            delta = direction ? envelope_pixel-original_pixel : original_pixel-envelope_pixel;
             p0 = strength[0] ? {5'd0, delta} : 13'd0;
             p1 = strength[1] ? {4'd0, delta, 1'd0} : 13'd0;
             p2 = strength[2] ? {3'd0, delta, 2'd0} : 13'd0;
@@ -303,8 +341,13 @@ module fusion_lift_blend(
             a0 = p0+p1;
             a1 = p2+p3;
             product = a0+a1+p4+13'd8;
-            result = {1'b0, original_pixel}+{1'b0, product[11:4]};
-            blend_channel = result[8] ? 8'hff : result[7:0];
+            if (direction) begin
+                result = {1'b0, original_pixel}+{1'b0, product[11:4]};
+                blend_channel = result[8] ? 8'hff : result[7:0];
+            end else begin
+                blend_channel = ({1'b0, original_pixel} > {1'b0, product[11:4]}) ?
+                                original_pixel-product[11:4] : 8'd0;
+            end
         end
     endfunction
     wire [4:0] bounded_strength = (I_strength > 5'd16) ? 5'd16 : I_strength;
@@ -402,10 +445,13 @@ module fusion_lift_control #(
     reg [COUNT_W-1:0] pending_bright,pending_shadow,pending_mid;
     reg [MID_SUM_W-1:0] pending_raw,pending_envelope;
     reg [15:0] pending_exposure;
-    wire enter_condition = range_sum >= 16*REGION_SAMPLES &&
-        pending_bright >= ENTER_BRIGHT && pending_shadow >= ENTER_SHADOW;
-    wire hold_condition = range_sum >= 14*REGION_SAMPLES &&
-        pending_bright >= HOLD_BRIGHT && pending_shadow >= HOLD_SHADOW;
+    // Tone mapping由背景过暗、亮部覆盖或明显反差任一证据触发；高光不再单独驱动降E。
+    wire enter_condition = (pending_shadow >= ENTER_SHADOW) ||
+        (pending_bright >= ENTER_BRIGHT) ||
+        (range_sum >= 16*REGION_SAMPLES);
+    wire hold_condition = (pending_shadow >= HOLD_SHADOW) ||
+        (pending_bright >= HOLD_BRIGHT) ||
+        (range_sum >= 14*REGION_SAMPLES);
     reg [1:0] enter_wait;
     reg [2:0] exit_wait;
     reg [15:0] exposure_stable_value;
@@ -448,10 +494,9 @@ module fusion_lift_control #(
     wire [15:0] reference_exposure_delta = (pending_exposure >= O_reference_exposure) ?
         pending_exposure-O_reference_exposure : O_reference_exposure-pending_exposure;
     wire exposure_near_reference = reference_exposure_delta <= EXPOSURE_TOLERANCE;
-    // 基线附近、E已稳定且当前场景已不再满足保持条件时，提前结束本轮保护。
-    // 保留保持门限，避免仅因一帧明暗差变小就切断仍在进行的保护。
+    // 场景不再需要曲线、且AE稳定约0.75秒时，退出本轮Tone映射。
     wire baseline_recovered = O_triggered && reference_ready && !hold_condition &&
-        exposure_exit_stable_now && exposure_near_reference && (O_strength == 0);
+        exposure_exit_stable_now && (O_strength == 0);
     wire target_input_same = target_valid &&
         pending_exposure == target_exposure && pending_mid == target_mid &&
         pending_raw == target_raw && pending_envelope == target_envelope;
@@ -604,32 +649,19 @@ module fusion_lift_control #(
                             if (hold_condition) exit_wait<=0;
                             else exit_wait<=exit_wait+1'b1;
                             if (reference_ready) begin
+                                // 新目标是统一Tone映射，不再把包络亮度差当作“恢复E前均值”
+                                // 的除法问题。AE稳定后按场景证据缓慢推到16档或退回0档。
                                 if (!exposure_stable_now) begin
-                                    // AE仍在改变E时只保留当前强度；稳定后再算一次目标。
-                                end else if (target_input_same) begin
-                                    // 输入没有变化时沿用上次目标，只做一拍一级的渐变。
-                                    if (O_strength<target_strength) O_strength<=O_strength+1'b1;
-                                    else if (O_strength>target_strength) O_strength<=O_strength-1'b1;
-                                end else if (pending_exposure>=O_reference_exposure || pending_mid==0 ||
-                                             pending_envelope<=pending_raw) begin
-                                    target_strength<=0; target_valid<=1;
-                                    target_exposure<=pending_exposure; target_mid<=pending_mid;
-                                    target_raw<=pending_raw; target_envelope<=pending_envelope;
-                                    if (O_strength!=0) O_strength<=O_strength-1'b1;
+                                    // AE在途时保持当前显示强度，避免亮度变化和曲线同时抖动。
                                 end else begin
-                                    // 先串行计算参考均值×当前同类像素数。
-                                    target_valid<=0;
+                                    target_strength<=hold_condition ? 5'd16 : 5'd0;
+                                    target_valid<=1;
                                     target_exposure<=pending_exposure; target_mid<=pending_mid;
                                     target_raw<=pending_raw; target_envelope<=pending_envelope;
-                                    multiply_bits<=pending_mid;
-                                    multiply_term<=O_reference_luma; multiply_acc<=0;
-                                    raw_scaled<={pending_raw,4'd0};
-                                    envelope_delta<=pending_envelope-pending_raw;
-                                    // 目标亮度计算本身已经按参考均值停止；不再用E比例
-                                    // 提前截断，避免E900->675时最多只有5档而补亮不足。
-                                    exposure_remaining<={exposure_difference,4'd0};
-                                    exposure_denominator<=pending_exposure;
-                                    serial_left<=COUNT_W; state<=S_REFERENCE_MUL;
+                                    if (hold_condition && O_strength<5'd16)
+                                        O_strength<=O_strength+1'b1;
+                                    else if (!hold_condition && O_strength!=0)
+                                        O_strength<=O_strength-1'b1;
                                 end
                             end
                         end

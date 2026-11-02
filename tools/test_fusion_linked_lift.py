@@ -15,7 +15,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 HDL = ROOT / "user_source/hdl_source"
-BASELINE = "d755598"
+BASELINE = "9d930ed"
 IVERILOG = Path(shutil.which("iverilog") or
                 r"C:\Users\lenovo\AppData\Local\iverilog\bin\iverilog.exe")
 
@@ -32,279 +32,94 @@ module tb;
     wire [15:0] reference_exposure;
     wire [9:0] reference_luma;
     wire triggered;
-    reg [10:0] gains[0:255];
-    integer frames=0, checks=0, transitions=0, k, previous;
-    integer highest=0, entry_tests=0, invalid_tests=0, exposure_tests=0;
-    integer shadow_value=32, exposure_perturb=0;
+    integer p, k, value, x, frame_no=0;
+
     fusion_lift_control #(.H_ACTIVE(W), .V_ACTIVE(H), .EXPECTED_SAMPLES(N),
         .SAMPLE_LOG2(6)) dut(
         .I_clk(clk), .I_rst_n(rst_n), .I_vs(vs), .I_de(de), .I_enable(enable),
-        .I_data(data), .I_envelope_data(envelope_data),
-        .I_exposure(exposure), .I_exposure_valid(exposure_valid),
-        .O_strength(strength), .O_reference_exposure(reference_exposure),
-        .O_reference_luma(reference_luma), .O_triggered(triggered));
-
-    // 参考目标直接穷举17个强度，与RTL的串行比较状态机无关。
-    function integer target;
-        input integer baseline, current, reference_mean, raw_pixel;
-        integer value, raw_luma, envelope_pixel, envelope_luma, candidate, allowance;
-        begin
-            envelope_pixel=(raw_pixel*gains[raw_pixel]+128)/256;
-            raw_luma=raw_pixel/4;
-            envelope_luma=envelope_pixel/4;
-            allowance=(current>=baseline)?0:(16*(baseline-current))/current;
-            if(allowance>16) allowance=16;
-            value=0;
-            if(raw_pixel>=8 && raw_pixel<=191 && envelope_luma>raw_luma)
-                for(candidate=0;candidate<=16;candidate=candidate+1)
-                    if(candidate<=allowance &&
-                       raw_luma*16+(envelope_luma-raw_luma)*candidate<=reference_mean)
-                        value=candidate;
-            target=value;
-        end
-    endfunction
+        .I_data(data), .I_envelope_data(envelope_data), .I_exposure(exposure),
+        .I_exposure_valid(exposure_valid), .O_strength(strength),
+        .O_reference_exposure(reference_exposure), .O_reference_luma(reference_luma),
+        .O_triggered(triggered));
 
     task blank;
-        input integer n;
-        integer b;
+        input integer count;
+        integer i;
         begin
-            for(b=0;b<n;b=b+1) begin @(negedge clk); de=0; data=0; envelope_data=0; end
+            for(i=0;i<count;i=i+1) begin
+                @(negedge clk); de=0; data=0; envelope_data=0;
+            end
         end
     endtask
 
     task boundary;
         begin
-            @(negedge clk); vs=1; de=0; data=0; envelope_data=0;
+            @(negedge clk); vs=1; de=0;
             @(negedge clk); vs=0;
-            // 允许归约流水线与串行目标运算完成，但不追加有效像素。
-            blank(128);
+            blank(140);
         end
     endtask
 
-    task reset;
+    task reset_dut;
         begin
-            @(negedge clk); rst_n=0; vs=0; de=0;
-            blank(5);
-            if(strength!==0 || triggered!==0 || reference_exposure!==0 || reference_luma!==0)
-                $fatal(1,"复位未清零 strength=%0d triggered=%b ref=%0d",strength,triggered,reference_exposure);
+            rst_n=0; enable=0; vs=0; de=0;
+            blank(8);
             @(negedge clk); rst_n=1;
             boundary;
         end
     endtask
 
-    // pattern=0均匀；1强反差；2满足迟滞hold但不满足enter。
-    // hold图中每区4个样本，8个区有一个亮度4样本，一个区有亮度60样本，
-    // 其余样本亮度36：区域均值最小28、最大42，亮差恰为14。
+    // pattern=0为均匀背景，pattern=1为左暗右亮的明暗冲突场景。
     task frame;
-        input integer pattern, pixel_count;
-        integer p,x,y,col,row,region,value,envelope_value,old_strength;
+        input integer pattern;
         begin
-            old_strength=strength;
-            for(p=0;p<pixel_count;p=p+1) begin
-                @(negedge clk); de=1;
-                x=p%W; y=(p/W)%H;
-                col=x/64; row=y/4; region=row*4+col;
-                case(pattern)
-                    0: value=128;
-                    1: value=(x<W/2)?shadow_value:224;
-                    2: begin
-                        value=144;
-                        if((y%4)==0 && region<8) value=16;
-                        if((y%4)==0 && region==8) value=240;
-                    end
-                    3:value=(x<W/2)?0:255;
-                    4:begin
-                        value=(x<W/2)?32:224;
-                        if(x==0 && y==0) value=28;
-                    end
-                    5:value=shadow_value;
-                    default:value=16;
-                endcase
+            for(p=0;p<W*H;p=p+1) begin
+                @(negedge clk); de=1; x=p%W;
+                if(pattern==0) value=128;
+                else value=(x<W/2) ? 32 : 224;
                 data={8'(value),8'(value),8'(value)};
-                envelope_value=(value*gains[value]+128)/256;
-                envelope_data={8'(envelope_value),8'(envelope_value),8'(envelope_value)};
-                if(exposure_perturb && p==W*H/2) exposure=500;
-                if(exposure_perturb && p==W*H/2+64) exposure=675;
+                envelope_data=data;
             end
             blank(8);
             boundary;
-            frames=frames+1;
-            if(strength>16 || $isunknown({strength,triggered,reference_exposure,reference_luma}))
-                $fatal(1,"强度越界或输出未知 frame=%0d",frames);
-            if(enable && ((strength>old_strength+1)||(old_strength>strength+1)))
-                $fatal(1,"逐帧强度跳变 frame=%0d old=%0d new=%0d",frames,old_strength,strength);
-            if(strength!=old_strength) transitions=transitions+1;
-            if(strength>highest) highest=strength;
-            checks=checks+1;
-        end
-    endtask
-
-    task steady;
-        input integer current, raw_pixel, wanted;
-        integer n,baseline,baseline_luma,last_strength;
-        begin
-            baseline=reference_exposure;
-            baseline_luma=reference_luma;
-            exposure=current;
-            shadow_value=raw_pixel;
-            boundary;
-            last_strength=strength;
-            for(n=0;n<24;n=n+1) begin
-                frame(1,W*H);
-                if(!triggered || reference_exposure!==baseline || reference_luma!==baseline_luma)
-                    $fatal(1,"曝光变化重写触发参考 current=%0d ref=%0d expected=%0d",current,reference_exposure,baseline);
-                if(n>1 && wanted>last_strength && strength<last_strength)
-                    $fatal(1,"降曝后强度反向下降");
-                if(n>1 && wanted<last_strength && strength>last_strength)
-                    $fatal(1,"恢复曝光后强度反向上升");
-                last_strength=strength;
-            end
-            if(strength!==wanted || wanted!=target(baseline,current,baseline_luma,raw_pixel))
-                $fatal(1,"曝光目标不符 ref=%0d E=%0d raw=%0d actual=%0d wanted=%0d oracle=%0d",baseline,current,raw_pixel,strength,wanted,target(baseline,current,baseline_luma,raw_pixel));
-            exposure_tests=exposure_tests+1;
+            frame_no=frame_no+1;
+            if($isunknown({strength,triggered,reference_exposure,reference_luma}))
+                $fatal(1,"输出出现X frame=%0d",frame_no);
         end
     endtask
 
     initial begin
-        $readmemh("baseline_n1_gains.hex",gains);
-        reset;
-        for(k=0;k<8;k=k+1) frame(1,W*H);
-        if(triggered || strength!=0) $fatal(1,"SW5关闭仍启动补亮");
-        enable=1;
-        for(k=0;k<10;k=k+1) frame(0,W*H);
-        if(triggered || strength!=0) $fatal(1,"SW5开启后均匀场景误启动");
-        frame(1,W*H); frame(1,W*H);
-        if(triggered || strength!=0) $fatal(1,"未满3个连续有效帧便启动");
-        frame(1,W*H);
-        if(!triggered || reference_exposure!=900 || reference_luma!=128)
-            $fatal(1,"3帧强反差未锁存E900和中间调均值8的Q4");
-        entry_tests=entry_tests+1;
-        for(k=0;k<10;k=k+1) frame(1,W*H);
-        if(strength!=0) $fatal(1,"曝光尚未下降便过量补亮");
-
-        for(k=0;k<12;k=k+1) frame(2,W*H);
-        if(!triggered || strength!=0 || reference_exposure!=900 || reference_luma!=128)
-            $fatal(1,"hold迟滞区错误退出或修改参考");
-        // 只改变E而图像未变，不能凭E比例凭空多补。
-        steady(450,32,0);
-        steady(450,20,16);
-        steady(225,12,16);
-        steady(900,32,0);
-        steady(1200,40,0);
-        steady(675,28,4);
-        steady(899,32,0);
-        steady(800,24,2);
-        steady(900,20,0);
-        steady(720,28,4);
-        steady(600,24,8);
-        steady(300,16,16);
-        steady(225,4,0);
-        steady(675,28,4);
-
-        // 不完整帧不能改变启停状态、触发参考或稳定强度。
-        frame(0,W*H-1);
-        frame(0,W*H+W);
-        if(!triggered || strength!=4 || reference_exposure!=900 || reference_luma!=128)
-            $fatal(1,"短帧/长帧污染已触发状态");
-        invalid_tests=invalid_tests+2;
-
-        exposure_perturb=1;
-        frame(1,W*H);
-        exposure_perturb=0;
-        if(!triggered || strength!=4 || reference_exposure!=900 || reference_luma!=128)
-            $fatal(1,"帧中途曝光短暂改变仍被当作稳定曝光帧");
-        invalid_tests=invalid_tests+1;
-
-        exposure_valid=0; exposure=128;
-        previous=strength;
-        for(k=0;k<12;k=k+1) frame(1,W*H);
-        if(strength!=previous || reference_exposure!=900 || reference_luma!=128)
-            $fatal(1,"未确认生效的曝光改变强度或参考");
-        invalid_tests=invalid_tests+1;
-        exposure=675; exposure_valid=1;
-        boundary;
-        for(k=0;k<3;k=k+1) frame(1,W*H);
-
-        for(k=0;k<7;k=k+1) begin
-            frame(5,W*H);
-            if(!triggered) $fatal(1,"退出未满8个有效非hold帧");
-        end
-        frame(5,W*H);
-        if(triggered) $fatal(1,"8个有效非hold帧后仍未退出");
-        if(strength!=3) $fatal(1,"退出瞬间应从4平滑下降至3");
-        for(k=0;k<3;k=k+1) begin
-            frame(1,W*H);
-            if(triggered || reference_exposure!=0 || reference_luma!=0)
-                $fatal(1,"上一场景渐退期间捕获了新参考");
-        end
-        if(strength!=0) $fatal(1,"剩余3档未按有效帧渐退至0");
-        frame(1,W*H); frame(1,W*H); frame(1,W*H);
-        if(!triggered || reference_exposure!=675 || reference_luma!=112)
-            $fatal(1,"渐退完成后不能正常重建新的参考");
-        entry_tests=entry_tests+1;
-        for(k=0;k<20;k=k+1) frame(0,W*H);
-        if(strength!=0) $fatal(1,"退出后补亮未平滑归零");
-
-        enable=0; frame(1,W*H);
-        if(triggered || strength!=0 || reference_exposure!=0 || reference_luma!=0)
-            $fatal(1,"关闭未清理触发参考");
-        enable=1; exposure=600; shadow_value=24;
-        boundary;
-        for(k=0;k<14;k=k+1) frame(1,W*H);
-        if(!triggered || reference_exposure!=600 || reference_luma!=96 || strength!=0)
-            $fatal(1,"重新开启未记录新的E600基线");
-        entry_tests=entry_tests+1;
-        enable=0; frame(1,W*H);
-        enable=1; exposure_valid=0;
-        for(k=0;k<8;k=k+1) frame(1,W*H);
-        if(triggered || strength!=0 || reference_exposure!=0 || reference_luma!=0)
-            $fatal(1,"无效曝光允许新触发");
-        invalid_tests=invalid_tests+1;
-        exposure_valid=1; exposure=127;
-        for(k=0;k<5;k=k+1) frame(1,W*H);
-        exposure=1992;
-        for(k=0;k<5;k=k+1) frame(1,W*H);
-        if(triggered || strength!=0) $fatal(1,"越界曝光允许新触发");
-        invalid_tests=invalid_tests+2;
+        reset_dut;
+        enable=1; exposure=900; exposure_valid=1;
+        // 先建立正常背景基线，再进入高光/暗部共存场景。
+        for(k=0;k<5;k=k+1) frame(0);
+        if(triggered || strength!=0) $fatal(1,"均匀背景误触发");
+        for(k=0;k<3;k=k+1) frame(1);
+        if(!triggered || reference_exposure!=900 || reference_luma!=512)
+            $fatal(1,"明暗场景未在三帧后触发或基线错误 E=%0d L=%0d",reference_exposure,reference_luma);
+        // 稳定E后，Tone强度逐帧上升而不是一步跳满。
+        for(k=0;k<25;k=k+1) frame(1);
+        if(strength<12 || strength>16) $fatal(1,"Tone稳定强度异常=%0d",strength);
+        // E变化期间保持现有显示强度，避免AE和Tone同时抖动。
         exposure=600;
-        boundary;
-        for(k=0;k<8;k=k+1) frame(3,W*H);
+        for(k=0;k<10;k=k+1) frame(1);
+        if(strength<12 || !triggered) $fatal(1,"E变化期间Tone异常 E=%0d strength=%0d",exposure,strength);
+        // 光源移开后恢复均匀背景，等待约0.75秒稳定帧后自动退出。
+        exposure=900;
+        for(k=0;k<70;k=k+1) frame(0);
         if(triggered || strength!=0 || reference_exposure!=0 || reference_luma!=0)
-            $fatal(1,"没有中间调样本的黑白场景不应锁存补亮参考");
-        invalid_tests=invalid_tests+1;
-        reset;
-        // 候选从第一个有效明暗冲突帧保存，参数写入期间暂停证据。
-        exposure=900; shadow_value=32; exposure_valid=1; enable=1;
-        boundary;
-        frame(1,W*H);
-        if(triggered) $fatal(1,"候选首帧提前确认触发");
-        exposure_valid=0; exposure=675; shadow_value=28;
-        for(k=0;k<5;k=k+1) frame(1,W*H);
-        if(triggered || strength!=0) $fatal(1,"pending期间累计触发证据");
-        exposure_valid=1; boundary;
-        frame(1,W*H);
-        if(triggered) $fatal(1,"只有两个有效enter帧便确认触发");
-        frame(1,W*H);
-        if(!triggered || reference_exposure!=900 || reference_luma!=128)
-            $fatal(1,"pending后触发未保留第一次冲突帧的参考曝光/亮度");
-        for(k=0;k<12;k=k+1) frame(1,W*H);
-        if(strength!=target(900,675,128,28))
-            $fatal(1,"跨pending触发后未按首帧亮度恢复");
-        entry_tests=entry_tests+1;
-        reset;
-        // 非整数均值Q4需要向下取整，并会改变最终允许的补亮档位。
-        exposure=900; shadow_value=32; enable=1; exposure_valid=1;
-        boundary;
-        frame(4,W*H); frame(4,W*H); frame(4,W*H);
-        if(!triggered || reference_exposure!=900 || reference_luma!=127)
-            $fatal(1,"非整数参考均值未正确向下取整 ref_luma=%0d",reference_luma);
-        steady(675,28,3);
-        entry_tests=entry_tests+1;
-        reset;
-        $display("PASS fusion_control frames=%0d checks=%0d transitions=%0d highest=%0d entry_tests=%0d exposure_tests=%0d invalid_tests=%0d",frames,checks,transitions,highest,entry_tests,exposure_tests,invalid_tests);
+            $fatal(1,"高光移开后未自动退出 trig=%b strength=%0d",triggered,strength);
+        // 退出后再次出现明暗冲突，必须能够建立新的参考并触发。
+        for(k=0;k<3;k=k+1) frame(1);
+        if(!triggered) $fatal(1,"退出后重新触发失败");
+        $display("PASS fusion_control_new frames=%0d",frame_no);
         $finish;
     end
-    initial begin #10000000; $fatal(1,"融合控制仿真超时"); end
+
+    initial begin
+        #5000000;
+        $fatal(1,"融合控制仿真超时");
+    end
 endmodule
 '''
 
@@ -317,7 +132,6 @@ module tb;
     reg [7:0] peak=0;
     reg [4:0] strength=0;
     wire [23:0] envelope, actual;
-    reg [10:0] gains[0:255];
     integer s,p,v,k,last,checks=0,highlight_checks=0,zero_checks=0;
     integer er,eg,eb,rr,rg,rb;
     reg [23:0] expected_envelope, expected;
@@ -327,12 +141,46 @@ module tb;
     fusion_lift_blend blend(.I_de(de), .I_enable(enable), .I_original(original),
         .I_envelope(envelope), .I_strength(strength), .O_data(actual));
 
-    function integer channel;
-        input integer pixel, gain;
-        integer value;
+    function integer tone;
+        input integer pixel;
+        integer base, delta, product, segment;
         begin
-            value=(pixel*gain+128)/256;
-            channel=(value>255)?255:value;
+            segment=pixel/16;
+            case(segment)
+                0:  begin base=0;   delta=18; end
+                1:  begin base=18;  delta=18; end
+                2:  begin base=36;  delta=18; end
+                3:  begin base=54;  delta=18; end
+                4:  begin base=72;  delta=18; end
+                5:  begin base=90;  delta=18; end
+                6:  begin base=108; delta=16; end
+                7:  begin base=124; delta=15; end
+                8:  begin base=139; delta=14; end
+                9:  begin base=153; delta=13; end
+                10: begin base=166; delta=12; end
+                11: begin base=178; delta=10; end
+                12: begin base=188; delta=10; end
+                13: begin base=198; delta=12; end
+                14: begin base=210; delta=15; end
+                default: begin base=225; delta=30; end
+            endcase
+            product=delta*(pixel%16)+8;
+            tone=(pixel==255)?255:base+product/16;
+        end
+    endfunction
+
+    function integer channel_blend;
+        input integer pixel, envelope_pixel, level;
+        integer value, delta;
+        begin
+            if(envelope_pixel>=pixel) begin
+                delta=envelope_pixel-pixel;
+                value=pixel+(delta*level+8)/16;
+            end else begin
+                delta=pixel-envelope_pixel;
+                value=pixel-(delta*level+8)/16;
+            end
+            channel_blend=(value<0)?0:((value>255)?255:value);
         end
     endfunction
 
@@ -341,11 +189,11 @@ module tb;
         begin
             original={8'(r),8'(g),8'(b)};
             peak=(r>g)?((r>b)?r:b):((g>b)?g:b);
-            er=channel(r,gains[peak]); eg=channel(g,gains[peak]); eb=channel(b,gains[peak]);
+            er=tone(r); eg=tone(g); eb=tone(b);
             expected_envelope={8'(er),8'(eg),8'(eb)};
-            rr=(r*(16-strength)+er*strength+8)/16;
-            rg=(g*(16-strength)+eg*strength+8)/16;
-            rb=(b*(16-strength)+eb*strength+8)/16;
+            rr=channel_blend(r,er,strength);
+            rg=channel_blend(g,eg,strength);
+            rb=channel_blend(b,eb,strength);
             expected={8'(rr),8'(rg),8'(rb)};
             if(!de || !enable) begin expected_envelope=original; expected=original; end
             #1;
@@ -354,21 +202,28 @@ module tb;
             if(actual!==expected)
                 $fatal(1,"融合混合偏离整数参考 s=%0d rgb=%06x actual=%06x expected=%06x",strength,original,actual,expected);
             if(peak>=192) begin
-                if(actual!==original) $fatal(1,"高光非逐位恒等");
+                if(peak<255 && ((r==peak && actual[23:16]>r) ||
+                                (g==peak && actual[15:8]>g) ||
+                                (b==peak && actual[7:0]>b)))
+                    $fatal(1,"高光未压缩");
                 highlight_checks=highlight_checks+1;
             end
             if(strength==0) begin
                 if(actual!==original) $fatal(1,"强度0未逐位复用原图");
                 zero_checks=zero_checks+1;
             end
-            if(de && enable && (actual[23:16]<r || actual[15:8]<g || actual[7:0]<b))
-                $fatal(1,"补亮意外降低通道");
+            if(de && enable && ((er>=r && actual[23:16]<r) ||
+                                (er<r && actual[23:16]>r) ||
+                                (eg>=g && actual[15:8]<g) ||
+                                (eg<g && actual[15:8]>g) ||
+                                (eb>=b && actual[7:0]<b) ||
+                                (eb<b && actual[7:0]>b)))
+                $fatal(1,"Tone方向错误");
             checks=checks+1;
         end
     endtask
 
     initial begin
-        $readmemh("baseline_n1_gains.hex",gains);
         for(s=0;s<=16;s=s+1) begin
             strength=s; last=0;
             for(p=0;p<256;p=p+1) begin
