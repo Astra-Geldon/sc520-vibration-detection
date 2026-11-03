@@ -34,8 +34,8 @@ module line_buffer_demosaic #(
     wire        rd_en;  // synthesis keep 
 
     // 定义地址计数器寄存器和数据寄存器
-    reg  [10:0] addra;     // 写地址计数器               
-    reg  [10:0] addrb;     // 读地址计数器               
+    reg  [8:0] addra;     // 写地址计数器               
+    reg  [8:0] addrb;     // 读地址计数器               
     reg  [32:0] data_d0;   // 延时一个时钟的数据         
     reg         valid_d0;  // 延时一个时钟的数据有效信号  
 

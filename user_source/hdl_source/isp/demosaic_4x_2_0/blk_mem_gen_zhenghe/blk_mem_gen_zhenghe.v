@@ -10,10 +10,10 @@
 module blk_mem_gen_zhenghe
 (
   input   [31:0]                dia,
-  input   [10:0]                addra,
+  input   [8:0]                 addra,
   input                         wea,
   input                         clka,
-  input   [10:0]                addrb,
+  input   [8:0]                 addrb,
   input                         clkb,
   input   [31:0]                dib,
   input                         web,
@@ -24,11 +24,11 @@ module blk_mem_gen_zhenghe
   ram_d32970204f32
   #(
       .DATA_WIDTH_A(32),
-      .ADDR_WIDTH_A(11),
-      .DATA_DEPTH_A(2048),
+      .ADDR_WIDTH_A(9),
+      .DATA_DEPTH_A(512),
       .DATA_WIDTH_B(32),
-      .ADDR_WIDTH_B(11),
-      .DATA_DEPTH_B(2048),
+      .ADDR_WIDTH_B(9),
+      .DATA_DEPTH_B(512),
       .REGMODE_A("NOREG"),
       .WRITEMODE_A("NORMAL"),
       .RESETMODE_A("ASYNC"),

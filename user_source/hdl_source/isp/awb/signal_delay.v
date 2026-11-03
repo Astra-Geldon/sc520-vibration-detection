@@ -33,8 +33,8 @@ module signal_delay #(
 
     wire        rd_en; 
 
-    reg  [10:0] addra; 
-    reg  [10:0] addrb; 
+    reg  [8:0] addra; 
+    reg  [8:0] addrb; 
 
 
     reg  [13:0] h_cnt;
