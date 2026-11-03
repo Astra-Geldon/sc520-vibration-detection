@@ -1,13 +1,13 @@
 # Final_Project 最终版：编译与烧录
 
-适用基于d1fe233初赛final的本轮资源清理构建。工具TD6.2.168116，器件PH1P35MDG324、-3。2026-11-03已完成A→B→C、Bit生成和40组物理CDC审计；本地Bit是否已下载由烧录日志另行确认。
+适用基于d1fe233初赛final的当前低LUT构建，包含行缓存优化并保留UART诊断。工具TD6.2.168116，器件PH1P35MDG324、-3。2026-11-04已完成A→B→C、Bit生成和40组物理CDC审计，当前Bit已通过JTAG芯片校验和下载；资源及实验边界见[资源压缩研究](RESOURCE_COMPRESSION_RESEARCH.md)。
 
 ## 已验证的 Bit
 
 本机输出：`td_project/camera_to_dsi_display.bit`，大小1,789,539字节，SHA256：
 
 ```text
-5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0
+F5D0D2DCF000B2A638A1849B0EE77761494BDD377536BBF9F46B650D6F4CE8BD
 ```
 
 Bit 被 Git 忽略，远端保存源码、验证 JSON 和用户截图。不要用历史五拨码图像单工程的 Bit 代替本版。
@@ -16,10 +16,10 @@ Bit 被 Git 忽略，远端保存源码、验证 JSON 和用户截图。不要�
 
 ```powershell
 Get-FileHash .\td_project\camera_to_dsi_display.bit -Algorithm SHA256
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\program_final.ps1 -Bit '.\td_project\camera_to_dsi_display.bit' -ExpectedSha256 '5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0' -TdExe 'F:\Anlogic\bin\td_commands_prompt.exe' -Spd 7 -Cable 0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\program_final.ps1 -Bit '.\td_project\camera_to_dsi_display.bit' -ExpectedSha256 'F5D0D2DCF000B2A638A1849B0EE77761494BDD377536BBF9F46B650D6F4CE8BD' -TdExe 'F:\Anlogic\bin\td_commands_prompt.exe' -OutputRoot "$env:TEMP\sc520-programming" -Spd 7 -Cable 0
 ```
 
-发布时已将脚本默认哈希更新为本版；显式传参便于核对。自编译 Bit 的哈希可能因日期元数据不同而变化，需先核验构建记录，再传相应 `-ExpectedSha256`。
+脚本默认哈希属于历史基线，烧录当前版本必须像上面一样显式传入`-ExpectedSha256`。自编译Bit的哈希可能因日期元数据不同而变化，需先核验构建记录，再传相应哈希；`OutputRoot`需为本机可写的纯ASCII路径。
 
 脚本将 Bit 暂存到纯 ASCII 路径、清理残留 hwserver，并通过本地 `127.0.0.1:5555` 和 `-usr_args "-f 12 -i 0"` 执行 JTAG SRAM 下载。成功需同时满足退出码 0、`PRG-2014 : Chip validation success: PH1P35MDG324` 和 `finish command "download -bit..."`。已知 `USR-8011 invalid option -f 12 -i 0` 单行不代表下载失败，要核对上述全部成功条件。
 

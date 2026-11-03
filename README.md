@@ -2,16 +2,16 @@
 
 安路HX1P35A开发板（PH1P35MDG324，-3）与SC520CS摄像头的图像处理、微振动识别及HDMI整合工程。
 
-当前交付基线源自分支codex/fusion-exposure-linked-lift的提交d1fe233（初赛final），本轮已完成自动曝光/补亮死代码清理、构建脚本口径修正和重新布局布线。当前Bit为本轮清理后的本地构建，已完成TD综合、布局布线、Bit生成；烧录需以该Bit哈希为准。
+当前交付基线源自提交d1fe233（初赛final），已完成自动曝光/补亮死代码清理、高斯行缓存复用和视频抽头行缓存ERAM迁移。当前保留UART诊断，ISP深度压缩实验已回退；本地Bit已完成A→B→C、时序与CDC检查，并通过JTAG下载。各实验结果见[资源压缩研究](RESOURCE_COMPRESSION_RESEARCH.md)。
 
 ## 获取与操作
 
 ```powershell
-git clone https://gitee.com/wang-zhanheng/sc520-vibration-detection.git
+git clone https://github.com/Astra-Geldon/sc520-vibration-detection.git
 cd sc520-vibration-detection
 ```
 
-上述命令取得远端默认分支，不保证包含当前本地测试分支；当前提交尚未推送远端。使用队友提供的工程时，先确认分支、提交和Bit来源。
+GitHub以main分支交付当前源码，同时保留codex/resource-compression-research分支。仓库为私有，克隆需要对应访问权限；Gitee远程保留为原有来源。Bit、TD数据库和临时仿真文件不随Git上传，取得源码后请按构建说明重新生成Bit，并核对实际构建的哈希。
 
 | 输入 | 当前源码功能 |
 |---|---|
@@ -40,19 +40,19 @@ KEY4开启时只自动调整曝光时间参数E，范围128～1991，传感器�
 ## 当前Bit与物理资源
 
 当前Bit：td_project/camera_to_dsi_display.bit
-SHA256：5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0
+SHA256：F5D0D2DCF000B2A638A1849B0EE77761494BDD377536BBF9F46B650D6F4CE8BD
 
 | 资源 | 已用／总量 | 占用率 |
 |---|---:|---:|
-| LUT6 | 17780／21216 | 83.80% |
-| REG | 17886／42432 | 42.15% |
-| Slice | 18576／21216 | 87.56% |
-| ERAM20K | 66／108 | 61.11% |
+| LUT6 | 17389／21216 | 81.96% |
+| REG | 17893／42432 | 42.17% |
+| Slice | 18249／21216 | 86.02% |
+| ERAM20K | 67／108 | 62.04% |
 | DSP | 40／40 | 100.00% |
 | PLL | 3／6 | 50.00% |
 | MCU硬核 | 1／1 | 100.00% |
 
-最终时序为STA覆盖率97.07%、SWNS＋0.103ns、STNS0、HWNS＋0.020ns、HTNS0。DSP已满，后续改动优先使用移位加法、已有RAM和寄存级。
+最终时序为SWNS＋0.123ns、STNS0、HWNS＋0.020ns、HTNS0。DSP已满，后续改动优先使用移位加法、已有RAM和寄存级。
 
 本轮已同步修正CDC检查器对u_demo_mipi_status目标侧3位裁剪的口径。A/B/C、独立时序和40组物理CDC审计均通过，`PHASE_C_DONE`已生成Bit；不再把历史35/40组不一致写入当前结论。
 
