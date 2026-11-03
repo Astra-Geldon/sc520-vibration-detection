@@ -1,6 +1,6 @@
 # 五拨码与四按键操作说明
 
-文件名保留历史日期，内容更新为`codex/fusion-exposure-linked-lift`源码的操作规则。**本轮尚未完整TD编译或烧录，新规则不适用于目录中的旧Bit。**版本边界见[融合说明](FUSION_EXPOSURE_LINKED.md)。
+文件名保留历史日期，内容更新为`codex/fusion-exposure-linked-lift`源码的操作规则。**当前规则适用于d1fe233初赛final和对应Bit。**版本边界见[融合说明](FUSION_EXPOSURE_LINKED.md)。
 
 ## 操作映射
 
@@ -60,6 +60,6 @@ KEY3关闭时振动算法链保持复位，振动DDR请求被门控，HDMI振动
 
 已烧录旧融合版源码为`d755598`，Bit为`td_project/camera_to_dsi_display_ae_shadow_fusion_20261102.bit`，SHA256为`908e5c61e438f0c32dd2b8335234ba548e73360c325c11255fb950cae2110db6`。旧版SW2同时控制Gamma/N1，SW5仍选择固定曝光档；不要把当前表格套用到它。
 
-旧融合版LUT6为17,570、Slice为18,510、FF为17,696、ERAM为66、DSP为40/40，setup/hold裕量为+0.103/+0.020ns，40组CDC检查通过。这些是旧版结果，当前源码的物理资源和时序未知。全部资源类型见[README](README.md)，原始数据见[旧版构建记录](validation/ae_shadow_fusion_build_20261102/build_result.json)。
+旧融合版LUT6为17,570、Slice为18,510、FF为17,696、ERAM为66、DSP为40/40，setup/hold裕量为+0.103/+0.020ns，40组CDC检查通过。这些是旧版结果，该历史结果不代表当前清理版资源；当前结果见README及RESOURCE_USAGE。全部资源类型见[README](README.md)，原始数据见[旧版构建记录](validation/ae_shadow_fusion_build_20261102/build_result.json)。
 
 [融合原理](FUSION_EXPOSURE_LINKED.md)·[当前算法](CURRENT_ALGORITHMS.md)·[完整构建与烧录](BUILD_AND_PROGRAM.md)

@@ -21,6 +21,7 @@ close $fd
 # Audit seven production mailboxes, two passive frame-event synchronizers,
 # and the AE button synchronizer. The external key to stage1 is false-pathed;
 # the stage1 to stage2 physical path remains bounded and is audited below.
+# u_demo_mipi_status的bit2和bit4无读点，综合后目标侧数据寄存器会被裁剪为3位.
 set demo_cdc_paths 0
 foreach {inst width} {
     u_demo_mipi_controls 5
@@ -39,10 +40,8 @@ foreach {inst width} {
         acknowledge_s1 acknowledge_s2 4.0 1] {
         set a [get_regs $inst/$from]
         set b [get_regs $inst/$to]
-        # mipi_status bit4 is intentionally unused: exposure status has its own
-        # sensor mailbox. TD drops that destination bit, not a sync stage.
         set dst_expected $expected
-        if {$inst eq "u_demo_mipi_status" && $from eq {payload[*]}} {set dst_expected 4}
+        if {$inst eq "u_demo_mipi_status" && $from eq {payload[*]}} {set dst_expected 3}
         if {[llength $a] != $expected || [llength $b] != $dst_expected} {
             error "DEMO CDC collection mismatch: $inst $from -> $to"
         }

@@ -4,7 +4,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Bit,
     [string]$TdExe = 'D:\Anlogic\TD6.2.1\bin\td_commands_prompt.exe',
-    [string]$ExpectedSha256 = 'A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1',
+    [string]$ExpectedSha256 = '5F8C6B9BC429B6BADEEBC0CB93C41BBCE051CF8276BB31E3C3C2FA7E1956AAA0',
     [string]$OutputRoot = 'D:\FPGA\codex_zyj\_build\Final_Project\manual-programming',
     [int]$Spd = 7,
     [int]$Cable = 0

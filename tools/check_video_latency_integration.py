@@ -58,7 +58,7 @@ proc get_regs {pattern} {
     if {$mock_fault eq "measure_missing" && $pattern eq {u_ae_measure_cdc/payload[*]}} {return {}}
     if {[regexp {^(.+)/(payload|O_dst_data)\[\*\]$} $pattern -> inst base]} {
         set count $widths($inst)
-        if {$inst eq "u_demo_mipi_status" && $base eq "O_dst_data"} {set count 4}
+        if {$inst eq "u_demo_mipi_status" && $base eq "O_dst_data"} {set count 3}
         set regs {}
         for {set i 0} {$i < $count} {incr i} {lappend regs "${inst}/${base}\[$i\]"}
         return $regs

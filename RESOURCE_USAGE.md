@@ -1,14 +1,14 @@
 # 最终版资源占用与比较口径
 
-适用当前 Final_Project 图像与微振动整合版，发布目标为 Gitee `main`。数据来自 2026-11-01 的完整 A→B→C 与独立 CDC 审查，器件 PH1P35MDG324、-3 速级、TD6.2.168116。图像基线为 `20261029project`，振动基线为 `backup-vibration-20261030`；下文旧五拨码资源比较仅作历史记录。
+适用基于d1fe233初赛final的本轮资源清理构建。数据来自2026-11-03最新A/B/C阶段产物、布局布线和独立CDC审查，器件PH1P35MDG324、-3、TD6.2.168116。
 
 ## 最终布局布线结果
 
 | 资源 | 已用 | 总量 | 占用率 | 剩余 |
 |---|---:|---:|---:|---:|
-| LUT6 | 18,362 | 21,216 | 86.55% | 2,854 |
-| Slice | 19,163 | 21,216 | 90.32% | 2,053 |
-| FF | 16,778 | 42,432 | 39.54% | 25,654 |
+| LUT6 | 17,780 | 21,216 | 83.80% | 3,436 |
+| Slice | 18,576 | 21,216 | 87.56% | 2,640 |
+| REG | 17,886 | 42,432 | 42.15% | 24,546 |
 | ERAM20K | 66 | 108 | 61.11% | 42 |
 | DSP | 40 | 40 | 100.00% | 0 |
 | PLL | 3 | 6 | 50.00% | 3 |
@@ -50,27 +50,31 @@ Slice是物理打包资源，不能把LUT、FF、RAM等计数相加来推算Slic
 
 历史五拨码图像版 Slice 比该无MCU历史基线少约2.09%；这些差异来自跨版本功能取舍、历史逻辑整理和实现优化，不能归功于“接入MCU自动省资源”。当前整合版 MCU 也仍为被动硬核，没有执行控制或计算卸载。算法及微振动状态见 [算法边界](CURRENT_ALGORITHMS.md)。
 
+## 与d1fe233物理基线的变化
+
+本轮只清理`fusion_shadow_lift.v`和`ae_luma_sampler.v`中的不可达/只写未读逻辑，并修正CDC检查脚本对综合裁剪位的收集口径。相对原物理基线LUT6 17,950、Slice 18,875、REG 17,898，最新实现分别减少170、299、12；ERAM、DSP、PLL和MCU不变。由于布局布线会重新打包，资源变化以本报告为准，不能把减少量简单归因到某一个RTL寄存器。
+
 ## 时序与验证范围
 
 | 指标 | 结果 |
 |---|---:|
-| SWNS / STNS | +0.121 ns / 0 |
+| SWNS / STNS | +0.103 ns / 0 |
 | HWNS / HTNS | +0.020 ns / 0 |
-| STA覆盖率 | 97.17% |
+| STA覆盖率 | 97.07% |
 | HDMI 12处计数器选择补丁 | 通过 |
-| CDC物理审查 | 25组通过 |
+| CDC寄存器/物理审查 | 40组通过 |
 | 控制跨域数据延迟上界 | 8 ns |
 | 同步一级至二级延迟上界 | 4 ns |
 
-当前 25 组 CDC 均在相应 8 ns/4 ns 上界内。生产时钟集合与 SDC 路径单独核查，CDC 审查使用独立 TD 进程，避免清除约束后默认 50 MHz 报告造成误判。
+当前40组CDC均在相应8ns/4ns上界内。`u_demo_mipi_status`保留源侧5位，但目标侧bit2和bit4无读点，综合后目标集合为3位；两个检查脚本均显式按该真实网表口径审计。独立审计运行在单独TD进程，避免清除约束后默认50MHz报告造成误判；本轮`build_all.ps1`已完整返回成功。
 
-以上是当前内部 setup/hold 和所列 CDC 检查的结论；继承的外部接口约束覆盖范围不因本次报告扩大。位级 I²C、动态切换、ISP 旁路、OSD 及长视频流水仿真记录属于原图像基线。当前整合版已于 15:56:33 烧录成功，用户截图已无此前绿色竖条，完整微振动频率识别验收尚未进行。
+以上是当前内部 setup/hold 和所列 CDC 检查的结论；继承的外部接口约束覆盖范围不因本次报告扩大。位级 I²C、动态切换、ISP 旁路、OSD 及长视频流水仿真记录属于原图像基线。当前初赛final整合版已于2026-11-03烧录成功，用户截图已无此前绿色竖条，完整微振动频率识别验收尚未进行。
 
 ## 证据位置
 
-- 当前整合版：[构建与烧录档案](validation/green_lines_dsp_20261101/README.md)、[构建核对](validation/green_lines_dsp_20261101/build_verification.json)、[源码哈希](validation/green_lines_dsp_20261101/source_after.json)。
-- 当前本机完整报告：`td_project/camera_to_dsi_display_phy.area`、`td_project/patched_final_timing.rpt`；归档副本在 `validation/green_lines_dsp_20261101/reports/`。
-- 当前 Bit SHA256：`A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1`。
+- 当前整合版：`td_project/pA.log`、`td_project/pB.log`、`td_project/pC.log`及Bit文件。
+- 当前本机完整报告：`td_project/camera_to_dsi_display_phy.area`、`td_project/patched_final_timing.rpt`。
+- 当前 Bit SHA256：`5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0`。
 - 历史图像基线：[旧构建摘要](validation/five_switch_demo_20261101/build.json)、[旧CDC延迟](validation/five_switch_demo_20261101/cdc_physical.json)、[旧源码绑定](validation/five_switch_demo_20261101/verification.json)。
 
 后续若改 RTL、IP 参数或约束，需重新构建并同时报告所有资源。器件 DSP 上限为 40，当前已用满；不得通过再次合并主图像 DSP 换取资源，资源转换须核对实现、时序与 HDMI 连续性。

@@ -1,6 +1,6 @@
 # 融合版自动曝光
 
-适用于`E:\杂七杂八\4竞赛\FPGA\sc520-vibration-detection`的`codex/fusion-exposure-linked-lift`源码。本轮只进行源码和Icarus验证，未完整TD编译、未生成新Bit、未烧录。全套融合行为见[FUSION_EXPOSURE_LINKED](FUSION_EXPOSURE_LINKED.md)。
+适用于`E:\杂七杂八\4竞赛\FPGA\sc520-vibration-detection`的`codex/fusion-exposure-linked-lift`源码。当前清理版Bit已完成TD综合、布局布线、Bit生成和40组物理CDC审计；哈希与烧录命令见[BUILD_AND_PROGRAM](BUILD_AND_PROGRAM.md)。全套融合行为见[FUSION_EXPOSURE_LINKED](FUSION_EXPOSURE_LINKED.md)。
 
 ## 操作
 
@@ -16,11 +16,11 @@ E是传感器曝光控制参数，不是毫秒；本文的G12为标称总增益�
 
 活动入口为[fusion_exposure_control.v](user_source/hdl_source/fusion_exposure_control.v)，前端统计为[ae_luma_sampler.v](user_source/hdl_source/ae_luma_sampler.v)。旧`uiisp_beta/ae_set.v`保留历史内容，但不再是本轮活动工程入口。
 
-统计位置在AWB/Gamma之前，完全不读取显示端补亮结果。每16个有效四像素包抽取第0个像素，完整720p帧共14,400样本；亮度为`(R+2G+B)>>4`，范围0～63。正常情况下均值小于16请求增曝，大于24请求减曝，中间保持。
+统计位置在AWB/Gamma之前，完全不读取显示端补亮结果。每16个有效四像素包抽取第0个像素，完整720p帧共14,400样本；亮度为`(R+2G+B)>>4`，范围0～63。统计8个亮度桶（每桶8级），排除最高桶后用累计分布近似背景P60：P60低于22请求增曝，高于30请求减曝，介于两者之间保持。
 
-明暗并存时叠加高光约束：亮度≥48的样本至少2%，且亮度≤12的样本至少20%，视为混合场景。此时若亮度≥60的样本至少2%，且全帧均值不低于8，则优先减曝；亮端仍有覆盖时，即使均值偏暗也不反向增曝。该规则用于给高光留余量，全局E仍无法同时覆盖任意强逆光场景。
+自动曝光优先保证大部分背景可见，只有接近饱和（亮度≥60）的样本达到10%才触发紧急减曝；背景有效样本少于40%时不依据P60调节。这样小面积光源不会单独压暗整幅背景，严重高光仍能为传感器保留余量。E和G仍受传感器动态范围限制，无法同时覆盖任意强逆光场景。
 
-每次参数组完成后丢弃3个新统计帧，再要求连续2个同方向结果才调整。步长约当前E的1/16，触及128或1991后不反复重写相同参数。短帧、长帧、RAW过渡和过时序号不作为新的调节反馈。
+每次参数组完成后丢弃3个新统计帧，再要求连续2个同方向结果才调整。步长约当前E的1/16，触及128或1991后不反复重写相同参数。短帧、长帧、RAW过渡和过时序号不作为新的调节反馈。补亮控制器另要求同一已生效E连续稳定至少3个有效帧才调整强度，退出还需要约45个有效帧（60Hz约0.75秒）稳定。
 
 ## 请求E与已生效E
 
@@ -41,4 +41,4 @@ python tools/test_ae_highlight_guard.py
 
 曝光控制专用验证覆盖65次真实参数请求、请求／生效隔离、done卡高、上下限、固定G12、冻结、忙中切模式、配置失效以及KEY4去抖；摘要见[控制验证](validation/fusion_exposure_linked/control/summary.json)。补亮和集成验证结果以各自最新输出为准。
 
-旧`test_auto_exposure.py`与`test_five_switch_sensor.py`仍描述历史SW5固定档协议，不应拿其旧目标值验收本轮接口。新源码的资源、Slice、DSP和物理时序尚未测得。完整TD构建仍按[构建说明](BUILD_AND_PROGRAM.md)执行A→B→C及更新后的CDC审计；不能沿用旧Bit或旧资源报告作为新功能的实现证明。
+旧`test_auto_exposure.py`与`test_five_switch_sensor.py`仍描述历史SW5固定档协议，不应拿其旧目标值验收本轮接口。当前源码资源、Slice、DSP和物理时序见RESOURCE_USAGE。完整TD构建仍按[构建说明](BUILD_AND_PROGRAM.md)执行A→B→C及更新后的CDC审计；不能沿用旧Bit或旧资源报告作为新功能的实现证明。

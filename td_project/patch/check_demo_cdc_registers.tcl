@@ -1,5 +1,6 @@
 # Executed as Tcl after read_sdc, never embedded in the SDC parser.
 set demo_register_groups 0
+# u_demo_mipi_status的bit2和bit4无读点，综合后目标侧数据寄存器会被裁剪为3位.
 foreach {inst width} {
     u_demo_mipi_controls 5
     u_demo_hdmi_controls 6
@@ -15,10 +16,8 @@ foreach {inst width} {
         request_s1 request_s2 1 acknowledge_s1 acknowledge_s2 1] {
         set a [get_regs $inst/$from]
         set b [get_regs $inst/$to]
-        # mipi_status bit4 is intentionally unused: exposure status has its own
-        # sensor mailbox. TD drops that destination bit, not a sync stage.
         set dst_expected $expected
-        if {$inst eq "u_demo_mipi_status" && $from eq {payload[*]}} {set dst_expected 4}
+        if {$inst eq "u_demo_mipi_status" && $from eq {payload[*]}} {set dst_expected 3}
         if {[llength $a] != $expected || [llength $b] != $dst_expected} {
             error "DEMO CDC collection mismatch: $inst $from -> $to"
         }

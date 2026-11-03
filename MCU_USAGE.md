@@ -1,6 +1,6 @@
 # MCU 当前状态与扩展方法
 
-适用当前 Final_Project 图像与微振动整合版，发布目标为 Gitee `main`。**MCU 硬核已例化，但没有运行项目固件，没有接管曝光、拨码、图像处理、微振动、DDR 或 HDMI。** KEY3 与振动算法、UART 诊断仍由 FPGA 逻辑实现。本文的后续扩展步骤是建议，不代表当前镜像已实现。
+适用提交d1fe233初赛final。MCU硬核已例化，但没有运行项目固件，没有接管曝光、拨码、图像处理、微振动、DDR或HDMI。
 
 ## 当前连接
 
@@ -29,7 +29,7 @@
 - `user_source/ip_source/MCU/Design.xml`、`DesignConfiguration.xml`：IP定义/配置。
 - [ps_wrapper.v](user_source/hdl_source/ps_wrapper.v)：保留的通用包装，不是当前顶层活动实例。
 
-当前正常视频和微振动链路不需要 FD、OpenOCD 或 ELF，直接下载匹配的 Bit 即可。当前版本的位置、SHA256 和烧录命令见[本次修复档案](validation/green_lines_dsp_20261101/README.md)。
+当前正常视频和微振动链路不需要 FD、OpenOCD 或 ELF，直接下载匹配的 Bit 即可。当前Bit的位置、SHA256和烧录命令见[编译烧录说明](BUILD_AND_PROGRAM.md)。
 
 ## 真正使用MCU的最小路线
 
@@ -48,6 +48,6 @@
 
 整合工程构建必须保留 HDMI 数据库补丁及生产时钟/CDC 检查，步骤见 [编译说明](BUILD_AND_PROGRAM.md)。当前占用 1 个 MCU 硬核、40 个 DSP，其中原图像 31 个 DSP 保持独立；bbox 已改用 LUT/Slice。硬核占用不能与 Slice 相加，也不能据此声称计算已经搬到 MCU。
 
-当前 Bit SHA256 为 `A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1`，2026-11-01 15:56:33（北京时间）已完成 JTAG SRAM 下载。用户截图已无此前绿色竖条；未装载 MCU 固件，亦未完成完整微振动频率识别验收。
+当前 Bit SHA256 为 `5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0`；本轮已完成A/B/C和40组物理CDC审计。未装载MCU固件，亦未完成完整微振动频率识别验收；板上下载需按[编译烧录说明](BUILD_AND_PROGRAM.md)单独确认。
 
 实际开发经验与常见错误见 [MCU_LESSONS](MCU_LESSONS.md)，当前算法见 [CURRENT_ALGORITHMS](CURRENT_ALGORITHMS.md)。

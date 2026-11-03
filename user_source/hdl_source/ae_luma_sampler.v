@@ -31,12 +31,7 @@ module ae_luma_sampler #(
 );
     localparam integer COUNT_W = (EXPECTED_SAMPLES < 2) ? 1 :
                                   $clog2(EXPECTED_SAMPLES + 1);
-    localparam integer SUM_W = (EXPECTED_SAMPLES < 2) ? 6 :
-                                $clog2(EXPECTED_SAMPLES * 63 + 1);
     localparam integer PHASE_W = (SAMPLE_LOG2 < 1) ? 1 : SAMPLE_LOG2;
-    localparam [SUM_W-1:0] LOW_SUM = EXPECTED_SAMPLES * LOW_LUMA;
-    localparam [SUM_W-1:0] HIGH_SUM = EXPECTED_SAMPLES * HIGH_LUMA;
-    localparam [SUM_W-1:0] SHADOW_FLOOR_SUM = EXPECTED_SAMPLES * SHADOW_MEAN_FLOOR;
     // 比例门限仅在展开阶段计算，不产生运行时乘除法。
     localparam [COUNT_W-1:0] HIGHLIGHT_COUNT =
                                 (EXPECTED_SAMPLES * HIGHLIGHT_PERCENT + 99) / 100;
@@ -48,9 +43,8 @@ module ae_luma_sampler #(
                                 (EXPECTED_SAMPLES * BACKGROUND_MIN_PERCENT + 99) / 100;
 
     reg [COUNT_W-1:0] sample_count;
-    reg [COUNT_W-1:0] near_clip_count, headroom_count, shadow_count;
+    reg [COUNT_W-1:0] near_clip_count;
     reg [COUNT_W-1:0] hist0, hist1, hist2, hist3, hist4, hist5, hist6, hist7;
-    reg [SUM_W-1:0] luma_sum;
     reg [PHASE_W-1:0] phase;
     reg frame_armed, frame_enabled, overflow, frame_start_d;
     wire frame_start = I_frame_start && !frame_start_d;
@@ -104,11 +98,8 @@ module ae_luma_sampler #(
         if (!I_rst_n) begin
             sample_count <= 0;
             near_clip_count <= 0;
-            headroom_count <= 0;
-            shadow_count <= 0;
             hist0 <= 0; hist1 <= 0; hist2 <= 0; hist3 <= 0;
             hist4 <= 0; hist5 <= 0; hist6 <= 0; hist7 <= 0;
-            luma_sum <= 0;
             phase <= 0;
             frame_armed <= 0;
             frame_enabled <= 0;
@@ -130,8 +121,6 @@ module ae_luma_sampler #(
                 // 帧首可以与首个有效包同拍，三个计数器必须同步计入。
                 sample_count <= I_valid ? 1 : 0;
                 near_clip_count <= (I_valid && (I_luma >= NEAR_CLIP_LUMA)) ? 1 : 0;
-                headroom_count <= (I_valid && (I_luma >= HEADROOM_LUMA)) ? 1 : 0;
-                shadow_count <= (I_valid && (I_luma <= SHADOW_LUMA)) ? 1 : 0;
                 hist0 <= 0; hist1 <= 0; hist2 <= 0; hist3 <= 0;
                 hist4 <= 0; hist5 <= 0; hist6 <= 0; hist7 <= 0;
                 if (I_valid) begin
@@ -146,7 +135,6 @@ module ae_luma_sampler #(
                         default: hist7 <= 1;
                     endcase
                 end
-                luma_sum <= I_valid ? {{(SUM_W-6){1'b0}}, I_luma} : 0;
                 phase <= (I_valid && (SAMPLE_LOG2 != 0)) ? 1 : 0;
             end else if (frame_armed) begin
                 if (!I_enable) frame_enabled <= 0;
@@ -154,14 +142,9 @@ module ae_luma_sampler #(
                     if (SAMPLE_LOG2 != 0) phase <= phase + 1'b1;
                     if (phase == 0) begin
                         if (sample_count < EXPECTED_SAMPLES) begin
-                            luma_sum <= luma_sum + {{(SUM_W-6){1'b0}}, I_luma};
                             sample_count <= sample_count + 1'b1;
                             if (I_luma >= NEAR_CLIP_LUMA)
                                 near_clip_count <= near_clip_count + 1'b1;
-                            if (I_luma >= HEADROOM_LUMA)
-                                headroom_count <= headroom_count + 1'b1;
-                            if (I_luma <= SHADOW_LUMA)
-                                shadow_count <= shadow_count + 1'b1;
                             case (I_luma[5:3])
                                 3'd0: hist0 <= hist0 + 1'b1;
                                 3'd1: hist1 <= hist1 + 1'b1;

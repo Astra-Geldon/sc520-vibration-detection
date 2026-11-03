@@ -1,13 +1,13 @@
 # Final_Project 最终版：编译与烧录
 
-适用 `main` 的图像＋微振动整合工程。工具 TD 6.2.168116，本机安装 `D:\Anlogic\TD6.2.1`，器件 PH1P35MDG324、-3。2026-11-01 15:56:33（北京时间）已完成本版下载，用户随后提供的画面中绿色竖条已消失。
+适用基于d1fe233初赛final的本轮资源清理构建。工具TD6.2.168116，器件PH1P35MDG324、-3。2026-11-03已完成A→B→C、Bit生成和40组物理CDC审计；本地Bit是否已下载由烧录日志另行确认。
 
 ## 已验证的 Bit
 
-本机输出：`td_project/camera_to_dsi_display.bit`。独立归档：`validation/green_lines_dsp_20261101/Final_Project_bbox_lut_20261101.bit`。两个文件均为 1,789,539 字节，SHA256：
+本机输出：`td_project/camera_to_dsi_display.bit`，大小1,789,539字节，SHA256：
 
 ```text
-A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1
+5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0
 ```
 
 Bit 被 Git 忽略，远端保存源码、验证 JSON 和用户截图。不要用历史五拨码图像单工程的 Bit 代替本版。
@@ -16,7 +16,7 @@ Bit 被 Git 忽略，远端保存源码、验证 JSON 和用户截图。不要�
 
 ```powershell
 Get-FileHash .\td_project\camera_to_dsi_display.bit -Algorithm SHA256
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\program_final.ps1 -Bit '.\td_project\camera_to_dsi_display.bit' -ExpectedSha256 'A2CA15E1BC1A57199D6171230E50BCB8DF6F2C4F75635CF387B6BB1AB753B4E1' -TdExe 'D:\Anlogic\TD6.2.1\bin\td_commands_prompt.exe' -Spd 7 -Cable 0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\program_final.ps1 -Bit '.\td_project\camera_to_dsi_display.bit' -ExpectedSha256 '5f8c6b9bc429b6badeebc0cb93c41bbce051cf8276bb31e3c3c2fa7e1956aaa0' -TdExe 'F:\Anlogic\bin\td_commands_prompt.exe' -Spd 7 -Cable 0
 ```
 
 发布时已将脚本默认哈希更新为本版；显式传参便于核对。自编译 Bit 的哈希可能因日期元数据不同而变化，需先核验构建记录，再传相应 `-ExpectedSha256`。
@@ -30,7 +30,7 @@ JTAG SRAM 掉电失效；此流程没有写 Flash 或加载 MCU 固件。
 在当前工程根目录运行，脚本会先归档旧构建输出，避免旧 Bit 或日志冒充成功：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\td_project\patch\build_all.ps1 -TdExe 'D:\Anlogic\TD6.2.1\bin\td_commands_prompt.exe'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\td_project\patch\build_all.ps1 -TdExe 'F:\Anlogic\bin\td_commands_prompt.exe'
 ```
 
 `.al` 的文件引用为相对路径；其首部 Project `Path` 仍是本机元数据。克隆到其他目录后，仅将该字段调整为本机 `td_project` 绝对路径。该厂商文件含非标准 XML 属性，不要用通用 XML 库整体重写。其他 HDL/IP/约束和相对引用应保持原样。
@@ -39,14 +39,14 @@ A 阶段综合并导出数据库；B 阶段修复加密 HDMI 核的 12 个计数
 
 | 检查 | 成功标志／文件 |
 |---|---|
-| 综合 | `pA.log`：`PHASE_A_DONE ERR=0`、`DEMO_CDC_REGISTERS_PASS groups=40` |
+| 综合 | `pA.log`：`PHASE_A_DONE ERR=0`、当前网表独立CDC寄存器审计`groups=40` |
 | HDMI 补丁 | `pB.log`：`PATCH_FINISHED`、`VERIFIED_COUNTER_SELECTORS12` |
 | 补丁保留 | `pC.log`：`CHECK valid_2d=2 valid_3d=14` |
 | DSP | bbox DSP=0，总 DSP≤40，`No need to merge 9x9 Dsps.` |
 | 布线 | 无新增物理无驱动网／跳过布线警告，`eco open net = 0` |
 | 时序／CDC | `DEMO_PRODUCTION_TIMING_PASS`、`DEMO_CDC_PHYSICAL_PASS groups=40`、`PHASE_D_DONE` |
-| 完成 | `PHASE_C_DONE ERR=0`，新 Bit 时间戳和 SHA256 |
+| Bit生成 | Bitgen、资源报告和时序报告完成，`PHASE_C_DONE ERR=0` |
 
-核对 `camera_to_dsi_display_phy.area` 资源和 `patched_final_timing.rpt` 的 setup/hold 后再烧录。上述已验证 Bit 与[资源说明](RESOURCE_USAGE.md)属于添加延时显示之前的基线；延时显示源码尚需用户完整构建，含新增 9 组 CDC 审计。测量口径见[延时显示说明](LATENCY_DISPLAY.md)。
+核对`camera_to_dsi_display_phy.area`资源和`patched_final_timing.rpt`的setup/hold后再烧录。当前Bit已包含自动曝光、Tone LUT、联动补亮及延时显示；A/B/C和40组独立物理CDC审计均完成。烧录时必须使用本节最新SHA256，不能把历史Bit当作当前实现。测量口径见[延时显示说明](LATENCY_DISPLAY.md)。
 
 旧 `verify_diag.py` 面向关闭 HDMI 的历史诊断版本；`check_all_inst.py` 不能识别带初值的端口，具体不适用项已记录在本版 `static_checks.json`，不要为通过旧脚本关闭 HDMI 或改写已验证逻辑。

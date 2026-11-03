@@ -1,22 +1,22 @@
 # 队友上手指南
 
-本文适用于本地`codex/fusion-exposure-linked-lift`源码。当前只完成源码和局部仿真工作，尚无对应的新bitstream、TD资源结果或上板效果结论。本轮尚未推送远端；从Gitee默认分支下载的工程不一定包含这些改动。
+当前交付基线为codex/fusion-exposure-linked-lift:d1fe233初赛final及本轮资源清理，Bit已完成TD构建和40组物理CDC审计。先读README和BUILD_AND_PROGRAM，确认最新Bit哈希、板卡电源、USB/JTAG和HDMI连接。
 
 1. 按[README](README.md)确认提交、连接SC520CS、开发板电源、USB/JTAG和HDMI。
-2. 当前目录保留的旧融合Bit来自`d755598`，不能用它验收本轮SW5补亮逻辑。新源码完整构建流程见[编译烧录说明](BUILD_AND_PROGRAM.md)。
+2. 当前验收使用Bit `td_project/camera_to_dsi_display.bit`，不要用历史Bit验收本轮SW5补亮逻辑。完整构建流程见[编译烧录说明](BUILD_AND_PROGRAM.md)。
 3. KEY1回彩色；KEY2切换灰度、二值化、Sobel。SW1控制AWB，SW2只控制Gamma，SW3控制Color Shading，SW4控制去马赛克／RAW展示。
 4. KEY4控制自动曝光，默认开启。它只调整E（128～1991），G固定G12；关闭后恢复E900/G12。
-5. SW5只允许自动补亮，不改变E或G。允许后还需满足场景触发条件；补亮根据参考E与当前已生效E联动，并用中暗部亮度反馈限制过补。详见[融合说明](FUSION_EXPOSURE_LINKED.md)。
+5. SW5只允许自动补亮，不改变E或G。允许后还需满足场景触发条件；补亮记录参考E/中暗部统计，但当前Tone强度由场景保持条件和AE稳定门控逐帧调节，是否恢复到触发前观感需实拍确认。详见[融合说明](FUSION_EXPOSURE_LINKED.md)。
 6. KEY3控制微振动算法，默认关闭；其用途没有改动。SW6不使用。
 
 左下`K4 AE`的ON/OFF表示自动曝光模式，WAIT表示初始化、写入等待或振动／RAW暂停。`S5 N1`的ARM表示已允许但没有实际补偿，ON表示实际强度大于0，OFF表示关闭或非彩色模式旁路，WAIT表示控制或状态未就绪。**SW5开启时显示ARM可能完全正常。**开关方向以屏幕状态为准。
 
 补亮只在彩色、非RAW模式工作；SW4关闭时AWB/CSC/N1自动旁路，Gamma仍跟随SW2。补亮不会对不同粗分区分别施加增益。首个有效高反差帧保存候选参考，再用连续有效帧确认；曝光过渡期间暂停统计证据，保留候选参考。参考E不随每次曝光下降重新锁存；E下降时才补偿损失，光源离开后自主渐退。已经在传感器或前级削顶的细节无法凭后级算法恢复。
 
-比较时先固定机位、开启SW5并等待正常场景稳定，再让强光源进入、离开画面，观察高光抑制、中暗部补偿和自主退出。若SW5直到AE已经降曝完成才打开，无法追溯更早的参考亮度。控制跨域和DDR缓存会带来数帧延后，OSD不是逐像素曝光标签。新源码尚未上板，这些步骤用于之后验证，不能当作已取得的效果。
+比较时先固定机位、同时开启KEY4和SW5并等待正常场景稳定，再让强光源进入、离开画面，观察高光抑制、中暗部补偿和自主退出。保持条件解除、强度退到0且AE同一E稳定约0.75秒后才会退出；若SW5直到AE已经降曝完成后才打开，无法追溯更早的参考亮度。控制跨域和DDR缓存会带来数帧延后，OSD不是逐像素曝光标签。使用[编译烧录说明](BUILD_AND_PROGRAM.md)中的最新哈希下载后再做上板验收。
 
 旧融合版Bit为`td_project/camera_to_dsi_display_ae_shadow_fusion_20261102.bit`，SHA256为`908e5c61e438f0c32dd2b8335234ba548e73360c325c11255fb950cae2110db6`。旧版SW2同时控制Gamma/N1，SW5仍有固定曝光选择用途，OSD旧标签也与当前源码不同。回滚源码提交为`d755598`。
 
-HDMI继续使用既有加密核补丁，改RTL后完整运行A→B→C。保留`vib_bbox_grid`的`dsp_style="no"`属性，避免DSP压力影响图像模块。旧版资源和新源码未编译状态以[README资源表](README.md)为准；历史“31个DSP”仅指早期图像工程，不能当整合工程总数。
+HDMI继续使用既有加密核补丁，改RTL后完整运行A→B→C。保留`vib_bbox_grid`的`dsp_style="no"`属性，避免DSP压力影响图像模块。当前资源以[README资源表](README.md)为准；历史“31个DSP”仅指早期图像工程，不能当整合工程总数。
 
 [按键和OSD详情](FIVE_SWITCH_DEMO_20261101.md)·[当前算法](CURRENT_ALGORITHMS.md)·[曝光协议](AUTO_EXPOSURE.md)·[MCU状态](MCU_USAGE.md)

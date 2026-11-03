@@ -27,6 +27,6 @@
 
 整合最初的合并前需求为 46 DSP，器件上限 40，工具自动合并了部分图像乘法器，并出现 5 条连接 AWB/Color Shading DSP 输入的物理浮空网。将 bbox 的 6 个 DSP 转 LUT 后，不再合并主图像 DSP，物理浮空网／跳过布线警告消失。
 
-本版已完整编译，最终 SWNS +0.121 ns、HWNS +0.020 ns、DSP 40/40、Slice 19,163/21,216；2026-11-01 15:56:33 完成 JTAG SRAM 下载。随后用户截图中此前的密集绿色竖条消失，OSD 和摄像头背景正常。完整频率识别精度、长期稳定性及独立 KEY3 ON/OFF 双帧对照未作为本次已验证结论。
+本轮清理版已完整编译，最终SWNS+0.103ns、HWNS+0.020ns、DSP40/40、Slice18576/21216；STA覆盖率97.07%，40组物理CDC审计通过。最新Bit是否已下载需按BUILD_AND_PROGRAM中的烧录日志确认；完整频率识别精度、长期稳定性及独立KEY3 ON/OFF双帧对照未作为本次已验证结论。
 
-详细构建、源码哈希、烧录与用户截图见[验证档案](validation/green_lines_dsp_20261101/README.md)。本地更完整的排查过程保留在工作区 `0 docs`。
+详细构建、资源、时序和烧录记录见td_project下的pA.log、pB.log、pC.log、camera_to_dsi_display_phy.area和patched_final_timing.rpt。

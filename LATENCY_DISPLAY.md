@@ -1,6 +1,6 @@
 # 帧处理延时显示
 
-工程：`D:\workplace\anlogic\sc520-vibration-detection-main`。
+工程：E:\杂七杂八\4竞赛\FPGA\sc520-vibration-detection，适用提交d1fe233初赛final。
 
 左上角模式名右侧显示白字黑底 `LAT 033.2 MS`，表示 33.2 毫秒。文字从 `(96,28)` 开始，采用原生 5×7 字模、8 像素字符节距，黑底范围 `x=92..195、y=24..39`，大小 104×16；原图、灰度、二值化、边缘模式均显示。尚无有效帧、帧关联冲突或延时达到 1000 毫秒时显示 `LAT ---.- MS`。
 
@@ -32,7 +32,7 @@
 
 ## 构建与验证
 
-此次仅做代码整理、静态检查与 Icarus 仿真，没有运行 TD 综合、布局布线或下载硬件。原始文件及哈希保存在本机 `validation/latency_osd_20261101/before/` 和 `before_sha256.json`；测试记录在同目录，结果不代表上板验收。
+当前清理版Bit已完成TD综合、布局布线、Bit生成和40组物理CDC审计；本节历史局部仿真记录仅用于说明测试范围。原始文件及哈希保存在本机 `validation/latency_osd_20261101/before/` 和 `before_sha256.json`；测试记录在同目录，结果不代表上板验收。
 
 紧凑 OSD 的修改前原件保存在 `validation/compact_osd_20261101/before/`。当前 `tools/test_video_latency_osd.py` 检查两处紧凑面板，结果和实际 RTL 输出预览在该目录的 `sim_osd/`；早期 `test_six_switch_osd.py` 面向历史大字体版，不作为本版的尺寸验收。
 
@@ -41,12 +41,12 @@
 由你运行完整构建：
 
 ```powershell
-cd D:\workplace\anlogic\sc520-vibration-detection-main
-powershell -NoProfile -ExecutionPolicy Bypass -File .\td_project\patch\build_all.ps1 -TdExe 'D:\Anlogic\TD6.2.1\bin\td_commands_prompt.exe'
+cd E:\杂七杂八\4竞赛\FPGA\sc520-vibration-detection
+powershell -NoProfile -ExecutionPolicy Bypass -File .\td_project\patch\build_all.ps1 -TdExe 'F:\Anlogic\bin\td_commands_prompt.exe'
 ```
 
-验收仍按 `BUILD_AND_PROGRAM.md`：HDMI 补丁通过、DSP 不超过 40、没有新增物理浮空网警告、setup/hold 收敛、`DEMO_CDC_REGISTERS_PASS groups=40` 和 `DEMO_CDC_PHYSICAL_PASS groups=40`（接入 AE 后）。旧 Bit 不含本功能，不能用它验证此次代码。
+验收仍按`BUILD_AND_PROGRAM.md`：HDMI补丁通过、DSP不超过40、没有新增物理浮空网警告、setup/hold收敛、`DEMO_CDC_REGISTERS_PASS groups=40`和`DEMO_CDC_PHYSICAL_PASS groups=40`。当前Bit已包含本功能。
 
 上板后先看原图颜色及画面稳定性，再看左上延时由横杠变成数值；KEY1/KEY2 和五个图像开关、KEY3 振动使能继续按原工程使用。这里显示的是芯片内部帧延时；若要测曝光到屏幕实际发光的总延时，需要额外光学测试。
 
-当前自动曝光增加一组6位统计邮箱和K3同步器，CDC审计现为40组；上述34组验证与资源数据是接入AE前的历史结果，AE新增资源与物理时序待重新编译。
+当前自动曝光增加一组6位统计邮箱和K4同步器，清理版网表寄存器/物理CDC审计为40组；资源与物理时序以README及RESOURCE_USAGE中的最新报告为准。

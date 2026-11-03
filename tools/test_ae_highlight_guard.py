@@ -4,6 +4,7 @@
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,30 +14,48 @@ IV = Path(shutil.which("iverilog") or r"C:\Users\lenovo\AppData\Local\iverilog\b
 VVP = Path(shutil.which("vvp") or str(IV.with_name("vvp.exe")))
 
 
+def decode_tool_output(data: bytes) -> str:
+    """优先按仿真器常用的UTF-8解码，兼容本机旧版代码页输出。"""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data.decode("mbcs", errors="replace")
+
+
 def classify_model(samples):
-    """与RTL相同的整数参考模型，便于无仿真器时先验证门限关系。"""
+    """与当前RTL相同的8桶背景P60参考模型。"""
     n = len(samples)
-    total = sum(samples)
     near = sum(value >= 60 for value in samples)
-    headroom = sum(value >= 48 for value in samples)
-    shadow = sum(value <= 12 for value in samples)
-    mixed = headroom * 100 >= n * 2 and shadow * 100 >= n * 20
-    pressure = mixed and near * 100 >= n * 2 and total >= n * 8
-    if pressure:
+    hist = [0] * 8
+    for value in samples:
+        hist[min(value >> 3, 7)] += 1
+    background = sum(hist[:7])
+    if near * 100 >= n * 10:
         return 2
-    if total < n * 16:
-        return 0 if mixed else 1
-    return 2 if total > n * 24 else 0
+    if background * 100 < n * 40:
+        return 0
+    cumulative = 0
+    p60 = 59
+    for index in range(7):
+        cumulative += hist[index]
+        if cumulative * 5 >= background * 3:
+            p60 = 3 + index * 8
+            break
+    if p60 < 22:
+        return 1
+    if p60 > 30:
+        return 2
+    return 0
 
 
 def run_offline_model() -> None:
     """覆盖基础分类、孤立亮点、明暗冲突和亮端死区。"""
-    assert classify_model([20] * 100) == 0
+    assert classify_model([20] * 100) == 1
     assert classify_model([10] * 100) == 1
-    assert classify_model([30] * 100) == 2
-    assert classify_model([60] + [20] * 99) == 0
-    assert classify_model([60, 60] + [10] * 20 + [20] * 78) == 2
-    assert classify_model([50] * 10 + [10] * 20 + [20] * 70) == 0
+    assert classify_model([30] * 100) == 0
+    assert classify_model([60] + [20] * 99) == 1
+    assert classify_model([60, 60] + [10] * 20 + [20] * 78) == 1
+    assert classify_model([50] * 10 + [10] * 20 + [20] * 70) == 1
     assert classify_model([5] * 100) == 1
 
 
@@ -95,16 +114,16 @@ module tb;
   endtask
   initial begin
     tick; rst_n=1; enable=1;
-    // 均匀中灰、暗、亮仍完全保持原均值AE行为。
-    frame(0,0,0,20); check_result(0,"均匀中灰");
+    // 当前背景P60桶将20量化到19，因此会请求小步增曝。
+    frame(0,0,0,20); check_result(1,"背景P60偏暗");
     frame(0,0,0,10); check_result(1,"均匀暗");
-    frame(0,0,0,30); check_result(2,"均匀亮");
-    // 仅一个灯点不能触发高光保护（近饱和比例低于2%）。
-    frame(1,0,0,20); check_result(0,"孤立灯点");
-    // 2%近饱和+20%阴影且整体不亮，优先减曝保护高光。
-    frame(2,0,20,20); check_result(2,"明暗冲突减曝");
-    // 饱和点暂时消失但亮端余量和阴影仍存在，保持而不是马上增曝。
-    frame(0,10,20,20); check_result(0,"高光死区保持");
+    frame(0,0,0,30); check_result(0,"均匀中亮");
+    // 少量高光不达到10%紧急门限，仍按背景P60控制。
+    frame(1,0,0,20); check_result(1,"孤立灯点");
+    // 近饱和数量尚未达到10%时，背景优先规则仍保持增曝方向。
+    frame(2,0,20,20); check_result(1,"明暗冲突背景优先");
+    // 亮端余量和阴影共存时同样由背景P60决定，不使用旧均值死区。
+    frame(0,10,20,20); check_result(1,"高光死区背景优先");
     // 整体过暗没有亮端覆盖，仍允许原AE增曝。
     frame(0,0,0,5); check_result(1,"整体暗增曝");
     // 无效短帧产生无效分类，不能污染下一次有效帧。
@@ -134,16 +153,21 @@ def main() -> int:
         cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         timeout=60,
     )
-    compile_text = compile_run.stdout.decode("mbcs", errors="replace")
+    compile_text = decode_tool_output(compile_run.stdout)
     (OUT / "compile.log").write_text(compile_text, encoding="utf-8")
     if compile_run.returncode:
         raise SystemExit(compile_text)
     run = subprocess.run([str(VVP), str(binary)], cwd=ROOT,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                          timeout=60)
-    run_text = run.stdout.decode("mbcs", errors="replace")
+    run_text = decode_tool_output(run.stdout)
     log.write_text(run_text, encoding="utf-8")
-    print(run_text, end="")
+    # Windows默认代码页可能无法打印仿真器输出中的个别Unicode字符；日志
+    # 已按UTF-8保存，终端只输出可编码文本，避免测试结果被打印异常掩盖。
+    safe_text = run_text.encode(sys.stdout.encoding or "utf-8", errors="replace").decode(
+        sys.stdout.encoding or "utf-8", errors="replace"
+    )
+    print(safe_text, end="")
     if run.returncode or "PASS " not in run_text:
         raise SystemExit(1)
     return 0
