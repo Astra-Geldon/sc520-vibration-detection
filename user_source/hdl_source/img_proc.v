@@ -359,11 +359,10 @@ module binary_majority3x3 (
     // pixels per word so the same 4096 bits use 256x8 rather than 2048x1.
     // Commit at column 7 of each byte; row-end also commits a partial byte.
     // Reads of row y-2 finish before its byte is overwritten at column 7.
-    reg [7:0] S_lb0 [0:255];
-    reg [7:0] S_lb1 [0:255];
     reg [7:0] S_pack;
-    wire [7:0] S_read0 = S_lb0[I_x[10:3]];
-    wire [7:0] S_read1 = S_lb1[I_x[10:3]];
+    // 两个8bit×256行缓存各自只有一写一读，显式落到ERAM，
+    //   避免TD把4096bit阵列垫成512个分布式RAM LUT。
+    wire [7:0] S_read0, S_read1;
     wire S_previous_row = I_y[0] ? S_read0[I_x[2:0]] : S_read1[I_x[2:0]];
     wire S_two_rows_ago = I_y[0] ? S_read1[I_x[2:0]] : S_read0[I_x[2:0]];
     wire [10:0] S_last_x = I_x - 11'd1;
@@ -376,12 +375,25 @@ module binary_majority3x3 (
         else S_pack[I_x[2:0]] <= I_bit;
     end
 
-    always @(posedge I_clk) begin
-        if (!I_vs && ((I_de && (&I_x[2:0])) || I_line_end)) begin
-            if (I_y[0]) S_lb1[S_write_address] <= S_write_byte;
-            else        S_lb0[S_write_address] <= S_write_byte;
-        end
-    end
+    wire S_line_mem_we = !I_vs && ((I_de && (&I_x[2:0])) || I_line_end);
+    vib_eram_dp #(
+        .W_A(8), .AW_A(8), .D_A(256),
+        .W_B(8), .AW_B(8), .D_B(256),
+        .REGMODE_A("NOREG"), .REGMODE_B("NOREG")
+    ) u_binary_lb0 (
+        .clk(I_clk), .rst_n(I_rst_n),
+        .dia(S_write_byte), .addra(S_write_address), .wea(S_line_mem_we && !I_y[0]), .doa(),
+        .dib(8'd0), .addrb(I_x[10:3]), .web(1'b0), .dob(S_read0)
+    );
+    vib_eram_dp #(
+        .W_A(8), .AW_A(8), .D_A(256),
+        .W_B(8), .AW_B(8), .D_B(256),
+        .REGMODE_A("NOREG"), .REGMODE_B("NOREG")
+    ) u_binary_lb1 (
+        .clk(I_clk), .rst_n(I_rst_n),
+        .dia(S_write_byte), .addra(S_write_address), .wea(S_line_mem_we && I_y[0]), .doa(),
+        .dib(8'd0), .addrb(I_x[10:3]), .web(1'b0), .dob(S_read1)
+    );
 
     reg [1:0] S_top_history, S_mid_history, S_bottom_history;
     reg S_src_d, S_frame_clean;

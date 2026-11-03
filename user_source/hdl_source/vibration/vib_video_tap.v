@@ -208,13 +208,30 @@ module vib_video_tap (
     reg  [8:0]  hsum;       // 偶数列的灰度
     wire [9:0]  osum = {1'b0, hsum} + {1'b0, gray};   // 水平相邻两像素之和
 
-    // 行 RAM：640 x 9bit，存偶数行的水平对和
-    //   col 在一对像素内不变，所以奇数列直接组合读出即可
-    reg  [8:0]  lram [0:DW-1];
-    reg  [8:0]  lram_rd;
+    // 行 RAM：640 x 9bit，存偶数行的水平对和。
+    //   这块缓存只在偶数行写、奇数行读，使用一个显式ERAM双口包装，
+    //   把原先约256个分布式RAM LUT移到一个20K ERAM中；读口保持NOREG，
+    //   不增加像素流水延迟。
     wire [9:0]  col = x[10:1];
 
-    always @(*) lram_rd = lram[col];
+    wire [8:0] lram_rd;
+    wire       lram_we = emit_act & ~row_odd & x[0];
+    vib_eram_dp #(
+        .W_A(9), .AW_A(10), .D_A(640),
+        .W_B(9), .AW_B(10), .D_B(640),
+        .REGMODE_A("NOREG"), .REGMODE_B("NOREG")
+    ) u_lram (
+        .clk   (clk),
+        .rst_n (rst_n),
+        .dia   (osum[8:0]),
+        .addra (col),
+        .wea   (lram_we),
+        .doa   (),
+        .dib   (9'd0),
+        .addrb (col),
+        .web   (1'b0),
+        .dob   (lram_rd)
+    );
 
     wire outpix   = emit_act & row_odd & x[0];
     wire last_col = emit_act & (x == LAST_X);
@@ -341,9 +358,7 @@ module vib_video_tap (
                 if (x[0] == 1'b0)
                     hsum <= gray;
 
-                // 偶行写行 RAM
-                if (~row_odd & x[0])
-                    lram[col] <= osum;
+                // 偶行写行 RAM由u_lram的显式ERAM写口完成。
 
                 // 奇数行、奇数列 -> 输出一个降采样像素
                 if (row_odd & x[0]) begin

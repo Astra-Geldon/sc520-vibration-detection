@@ -58,13 +58,13 @@ module vib_gauss3x3 (
     localparam [9:0] LASTY = 10'd359;
 
     //==================================================================
-    // 三个行缓存，各自独立读口
-    //   写第 r 行 -> lb[r%3]；同时读 lb[(r-1)%3]=raw[r-1], lb[(r-2)%3]=raw[r-2]
-    //   三个分开的 RAM 各有 1 个读口，避免"一拍读两行"的多口问题
+    // 两个行缓存，按奇偶行轮转。
+    //   写第 r 行 -> lb[r&1]；读 lb[(r-1)&1]=raw[r-1]、
+    //   lb[(r-2)&1]=raw[r-2]。当前写入行与两行前共用同一地址，
+    //   依赖LUTRAM在写沿前取出旧数据。
     //==================================================================
     reg  [7:0] lb0 [0:LASTX];
     reg  [7:0] lb1 [0:LASTX];
-    reg  [7:0] lb2 [0:LASTX];
 
     //==================================================================
     // ★ ccol：**当前这个像素**的列号
@@ -80,7 +80,7 @@ module vib_gauss3x3 (
     
     reg  [9:0] row_in;
     reg  [9:0] col;                       // 含义改为"下一个像素的列号"
-    reg  [1:0] wr_sel, rd1_sel, rd2_sel;
+    reg        wr_sel, rd1_sel, rd2_sel;
     reg        replay;
     reg        extra;
 
@@ -88,17 +88,16 @@ module vib_gauss3x3 (
 
     wire [7:0] lb0_rd = lb0[ccol];
     wire [7:0] lb1_rd = lb1[ccol];
-    wire [7:0] lb2_rd = lb2[ccol];
 
     reg  [7:0] gA, gB;                    // raw[r-2], raw[r-1]
     always @(*) begin
-        case (rd2_sel) 2'd0: gA = lb0_rd; 2'd1: gA = lb1_rd; default: gA = lb2_rd; endcase
-        case (rd1_sel) 2'd0: gB = lb0_rd; 2'd1: gB = lb1_rd; default: gB = lb2_rd; endcase
+        gA = rd2_sel ? lb1_rd : lb0_rd;
+        gB = rd1_sel ? lb1_rd : lb0_rd;
     end
 
-    // 回放输出行 359：raw[358]=lb1, raw[359]=lb2, raw[360]=raw[359]=lb2
-    wire [9:0] rpA = {2'b0, lb1[ccol]};
-    wire [9:0] rpB = {2'b0, lb2[ccol]};
+    // 回放输出行 359：raw[358]=lb0, raw[359]=lb1, raw[360]=raw[359]=lb1
+    wire [9:0] rpA = {2'b0, lb0[ccol]};
+    wire [9:0] rpB = {2'b0, lb1[ccol]};
 
     //==================================================================
     // 竖直级
@@ -152,9 +151,9 @@ module vib_gauss3x3 (
         if (!rst_n) begin
             row_in        <= 10'd0;
             col           <= 10'd0;
-            wr_sel        <= 2'd0;
-            rd1_sel       <= 2'd2;
-            rd2_sel       <= 2'd1;
+            wr_sel        <= 1'b0;
+            rd1_sel       <= 1'b1;
+            rd2_sel       <= 1'b0;
             replay        <= 1'b0;
             extra         <= 1'b0;
             frm_done      <= 1'b0;
@@ -185,11 +184,8 @@ module vib_gauss3x3 (
             //   下一行的第 0 个像素覆盖 lb[wr_sel][639]，污染竖直窗口的
             //   第三个 tap —— 而 GOFP/GOFL 依然正确，图像错却极难定位。
             if (px_valid && !replay && !extra) begin
-                case (wr_sel)
-                2'd0: lb0[ccol] <= px_data;
-                2'd1: lb1[ccol] <= px_data;
-                default: lb2[ccol] <= px_data;
-                endcase
+                if (!wr_sel) lb0[ccol] <= px_data;
+                else         lb1[ccol] <= px_data;
             end
 
             //-----------------------------------------------
@@ -254,20 +250,24 @@ module vib_gauss3x3 (
                 end
                 else begin
                     row_in <= row_in + 10'd1;
-                    case (wr_sel)
-                    2'd0: begin wr_sel <= 2'd1; rd1_sel <= 2'd0; rd2_sel <= 2'd2; end
-                    2'd1: begin wr_sel <= 2'd2; rd1_sel <= 2'd1; rd2_sel <= 2'd0; end
-                    default: begin wr_sel <= 2'd0; rd1_sel <= 2'd2; rd2_sel <= 2'd1; end
-                    endcase
+                    if (!wr_sel) begin
+                        wr_sel  <= 1'b1;
+                        rd1_sel <= 1'b0;
+                        rd2_sel <= 1'b1;
+                    end else begin
+                        wr_sel  <= 1'b0;
+                        rd1_sel <= 1'b1;
+                        rd2_sel <= 1'b0;
+                    end
                 end
             end
             else if (px_valid) begin
                 if (px_frame_start) begin
                     row_in  <= 10'd0;
                     col     <= 10'd1;          // 本像素是列 0，下一个是列 1
-                    wr_sel  <= 2'd0;
-                    rd1_sel <= 2'd2;
-                    rd2_sel <= 2'd1;
+                    wr_sel  <= 1'b0;
+                    rd1_sel <= 1'b1;
+                    rd2_sel <= 1'b0;
                     fs_pend <= 1'b1;
                     frm_done <= 1'b0;
                 end
