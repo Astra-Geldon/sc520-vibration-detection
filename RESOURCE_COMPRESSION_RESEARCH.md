@@ -36,6 +36,8 @@
 
 TD手册支持`resource_sharing`、`merge_equal`、`opt_area`、`opt_ram`和高努力面积策略。它们只在算子确实互斥时有效：例如峰值扫描的两个乘法可改写为同一乘法器的输入多路选择，或在状态机不同状态中复用加法器。当前`vib_gz_multi`已经将48块×27频点的Goertzel乘法串行复用，`vib_gz_peak`也复用了扫描和诊断状态；继续跨模块合并会改变触发窗口，风险高。RGB三通道和LK像素邻域同拍工作，不能用单算子时分复用替代。
 
+已做过一次不改源码的TD综合对照：在`optimize_rtl`前加入`set_param rtl resource_sharing auto`和`shifter_style shifter_reg`可以正常运行，但它只产生RTL级报告，没有证据表明最终布局布线会减少当前LUT/Slice；因此没有把综合策略直接写入生产流程。若以后要尝试，应把它作为独立种子完整跑A→B→C并比较时序。
+
 ### 5.位宽收缩和近似算法
 
 `vib_ddr_arb`计数器、`vib_div_serial`余数、视频坐标和部分LK计数器存在少量位宽余量，但收益主要是几十个REG/LUT，必须先证明所有边界和有符号累加不溢出。Goertzel乘法截位或把DSP改成LUT可以释放DSP，但本器件DSP已40/40满载，换成LUT会增加Slice，不能解决当前主要压力。Tone LUT三通道改时分复用则会增加像素延迟或要求更高时钟，也不适合当前视频接口。
