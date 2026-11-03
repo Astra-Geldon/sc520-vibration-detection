@@ -38,7 +38,7 @@ module zhenghe#(
     output [DATA_WIDTH-1:0] O_tdata  ,
     output reg              O_tvalid 
 );
-    reg  [8:0]              addra,addrb;
+    reg  [10:0]             addra,addrb;
     reg                     valid_r0,valid_r1;
     reg                     I_tlast_d0,I_tlast_d1;
     reg                     I_tuser_d0,I_tuser_d1;
