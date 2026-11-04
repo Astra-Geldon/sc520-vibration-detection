@@ -37,23 +37,4 @@ KEY4开启时只自动调整曝光时间参数E，范围128～1991，传感器�
 
 完整构建按[编译烧录说明](BUILD_AND_PROGRAM.md)执行`td_project/patch/build_all.ps1`的A→B→C，保留加密HDMI核12处数据库补丁和CDC审计。Icarus通过不能替代布局布线、资源及物理CDC检查。
 
-## 当前Bit与物理资源
-
-当前Bit：td_project/camera_to_dsi_display.bit
-SHA256：F5D0D2DCF000B2A638A1849B0EE77761494BDD377536BBF9F46B650D6F4CE8BD
-
-| 资源 | 已用／总量 | 占用率 |
-|---|---:|---:|
-| LUT6 | 17389／21216 | 81.96% |
-| REG | 17893／42432 | 42.17% |
-| Slice | 18249／21216 | 86.02% |
-| ERAM20K | 67／108 | 62.04% |
-| DSP | 40／40 | 100.00% |
-| PLL | 3／6 | 50.00% |
-| MCU硬核 | 1／1 | 100.00% |
-
-最终时序为SWNS＋0.123ns、STNS0、HWNS＋0.020ns、HTNS0。DSP已满，后续改动优先使用移位加法、已有RAM和寄存级。
-
-本轮已同步修正CDC检查器对u_demo_mipi_status目标侧3位裁剪的口径。A/B/C、独立时序和40组物理CDC审计均通过，`PHASE_C_DONE`已生成Bit；不再把历史35/40组不一致写入当前结论。
-
 [当前算法](CURRENT_ALGORITHMS.md)·[自动曝光](AUTO_EXPOSURE.md)·[整合记录](INTEGRATION_NOTES.md)·[文档索引](DOCUMENTATION_INDEX.md)
